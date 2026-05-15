@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATC 訓練管理系統</title>
+    <title>ATC 專業訓練管理系統</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
@@ -14,9 +14,12 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Noto Sans TC', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        @supports (height: 100dvh) { body { min-height: 100dvh; } }
         
-        .app-wrapper { position: relative; display: flex; align-items: center; }
-        .main-container { width: 1280px; height: 90vh; background: var(--panel-color); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .app-wrapper { position: relative; display: flex; align-items: center; width: min(100vw, 1320px); padding: 0 12px; }
+        .main-container { width: min(1280px, calc(100vw - 24px)); height: 90vh; background: var(--panel-color); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        @supports (height: 100dvh) { .main-container { height: 90dvh; } }
+        .login-panel { margin: auto; width: min(400px, 100%); }
         .section { display: none; width: 100%; height: 100%; padding: 30px; flex-direction: column; position: relative; }
         .section.active { display: flex; }
         
@@ -419,6 +422,44 @@
         }
         .review-modal-note { font-size: 13px; color: #8b949e; line-height: 1.5; }
 
+
+        /* 多平台瀏覽體驗優化：桌機、平板、手機 */
+        #scoreTableArea { overflow-x: auto; }
+        #scoreTableArea table { min-width: 960px; }
+        @media (max-width: 1024px) {
+            body { align-items: stretch; overflow: auto; }
+            .app-wrapper { align-items: stretch; padding: 10px; }
+            .main-container { width: 100%; height: auto; min-height: calc(100vh - 20px); }
+            @supports (height: 100dvh) { .main-container { min-height: calc(100dvh - 20px); } }
+            .section { padding: 22px; }
+            .admin-layout { grid-template-columns: 200px 1fr; gap: 14px; }
+            .filter-group { flex-wrap: wrap; }
+        }
+        @media (max-width: 760px) {
+            body { display: block; }
+            .app-wrapper { display: block; padding: 0; width: 100%; }
+            .main-container { width: 100%; min-height: 100vh; border-radius: 0; border-left: none; border-right: none; }
+            @supports (height: 100dvh) { .main-container { min-height: 100dvh; } }
+            .section { padding: 16px; }
+            .login-panel { width: 100%; }
+            .sticky-header { align-items: stretch; flex-direction: column; gap: 10px; }
+            .header-actions { width: 100%; justify-content: stretch; }
+            .header-actions .btn { flex: 1 1 130px; min-width: 0; }
+            .admin-layout { display: flex; flex-direction: column; gap: 12px; }
+            .admin-sidebar { border-right: none; border-bottom: 1px solid var(--border-color); padding-right: 0; padding-bottom: 12px; }
+            .admin-sidebar > div { margin-top: 12px !important; }
+            .admin-tab { margin-bottom: 6px; }
+            .filter-group, .account-toolbar, .batch-toolbar { flex-direction: column; align-items: stretch !important; }
+            .filter-item, .account-search-box { width: 100%; min-width: 0; flex: 1 1 auto; }
+            .account-card { grid-template-columns: auto 1fr; align-items: flex-start; }
+            .account-actions { grid-column: 1 / -1; justify-content: flex-start; }
+            #contentBox { min-height: 52vh; }
+            #viewActionArea > div { align-items: stretch !important; flex-direction: column; }
+            #sec-quiz > div:last-child { align-items: stretch !important; flex-direction: column; }
+            .review-modal { width: 94vw; height: 78vh; min-width: 300px; min-height: 260px; }
+            .nav-tools-rail { display: none !important; }
+        }
+
         .nav-tools-rail { position: absolute; right: -60px; top: 50%; transform: translateY(-50%); display: none; flex-direction: column; gap: 15px; z-index: 1000; }
         .nav-tools-rail.active { display: flex; }
         .nav-btn-circle { width: 45px; height: 45px; border-radius: 50%; background: #21262d; border: 1px solid var(--border-color); color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
@@ -439,7 +480,7 @@
 <div class="app-wrapper">
     <div class="main-container">
         <div id="sec-login" class="section active">
-            <div style="margin: auto; width: 400px;">
+            <div class="login-panel">
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h1 style="margin-bottom:6px;">ATC 訓練管理系統</h1>
                     <div style="color:var(--accent-color); font-size:16px; font-weight:bold; letter-spacing:0.5px; margin-bottom:6px;">RCTP 臺北機場管制臺</div>
@@ -543,7 +584,7 @@
 // 1. 先將隨附的 Code.gs 貼到 Google Apps Script 並部署為 Web App。
 // 2. 將部署後取得的 Web App URL 貼到下方引號內。
 // 3. 若留空，系統會維持本機 localStorage 模式，方便測試。
-const SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby0qmcUPeedCSmOpT0CGUlI2LFoZ89JL11hCY1Ul0NYBmyNACmNXheDh-B-iIelXjYuZw/exec";
+const SHEETS_WEB_APP_URL = "";
 
 const Backend = {
     enabled: function() { return !!SHEETS_WEB_APP_URL && SHEETS_WEB_APP_URL.trim().startsWith('http'); },
@@ -738,24 +779,25 @@ const App = {
         let code = document.getElementById('loginUser').value.trim();
         const selectedCourse = this.state.courses.find(c => c.id == document.getElementById('loginCourse').value);
         if (!selectedCourse) return alert("請先選擇科目。");
-        if (!code) return alert("請輸入姓名及代字。");
+        if (!code) return alert("請輸入代字。");
 
         this.normalizeUsers();
+        const lockedForReview = this.isQuizLocked(code, selectedCourse.id);
+        // 已測驗進入複習模式時，不需輸入登入密碼
+        if (isReview && lockedForReview) {
+            this.user = code;
+            this.activeCourse = selectedCourse;
+            this.openView(true);
+            return;
+        }
+
         if (!Object.prototype.hasOwnProperty.call(this.state.users, code)) {
-            const realName = prompt(`[${code}] 初次登入，請輸入姓名：`);
-            if (!realName) return;
             const p1 = prompt(`[${code}] 初次登入，請設定登入密碼：`);
             if (!p1) return;
-            this.state.users[code] = { name: realName.trim(), pw: p1 };
+            this.state.users[code] = { name: '', pw: p1 };
             this.save();
         } else {
             const account = this.getUserRecord(code);
-            if (!account.name) {
-                const realName = prompt(`[${code}] 請輸入姓名：`);
-                if (!realName) return;
-                account.name = realName.trim();
-                this.save();
-            }
             if (!account.pw) {
                 const newPw = prompt(`[${code}] 請重新設定登入密碼：`);
                 if (!newPw) return;
