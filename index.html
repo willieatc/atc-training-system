@@ -741,6 +741,21 @@ const Backend = {
     }
 };
 
+
+const DateUtil = {
+    pad: function(n) { return String(n).padStart(2, '0'); },
+    format: function(value) {
+        const d = value ? new Date(value) : new Date();
+        if (Number.isNaN(d.getTime())) {
+            const s = String(value || '').trim();
+            const m = s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2}).*?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+            if (m) return `${m[1]}/${this.pad(m[2])}/${this.pad(m[3])} ${this.pad(m[4])}:${this.pad(m[5])}:${this.pad(m[6] || 0)}`;
+            return s;
+        }
+        return `${d.getFullYear()}/${this.pad(d.getMonth()+1)}/${this.pad(d.getDate())} ${this.pad(d.getHours())}:${this.pad(d.getMinutes())}:${this.pad(d.getSeconds())}`;
+    }
+};
+
 const Backup = {
     version: 'sheets_v81_backup_floating_tools',
     buildEnvelope: function() {
@@ -748,7 +763,7 @@ const Backup = {
         return {
             app: 'ATC 訓練管理系統',
             version: this.version,
-            exportedAt: new Date().toLocaleString(),
+            exportedAt: DateUtil.format(),
             exportedAtISO: new Date().toISOString(),
             mode: Backend.enabled() ? 'google-sheets' : 'localStorage',
             state: state
@@ -883,7 +898,7 @@ const App = {
     isQuizLocked: function(user, courseId) { return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]); },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
-        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: new Date().toLocaleString() };
+        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: DateUtil.format() };
     },
     unlockQuiz: function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
@@ -897,7 +912,7 @@ const App = {
             employeeId: this.employeeId || this.getUserEmployeeId(this.user),
             cid: this.activeCourse.id,
             c: this.activeCourse.title,
-            startedAt: new Date().toLocaleString()
+            startedAt: DateUtil.format()
         }));
     },
     clearQuizSession: function() {
@@ -921,7 +936,7 @@ const App = {
                 cid: cid,
                 c: title,
                 s: 0,
-                d: new Date().toLocaleString(),
+                d: DateUtil.format(),
                 note: '測驗頁面刷新或未正常送出，自動記錄零分'
             });
             this.lockQuiz(pending.u, cid, title);
@@ -1467,7 +1482,7 @@ const Admin = {
                 r.c || '',
                 String(r.s ?? ''),
                 Number(r.s) >= PASS_SCORE ? '及格' : '未及格',
-                r.d || '',
+                DateUtil.format(r.d),
                 locked ? '已鎖定' : '可測驗',
                 r.note || ''
             ]);
@@ -1543,7 +1558,7 @@ const Admin = {
                             <td>${Admin.esc(r.c || '')}</td>
                             <td style="color:${Number(r.s) >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
                             <td>${Number(r.s) >= PASS_SCORE ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
-                            <td>${r.d}</td>
+                            <td>${DateUtil.format(r.d)}</td>
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1628,7 +1643,7 @@ const Quiz = {
             cid: App.activeCourse.id,
             c: App.activeCourse.title,
             s: 0,
-            d: new Date().toLocaleString(),
+            d: DateUtil.format(),
             note: '測驗中刷新或離開頁面，自動記錄零分'
         });
         App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
@@ -1772,7 +1787,7 @@ const Quiz = {
     finishSubmit: function() {
         const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
         if (!App.isInstructor) {
-            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:new Date().toLocaleString()});
+            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:DateUtil.format()});
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
             App.save();
         }
