@@ -70,8 +70,11 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
         }
 
-        #contentBox { position: relative; flex-grow: 1; background: #000; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
-        #contentBox iframe { width: 100%; height: 100%; border: none; }
+        #contentBox { position: relative; flex: 1 1 auto; min-height: min(660px, calc(90vh - 178px)); background: #000; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
+        @supports (height: 100dvh) { #contentBox { min-height: min(660px, calc(90dvh - 178px)); } }
+        #contentBox iframe { width: 100%; height: 100%; min-height: 100%; border: none; display: block; }
+        #sec-view { gap: 0; }
+        #viewActionArea { flex-shrink: 0; }
         .viewer-hint-below {
             display: inline-flex;
             align-items: center;
@@ -436,6 +439,15 @@
             .admin-layout { grid-template-columns: 200px 1fr; gap: 14px; }
             .filter-group { flex-wrap: wrap; }
         }
+
+        @media (max-width: 1024px) and (min-width: 761px) {
+            #contentBox { min-height: 62vh; height: 62vh; flex: 0 0 auto; }
+            #sec-view { padding-bottom: 18px; }
+        }
+        @media (orientation: landscape) and (max-height: 620px) {
+            #contentBox { min-height: 70vh; height: 70vh; }
+            #sec-view .section-title-row { margin-bottom: 8px; }
+        }
         @media (max-width: 760px) {
             body { display: block; }
             .app-wrapper { display: block; padding: 0; width: 100%; }
@@ -454,7 +466,7 @@
             .filter-item, .account-search-box { width: 100%; min-width: 0; flex: 1 1 auto; }
             .account-card { grid-template-columns: auto 1fr; align-items: flex-start; }
             .account-actions { grid-column: 1 / -1; justify-content: flex-start; }
-            #contentBox { min-height: 52vh; }
+            #contentBox { min-height: 64vh; height: 64vh; flex: 0 0 auto; }
             #viewActionArea > div { align-items: stretch !important; flex-direction: column; }
             #sec-quiz > div:last-child { align-items: stretch !important; flex-direction: column; }
             .review-modal { width: 94vw; height: 78vh; min-width: 300px; min-height: 260px; }
@@ -538,7 +550,7 @@
         </div>
 
         <div id="sec-view" class="section">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div class="section-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <div><h2 id="viewTitle" style="display:inline-block;">科目教材</h2><span class="badge-instructor hidden">管理員預覽模式</span></div>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <button id="adminBackFromViewBtn" class="btn btn-warning hidden" onclick="App.backToAdmin()">回到後台</button>
@@ -622,6 +634,36 @@
 <script>
 const PASS_SCORE = 70;
 
+function formatDateTime(value) {
+    const pad = n => String(n).padStart(2, '0');
+    const toText = d => `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    if (!value) return '';
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return toText(value);
+    const raw = String(value).trim();
+    if (!raw) return '';
+
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime()) && /T|GMT|UTC|\d{4}-\d{1,2}-\d{1,2}/.test(raw)) return toText(parsed);
+
+    const cleaned = raw
+        .replace(/星期[一二三四五六日天]/g, '')
+        .replace(/週[一二三四五六日天]/g, '')
+        .replace(/\([^)]*\)/g, '')
+        .replace(/GMT[+\-]\d{4}.*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const m = cleaned.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})日?\s*(上午|下午|AM|PM)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/i);
+    if (m) {
+        let hour = parseInt(m[5], 10);
+        const marker = (m[4] || '').toUpperCase();
+        if ((marker === '下午' || marker === 'PM') && hour < 12) hour += 12;
+        if ((marker === '上午' || marker === 'AM') && hour === 12) hour = 0;
+        return `${m[1]}/${pad(m[2])}/${pad(m[3])} ${pad(hour)}:${m[6]}:${m[7] || '00'}`;
+    }
+    return cleaned;
+}
+
 // ================= Google Sheets 後端設定 =================
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
@@ -694,13 +736,13 @@ const Backend = {
 };
 
 const Backup = {
-    version: 'sheets_v81_backup_floating_tools',
+    version: 'sheets_v87_date_viewer_optimized',
     buildEnvelope: function() {
         const state = JSON.parse(JSON.stringify(App.state || {}));
         return {
             app: 'ATC 訓練管理系統',
             version: this.version,
-            exportedAt: new Date().toLocaleString(),
+            exportedAt: formatDateTime(new Date()),
             exportedAtISO: new Date().toISOString(),
             mode: Backend.enabled() ? 'google-sheets' : 'localStorage',
             state: state
@@ -835,7 +877,7 @@ const App = {
     isQuizLocked: function(user, courseId) { return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]); },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
-        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: new Date().toLocaleString() };
+        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: formatDateTime(new Date()) };
     },
     unlockQuiz: function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
@@ -849,7 +891,7 @@ const App = {
             employeeId: this.employeeId || this.getUserEmployeeId(this.user),
             cid: this.activeCourse.id,
             c: this.activeCourse.title,
-            startedAt: new Date().toLocaleString()
+            startedAt: formatDateTime(new Date())
         }));
     },
     clearQuizSession: function() {
@@ -873,7 +915,7 @@ const App = {
                 cid: cid,
                 c: title,
                 s: 0,
-                d: new Date().toLocaleString(),
+                d: formatDateTime(new Date()),
                 note: '測驗頁面刷新或未正常送出，自動記錄零分'
             });
             this.lockQuiz(pending.u, cid, title);
@@ -1419,7 +1461,7 @@ const Admin = {
                 r.c || '',
                 String(r.s ?? ''),
                 Number(r.s) >= PASS_SCORE ? '及格' : '未及格',
-                r.d || '',
+                formatDateTime(r.d) || '',
                 locked ? '已鎖定' : '可測驗',
                 r.note || ''
             ]);
@@ -1495,7 +1537,7 @@ const Admin = {
                             <td>${Admin.esc(r.c || '')}</td>
                             <td style="color:${Number(r.s) >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
                             <td>${Number(r.s) >= PASS_SCORE ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
-                            <td>${r.d}</td>
+                            <td>${Admin.esc(formatDateTime(r.d))}</td>
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1578,7 +1620,7 @@ const Quiz = {
             cid: App.activeCourse.id,
             c: App.activeCourse.title,
             s: 0,
-            d: new Date().toLocaleString(),
+            d: formatDateTime(new Date()),
             note: '測驗中刷新或離開頁面，自動記錄零分'
         });
         App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
@@ -1702,7 +1744,7 @@ const Quiz = {
     finishSubmit: function() {
         const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
         if (!App.isInstructor) {
-            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:new Date().toLocaleString()});
+            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:formatDateTime(new Date())});
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
             App.save();
         }
