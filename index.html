@@ -544,6 +544,8 @@
                         <div class="admin-tab" id="t-rec" onclick="App.switchAdmin('rec')" style="margin-top:auto;">🔒 人員帳號管理</div>
                     </div>
                     <button class="btn btn-primary btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.adminOpenCourseTester()">進入教材/測驗</button>
+                    <button class="btn btn-success btn-sm" style="width:100%; margin-bottom:10px;" onclick="Backup.exportLocal()">匯出本地備份</button>
+                    <button class="btn btn-outline btn-sm" style="width:100%; margin-bottom:10px;" onclick="Backup.pickImportFile()">匯入本地備份</button>
                     <button class="btn btn-warning btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.logoutInstructor()">管理員登出</button>
                     <button class="btn btn-outline btn-sm" style="width:100%;" onclick="App.toHome()">返回首頁</button>
                 </div>
@@ -560,7 +562,7 @@
         <button class="nav-btn-circle" onclick="App.scrollSide(1)">▼</button>
     </div>
 </div>
-
+<input type="file" id="backupImportFile" class="hidden" accept="application/json,.json" onchange="Backup.importLocal(event)">
 
 <div id="answerReviewOverlay" class="review-modal-overlay" aria-hidden="true">
     <div id="answerReviewModal" class="review-modal" role="dialog" aria-modal="true" aria-labelledby="answerReviewTitle">
@@ -644,6 +646,92 @@ const Backend = {
         } finally {
             this.saving = false;
         }
+    }
+};
+
+const Backup = {
+    version: 'sheets_v80_local_backup',
+    buildEnvelope: function() {
+        const state = JSON.parse(JSON.stringify(App.state || {}));
+        return {
+            app: 'ATC 訓練管理系統',
+            version: this.version,
+            exportedAt: new Date().toLocaleString(),
+            exportedAtISO: new Date().toISOString(),
+            mode: Backend.enabled() ? 'google-sheets' : 'localStorage',
+            state: state
+        };
+    },
+    fileTimestamp: function() {
+        const d = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    },
+    exportLocal: function() {
+        try {
+            const envelope = this.buildEnvelope();
+            const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `ATC本地備份_${this.fileTimestamp()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (err) {
+            console.error('Backup export failed:', err);
+            alert('本地備份匯出失敗。');
+        }
+    },
+    pickImportFile: function() {
+        const input = document.getElementById('backupImportFile');
+        if (input) input.click();
+    },
+    normalizeImportedState: function(raw) {
+        const st = raw && raw.state ? raw.state : raw;
+        if (!st || typeof st !== 'object') throw new Error('備份檔格式不正確。');
+        return {
+            courses: Array.isArray(st.courses) ? st.courses : [],
+            records: Array.isArray(st.records) ? st.records : [],
+            users: st.users && typeof st.users === 'object' ? st.users : {},
+            userNames: st.userNames && typeof st.userNames === 'object' ? st.userNames : {},
+            quizLocks: st.quizLocks && typeof st.quizLocks === 'object' ? st.quizLocks : {},
+            adminPw: st.adminPw || 'rctp3023'
+        };
+    },
+    importLocal: function(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            try {
+                const parsed = JSON.parse(ev.target.result);
+                const importedState = this.normalizeImportedState(parsed);
+                const summary = [
+                    `科目：${importedState.courses.length} 筆`,
+                    `帳號：${Object.keys(importedState.users).length} 筆`,
+                    `成績：${importedState.records.length} 筆`,
+                    `鎖定：${Object.keys(importedState.quizLocks).length} 筆`
+                ].join('\n');
+                if (!confirm(`確定匯入此本地備份並覆蓋目前資料？\n\n${summary}\n\n提醒：若已連線 Google Sheets，確認後也會同步覆蓋雲端資料。`)) return;
+
+                App.state = importedState;
+                App.normalizeUsers();
+                localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+                const cloudOk = await Backend.saveState(App.state);
+                App.renderSelects();
+                App.updateLoginStatus();
+                App.syncUI();
+                if (App.isInstructor) App.switchAdmin(App.currentAdminTab || 'score');
+                alert(cloudOk ? '✅ 本地備份已匯入並同步完成。' : '⚠️ 本地備份已匯入本機，但雲端同步失敗，請檢查 Web App URL。');
+            } catch (err) {
+                console.error('Backup import failed:', err);
+                alert('本地備份匯入失敗，請確認檔案是否為本系統匯出的 JSON 備份檔。');
+            } finally {
+                if (event && event.target) event.target.value = '';
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
     }
 };
 const App = {
