@@ -1,21 +1,13 @@
-ATC 訓練管理系統 - Google Sheets 後端版 v87 完整套件
+ATC 訓練管理系統 - Google Sheets 後端版 v88
 
-檔案說明：
-1. index.html
-   - 上傳到 GitHub Pages 使用。
-   - 會自動讀取同層的 config.js。
+本版調整：
+1. 移除作答檢查視窗左下角提示文字。
+2. 答案送出後，結果頁會顯示分數、及格狀態與每題正確答案。
+3. 結果頁會列出每題「答案」與「你的作答」供檢視。
 
-2. config.js
-   - 請填入你的 Google Apps Script Web App URL。
-   - 之後更新 index.html 時，通常不需要再修改此檔。
-
-3. Code.gs
-   - 貼到 Google Sheets 的 Apps Script 使用。
-   - 若未修改後端邏輯，通常不需要重新部署 Apps Script。
-
-GitHub Pages 目錄建議：
+GitHub Pages 請上傳：
 - index.html
 - config.js
 
 Apps Script：
-- 將 Code.gs 內容貼到 Apps Script 專案。
+- Code.gs 放在 Google Apps Script，不需要上傳 GitHub。

@@ -70,11 +70,8 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
         }
 
-        #contentBox { position: relative; flex: 1 1 auto; min-height: min(660px, calc(90vh - 178px)); background: #000; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
-        @supports (height: 100dvh) { #contentBox { min-height: min(660px, calc(90dvh - 178px)); } }
-        #contentBox iframe { width: 100%; height: 100%; min-height: 100%; border: none; display: block; }
-        #sec-view { gap: 0; }
-        #viewActionArea { flex-shrink: 0; }
+        #contentBox { position: relative; flex-grow: 1; background: #000; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
+        #contentBox iframe { width: 100%; height: 100%; border: none; }
         .viewer-hint-below {
             display: inline-flex;
             align-items: center;
@@ -415,6 +412,57 @@
             border-radius: 8px;
             padding: 10px;
         }
+
+        .result-answer-area {
+            width: min(900px, 100%);
+            max-height: 46vh;
+            overflow-y: auto;
+            margin: 18px auto 24px;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-align: left;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(88,166,255,0.75) #0d1117;
+        }
+        .result-answer-area::-webkit-scrollbar { width: 6px; }
+        .result-answer-area::-webkit-scrollbar-track { background: #0d1117; }
+        .result-answer-area::-webkit-scrollbar-thumb { background: rgba(88,166,255,0.65); border-radius: 999px; }
+        .result-answer-title {
+            color: var(--accent-color);
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .result-answer-card {
+            background: #161b22;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .result-answer-card.correct { border-color: rgba(63,185,80,0.55); }
+        .result-answer-card.wrong { border-color: rgba(248,81,73,0.65); }
+        .result-answer-question {
+            color: var(--accent-color);
+            font-weight: 700;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        .result-answer-row {
+            line-height: 1.6;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        .result-answer-correct {
+            color: var(--success-color);
+            font-weight: 700;
+        }
+        .result-answer-user.wrong {
+            color: var(--danger-color);
+            font-weight: 700;
+        }
         .review-modal-footer {
             padding: 12px 16px;
             background: var(--panel-color);
@@ -424,9 +472,6 @@
             align-items: center;
             gap: 12px;
         }
-        .review-modal-note { font-size: 13px; color: #8b949e; line-height: 1.5; }
-
-
         /* 多平台瀏覽體驗優化：桌機、平板、手機 */
         #scoreTableArea { overflow-x: auto; }
         #scoreTableArea table { min-width: 960px; }
@@ -438,15 +483,6 @@
             .section { padding: 22px; }
             .admin-layout { grid-template-columns: 200px 1fr; gap: 14px; }
             .filter-group { flex-wrap: wrap; }
-        }
-
-        @media (max-width: 1024px) and (min-width: 761px) {
-            #contentBox { min-height: 62vh; height: 62vh; flex: 0 0 auto; }
-            #sec-view { padding-bottom: 18px; }
-        }
-        @media (orientation: landscape) and (max-height: 620px) {
-            #contentBox { min-height: 70vh; height: 70vh; }
-            #sec-view .section-title-row { margin-bottom: 8px; }
         }
         @media (max-width: 760px) {
             body { display: block; }
@@ -466,7 +502,7 @@
             .filter-item, .account-search-box { width: 100%; min-width: 0; flex: 1 1 auto; }
             .account-card { grid-template-columns: auto 1fr; align-items: flex-start; }
             .account-actions { grid-column: 1 / -1; justify-content: flex-start; }
-            #contentBox { min-height: 64vh; height: 64vh; flex: 0 0 auto; }
+            #contentBox { min-height: 52vh; }
             #viewActionArea > div { align-items: stretch !important; flex-direction: column; }
             #sec-quiz > div:last-child { align-items: stretch !important; flex-direction: column; }
             .review-modal { width: 94vw; height: 78vh; min-width: 300px; min-height: 260px; }
@@ -550,7 +586,7 @@
         </div>
 
         <div id="sec-view" class="section">
-            <div class="section-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <div><h2 id="viewTitle" style="display:inline-block;">科目教材</h2><span class="badge-instructor hidden">管理員預覽模式</span></div>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <button id="adminBackFromViewBtn" class="btn btn-warning hidden" onclick="App.backToAdmin()">回到後台</button>
@@ -576,9 +612,10 @@
         </div>
 
         <div id="sec-res" class="section">
-            <div style="margin:auto; text-align:center;">
+            <div style="margin:auto; text-align:center; width:min(960px, 100%);">
                 <h1>考核結果</h1>
                 <div id="finalScore" style="font-size:100px; color:var(--success-color); font-weight:bold;">0</div>
+                <div id="resultAnswerArea" class="result-answer-area hidden"></div>
                 <button class="btn btn-primary" onclick="App.toHome()">回到首頁</button>
             </div>
         </div>
@@ -621,8 +658,7 @@
             <h3 id="answerReviewTitle">作答內容檢查</h3>
         </div>
         <div id="answerReviewBody" class="review-modal-body"></div>
-        <div class="review-modal-footer">
-            <div class="review-modal-note">可拖曳上方標題列移動視窗，也可拖曳右下角調整大小。</div>
+        <div class="review-modal-footer" style="justify-content:flex-end;">
             <div style="display:flex; gap:10px; flex-shrink:0;">
                 <button class="btn btn-outline" onclick="Quiz.closeReviewModal()">返回修改</button>
                 <button class="btn btn-primary" onclick="Quiz.confirmReviewedSubmit()">確認送出</button>
@@ -633,36 +669,6 @@
 
 <script>
 const PASS_SCORE = 70;
-
-function formatDateTime(value) {
-    const pad = n => String(n).padStart(2, '0');
-    const toText = d => `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    if (!value) return '';
-    if (value instanceof Date && !Number.isNaN(value.getTime())) return toText(value);
-    const raw = String(value).trim();
-    if (!raw) return '';
-
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime()) && /T|GMT|UTC|\d{4}-\d{1,2}-\d{1,2}/.test(raw)) return toText(parsed);
-
-    const cleaned = raw
-        .replace(/星期[一二三四五六日天]/g, '')
-        .replace(/週[一二三四五六日天]/g, '')
-        .replace(/\([^)]*\)/g, '')
-        .replace(/GMT[+\-]\d{4}.*$/i, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    const m = cleaned.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})日?\s*(上午|下午|AM|PM)?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/i);
-    if (m) {
-        let hour = parseInt(m[5], 10);
-        const marker = (m[4] || '').toUpperCase();
-        if ((marker === '下午' || marker === 'PM') && hour < 12) hour += 12;
-        if ((marker === '上午' || marker === 'AM') && hour === 12) hour = 0;
-        return `${m[1]}/${pad(m[2])}/${pad(m[3])} ${pad(hour)}:${m[6]}:${m[7] || '00'}`;
-    }
-    return cleaned;
-}
 
 // ================= Google Sheets 後端設定 =================
 // Web App URL 請設定在同層的 config.js。
@@ -736,13 +742,13 @@ const Backend = {
 };
 
 const Backup = {
-    version: 'sheets_v87_date_viewer_optimized',
+    version: 'sheets_v81_backup_floating_tools',
     buildEnvelope: function() {
         const state = JSON.parse(JSON.stringify(App.state || {}));
         return {
             app: 'ATC 訓練管理系統',
             version: this.version,
-            exportedAt: formatDateTime(new Date()),
+            exportedAt: new Date().toLocaleString(),
             exportedAtISO: new Date().toISOString(),
             mode: Backend.enabled() ? 'google-sheets' : 'localStorage',
             state: state
@@ -877,7 +883,7 @@ const App = {
     isQuizLocked: function(user, courseId) { return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]); },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
-        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: formatDateTime(new Date()) };
+        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: new Date().toLocaleString() };
     },
     unlockQuiz: function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
@@ -891,7 +897,7 @@ const App = {
             employeeId: this.employeeId || this.getUserEmployeeId(this.user),
             cid: this.activeCourse.id,
             c: this.activeCourse.title,
-            startedAt: formatDateTime(new Date())
+            startedAt: new Date().toLocaleString()
         }));
     },
     clearQuizSession: function() {
@@ -915,7 +921,7 @@ const App = {
                 cid: cid,
                 c: title,
                 s: 0,
-                d: formatDateTime(new Date()),
+                d: new Date().toLocaleString(),
                 note: '測驗頁面刷新或未正常送出，自動記錄零分'
             });
             this.lockQuiz(pending.u, cid, title);
@@ -1461,7 +1467,7 @@ const Admin = {
                 r.c || '',
                 String(r.s ?? ''),
                 Number(r.s) >= PASS_SCORE ? '及格' : '未及格',
-                formatDateTime(r.d) || '',
+                r.d || '',
                 locked ? '已鎖定' : '可測驗',
                 r.note || ''
             ]);
@@ -1537,7 +1543,7 @@ const Admin = {
                             <td>${Admin.esc(r.c || '')}</td>
                             <td style="color:${Number(r.s) >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
                             <td>${Number(r.s) >= PASS_SCORE ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
-                            <td>${Admin.esc(formatDateTime(r.d))}</td>
+                            <td>${r.d}</td>
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1556,6 +1562,8 @@ const Admin = {
 
 const Quiz = {
     init: function() {
+        const resultArea = document.getElementById('resultAnswerArea');
+        if (resultArea) { resultArea.classList.add('hidden'); resultArea.innerHTML = ''; }
         if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
         if(!App.activeCourse.questions.length) return alert("本科目尚無考題。");
         if (!App.isInstructor) {
@@ -1620,7 +1628,7 @@ const Quiz = {
             cid: App.activeCourse.id,
             c: App.activeCourse.title,
             s: 0,
-            d: formatDateTime(new Date()),
+            d: new Date().toLocaleString(),
             note: '測驗中刷新或離開頁面，自動記錄零分'
         });
         App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
@@ -1741,10 +1749,30 @@ const Quiz = {
         this.closeReviewModal();
         this.finishSubmit();
     },
+    renderResultAnswers: function() {
+        const area = document.getElementById('resultAnswerArea');
+        if (!area || !App.activeCourse || !App.activeCourse.questions || !this.ans) return;
+        area.classList.remove('hidden');
+        area.innerHTML = `
+            <div class="result-answer-title">正確答案</div>
+            ${App.activeCourse.questions.map((q, i) => {
+                const userIndex = this.ans[i];
+                const correctIndex = q.a;
+                const userText = q.o[userIndex] || '';
+                const correctText = q.o[correctIndex] || '';
+                const isCorrect = userIndex === correctIndex;
+                return `<div class="result-answer-card ${isCorrect ? 'correct' : 'wrong'}">
+                    <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)}</div>
+                    <div class="result-answer-row">答案：<span class="result-answer-correct">(${correctIndex + 1}) ${Admin.esc(correctText)}</span></div>
+                    <div class="result-answer-row">你的作答：<span class="result-answer-user ${isCorrect ? '' : 'wrong'}">(${userIndex + 1}) ${Admin.esc(userText)}</span> ${isCorrect ? '✅' : '❌'}</div>
+                </div>`;
+            }).join('')}
+        `;
+    },
     finishSubmit: function() {
         const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
         if (!App.isInstructor) {
-            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:formatDateTime(new Date())});
+            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:new Date().toLocaleString()});
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
             App.save();
         }
@@ -1765,6 +1793,7 @@ const Quiz = {
             ? `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${PASS_SCORE} 分。`
             : (score >= PASS_SCORE ? `及格（及格標準：${PASS_SCORE} 分）` : `未及格（及格標準：${PASS_SCORE} 分）`);
         resultNote.style.color = App.isInstructor ? 'var(--warning-color)' : (score >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)');
+        this.renderResultAnswers();
         App.showSec('sec-res');
     }
 };
