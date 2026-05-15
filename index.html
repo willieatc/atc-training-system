@@ -622,7 +622,7 @@ const PASS_SCORE = 70;
 // 1. 先將隨附的 Code.gs 貼到 Google Apps Script 並部署為 Web App。
 // 2. 將部署後取得的 Web App URL 貼到下方引號內。
 // 3. 若留空，系統會維持本機 localStorage 模式，方便測試。
-const SHEETS_WEB_APP_URL = "";
+const SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxxf_owKqbN-T787gJFbxcFFMxPMGjLEpqGJU8KQ8RjpxYw4oWHXrPfg1RqQQ7cDO3znw/exec";
 
 const Backend = {
     enabled: function() { return !!SHEETS_WEB_APP_URL && SHEETS_WEB_APP_URL.trim().startsWith('http'); },
