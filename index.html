@@ -543,7 +543,7 @@
 // 1. 先將隨附的 Code.gs 貼到 Google Apps Script 並部署為 Web App。
 // 2. 將部署後取得的 Web App URL 貼到下方引號內。
 // 3. 若留空，系統會維持本機 localStorage 模式，方便測試。
-const SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzSMMDvlr7UoFlSnX1yxMq0ZLlRd0qPnU0hjvd4OusIBBV4IlATmtUpHfaBjOSvpE6yFQ/exec";
+const SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby0qmcUPeedCSmOpT0CGUlI2LFoZ89JL11hCY1Ul0NYBmyNACmNXheDh-B-iIelXjYuZw/exec";
 
 const Backend = {
     enabled: function() { return !!SHEETS_WEB_APP_URL && SHEETS_WEB_APP_URL.trim().startsWith('http'); },
