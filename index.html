@@ -460,6 +460,39 @@
             .nav-tools-rail { display: none !important; }
         }
 
+
+        .backup-floating-tools {
+            position: absolute;
+            right: 18px;
+            bottom: 18px;
+            z-index: 1200;
+            display: none;
+            gap: 6px;
+            align-items: center;
+            padding: 6px;
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.32);
+            backdrop-filter: blur(6px);
+        }
+        .backup-floating-tools.active { display: flex; }
+        .backup-floating-tools .btn {
+            min-width: 76px;
+            height: 28px;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        @media (max-width: 700px) {
+            .backup-floating-tools {
+                right: 12px;
+                bottom: 12px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .backup-floating-tools .btn { width: 100%; }
+        }
+
         .nav-tools-rail { position: absolute; right: -60px; top: 50%; transform: translateY(-50%); display: none; flex-direction: column; gap: 15px; z-index: 1000; }
         .nav-tools-rail.active { display: flex; }
         .nav-btn-circle { width: 45px; height: 45px; border-radius: 50%; background: #21262d; border: 1px solid var(--border-color); color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
@@ -544,8 +577,6 @@
                         <div class="admin-tab" id="t-rec" onclick="App.switchAdmin('rec')" style="margin-top:auto;">🔒 人員帳號管理</div>
                     </div>
                     <button class="btn btn-primary btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.adminOpenCourseTester()">進入教材/測驗</button>
-                    <button class="btn btn-success btn-sm" style="width:100%; margin-bottom:10px;" onclick="Backup.exportLocal()">匯出本地備份</button>
-                    <button class="btn btn-outline btn-sm" style="width:100%; margin-bottom:10px;" onclick="Backup.pickImportFile()">匯入本地備份</button>
                     <button class="btn btn-warning btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.logoutInstructor()">管理員登出</button>
                     <button class="btn btn-outline btn-sm" style="width:100%;" onclick="App.toHome()">返回首頁</button>
                 </div>
@@ -560,6 +591,10 @@
     <div id="global-nav-rail" class="nav-tools-rail">
         <button class="nav-btn-circle" onclick="App.scrollSide(0)">▲</button>
         <button class="nav-btn-circle" onclick="App.scrollSide(1)">▼</button>
+    </div>
+    <div id="backupFloatingTools" class="backup-floating-tools" aria-label="本地備份工具">
+        <button class="btn btn-success btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
+        <button class="btn btn-primary btn-sm" onclick="Backup.pickImportFile()">匯入備份</button>
     </div>
 </div>
 <input type="file" id="backupImportFile" class="hidden" accept="application/json,.json" onchange="Backup.importLocal(event)">
@@ -581,6 +616,7 @@
 </div>
 
 <script>
+const PASS_SCORE = 70;
 
 // ================= Google Sheets 後端設定 =================
 // 1. 先將隨附的 Code.gs 貼到 Google Apps Script 並部署為 Web App。
@@ -650,7 +686,7 @@ const Backend = {
 };
 
 const Backup = {
-    version: 'sheets_v80_local_backup',
+    version: 'sheets_v81_backup_floating_tools',
     buildEnvelope: function() {
         const state = JSON.parse(JSON.stringify(App.state || {}));
         return {
@@ -736,7 +772,7 @@ const Backup = {
 };
 const App = {
     state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, adminPw: "rctp3023" },
-    user: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null,
+    user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     save: function() { localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state)); Backend.saveState(this.state); },
     normalizeUsers: function() {
@@ -744,13 +780,14 @@ const App = {
         Object.keys(this.state.users).forEach(code => {
             const v = this.state.users[code];
             if (typeof v === 'string') {
-                this.state.users[code] = { name: '', pw: v };
+                this.state.users[code] = { employeeId: '', name: '', pw: '' };
             } else if (!v || typeof v !== 'object') {
-                this.state.users[code] = { name: '', pw: '' };
+                this.state.users[code] = { employeeId: '', name: '', pw: '' };
             } else {
                 this.state.users[code] = {
+                    employeeId: String(v.employeeId ?? v.empId ?? ''),
                     name: String(v.name || ''),
-                    pw: String(v.pw ?? v.password ?? '')
+                    pw: ''
                 };
             }
         });
@@ -758,6 +795,13 @@ const App = {
     getUserRecord: function(code) {
         this.normalizeUsers();
         return this.state.users[code] || null;
+    },
+    getUserEmployeeId: function(code) {
+        const rec = this.getUserRecord(code);
+        return rec ? (rec.employeeId || '') : '';
+    },
+    getRecordEmployeeId: function(record) {
+        return record.employeeId || record.empId || this.getUserEmployeeId(record.u) || '';
     },
     getUserName: function(code) {
         const rec = this.getUserRecord(code);
@@ -794,7 +838,7 @@ const App = {
         if (this.isInstructor || !this.user || !this.activeCourse) return;
         localStorage.setItem(this.pendingQuizKey, JSON.stringify({
             u: this.user,
-            name: this.getUserName(this.user),
+            employeeId: this.employeeId || this.getUserEmployeeId(this.user),
             cid: this.activeCourse.id,
             c: this.activeCourse.title,
             startedAt: new Date().toLocaleString()
@@ -816,6 +860,7 @@ const App = {
         if (!this.isQuizLocked(pending.u, cid)) {
             this.state.records.push({
                 u: pending.u,
+                employeeId: pending.employeeId || pending.empId || this.getUserEmployeeId(pending.u),
                 name: pending.name || this.getUserName(pending.u),
                 cid: cid,
                 c: title,
@@ -870,32 +915,12 @@ const App = {
         if (!code) return alert("請輸入代字。");
 
         this.normalizeUsers();
-        const lockedForReview = this.isQuizLocked(code, selectedCourse.id);
-        // 已測驗進入複習模式時，不需輸入登入密碼
-        if (isReview && lockedForReview) {
-            this.user = code;
-            this.activeCourse = selectedCourse;
-            this.openView(true);
-            return;
-        }
-
         if (!Object.prototype.hasOwnProperty.call(this.state.users, code)) {
-            const p1 = prompt(`[${code}] 初次登入，請設定登入密碼：`);
-            if (!p1) return;
-            this.state.users[code] = { name: '', pw: p1 };
+            this.state.users[code] = { employeeId: '', name: '', pw: '' };
             this.save();
-        } else {
-            const account = this.getUserRecord(code);
-            if (!account.pw) {
-                const newPw = prompt(`[${code}] 請重新設定登入密碼：`);
-                if (!newPw) return;
-                account.pw = newPw;
-                this.save();
-            } else {
-                if (prompt(`請輸入 [${code}] 的密碼：`) !== account.pw) return alert("密碼錯誤！");
-            }
         }
         this.user = code;
+        this.employeeId = this.getUserEmployeeId(code);
         this.activeCourse = selectedCourse;
         this.openView(isReview);
     },
@@ -945,6 +970,7 @@ const App = {
             course = this.state.courses[idx];
         }
         this.user = "管理員測試";
+        this.employeeId = "";
         this.activeCourse = course;
         this.openView(false);
     },
@@ -954,13 +980,15 @@ const App = {
         this.clearQuizSession();
         this.switchAdmin(this.currentAdminTab || 'score');
     },
-    toHome: function() { this.quizInProgress = false; this.clearQuizSession(); this.showSec('sec-login'); this.init(); },
+    toHome: function() { this.quizInProgress = false; this.employeeId = ""; this.clearQuizSession(); this.showSec('sec-login'); this.init(); },
     toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
     logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.getElementById('global-nav-rail').style.display = (id === 'sec-quiz' || id === 'sec-admin') ? 'flex' : 'none';
+        const backupTools = document.getElementById('backupFloatingTools');
+        if (backupTools) backupTools.classList.toggle('active', id === 'sec-admin' && this.isInstructor);
     },
     switchAdmin: function(tab) {
         this.currentAdminTab = tab;
@@ -1197,18 +1225,16 @@ const Admin = {
         const listHtml = users.length ? users.map((u, idx) => {
             const safeU = encodeURIComponent(u);
             const recordCount = App.state.records.filter(r => r.u === u).length;
-            const account = App.getUserRecord(u) || { name: '', pw: '' };
-            const realName = account.name ? account.name : '未填寫';
-            const pwStatus = account.pw ? '已設定密碼' : '待學員登入時重新設定密碼';
+            const account = App.getUserRecord(u) || { employeeId: '' };
+            const employeeText = account.employeeId ? account.employeeId : '尚未登錄';
             return `
             <div class="account-card" data-account-user="${Admin.esc(String(u).toLowerCase())}">
                 <input type="checkbox" class="row-check account-select" value="${safeU}" aria-label="選取 ${Admin.esc(u)}">
                 <div>
-                    <div class="account-name"><span class="account-order">${idx + 1}</span>. 代字：${Admin.esc(u)}｜姓名：${Admin.esc(realName)}</div>
-                    <div class="account-meta">成績紀錄：${recordCount} 筆｜密碼狀態：${pwStatus}</div>
+                    <div class="account-name"><span class="account-order">${idx + 1}</span>. 代字：${Admin.esc(u)}</div>
+                    <div class="account-meta">員工編號：${Admin.esc(employeeText)}｜成績紀錄：${recordCount} 筆</div>
                 </div>
                 <div class="account-actions">
-                    <button class="btn btn-warning btn-sm" onclick="Admin.resetUserPassword('${safeU}')">重設密碼</button>
                     <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${safeU}')">刪除帳號</button>
                 </div>
             </div>`;
@@ -1281,14 +1307,7 @@ const Admin = {
         Admin.renderUsers();
     },
     resetUserPassword: function(encodedU) {
-        const u = decodeURIComponent(encodedU);
-        if (!Object.prototype.hasOwnProperty.call(App.state.users, u)) return alert("找不到此帳號。");
-        if (!confirm(`確定要開放「${u}」於登入頁面重新設定密碼嗎？`)) return;
-        const account = App.getUserRecord(u) || { name: '', pw: '' };
-        App.state.users[u] = { name: account.name || '', pw: '' };
-        App.save();
-        alert("✅ 已開放學員於下次登入時重新設定密碼");
-        Admin.renderUsers();
+        alert('目前登入不使用密碼，無需重設密碼。');
     },
     changeAdminPassword: function() {
         const oldPw = prompt("請輸入目前管理員密碼：");
@@ -1367,8 +1386,9 @@ const Admin = {
         const cTarget = courseSelect ? courseSelect.value : 'ALL';
         return App.state.records.map((r, idx) => ({ r, idx })).filter(item => {
             const r = item.r;
+            const employeeId = App.getRecordEmployeeId(r);
             const displayName = App.getRecordName(r);
-            const matchU = String(r.u || '').toLowerCase().includes(uKeyword) || String(displayName || '').toLowerCase().includes(uKeyword);
+            const matchU = String(r.u || '').toLowerCase().includes(uKeyword) || String(employeeId || '').toLowerCase().includes(uKeyword) || String(displayName || '').toLowerCase().includes(uKeyword);
             const matchC = (cTarget === 'ALL' || r.c === cTarget);
             return matchU && matchC;
         }).slice().reverse();
@@ -1377,7 +1397,7 @@ const Admin = {
         const items = this.getFilteredScoreItems();
         if (!items.length) return alert('目前沒有可匯出的測驗成績。');
         const rows = [[
-            '代字', '姓名', '測驗科目', '分數', '考核日期', '測驗狀態', '備註'
+            '代字', '員工編號', '測驗科目', '分數', '及格狀態', '考核日期', '測驗狀態', '備註'
         ]];
         items.forEach(item => {
             const r = item.r;
@@ -1385,9 +1405,10 @@ const Admin = {
             const locked = course ? App.isQuizLocked(r.u, course.id) : false;
             rows.push([
                 r.u || '',
-                App.getRecordName(r),
+                App.getRecordEmployeeId(r),
                 r.c || '',
                 String(r.s ?? ''),
+                Number(r.s) >= PASS_SCORE ? '及格' : '未及格',
                 r.d || '',
                 locked ? '已鎖定' : '可測驗',
                 r.note || ''
@@ -1417,8 +1438,8 @@ const Admin = {
             </div>
             <div class="filter-group">
                 <div class="filter-item">
-                    <label>代字／姓名搜尋</label>
-                    <input type="text" id="searchUser" class="input-field" style="margin:0" placeholder="輸入代字或姓名關鍵字..." oninput="Admin.applyScoreFilter()">
+                    <label>代字／員工編號搜尋</label>
+                    <input type="text" id="searchUser" class="input-field" style="margin:0" placeholder="輸入代字或員工編號關鍵字..." oninput="Admin.applyScoreFilter()">
                 </div>
                 <div class="filter-item">
                     <label>科目類別篩選</label>
@@ -1447,12 +1468,12 @@ const Admin = {
             </div>
             <table>
                 <thead>
-                    <tr><th style="width:42px; text-align:center;">選取</th><th>代字</th><th>姓名</th><th>測驗科目</th><th>分數</th><th>考核日期</th><th>測驗狀態</th><th>操作</th></tr>
+                    <tr><th style="width:42px; text-align:center;">選取</th><th>代字</th><th>員工編號</th><th>測驗科目</th><th>分數</th><th>及格狀態</th><th>考核日期</th><th>測驗狀態</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                     ${filtered.map(item => {
                         const r = item.r;
-                        const displayName = App.getRecordName(r);
+                        const employeeId = App.getRecordEmployeeId(r);
                         const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
                         const locked = course ? App.isQuizLocked(r.u, course.id) : false;
                         const safeUser = String(r.u).replace(/'/g, "\'");
@@ -1460,9 +1481,10 @@ const Admin = {
                         <tr>
                             <td style="text-align:center;"><input type="checkbox" class="row-check score-select" value="${item.idx}" aria-label="選取測驗紀錄"></td>
                             <td>${Admin.esc(r.u || '')}</td>
-                            <td>${Admin.esc(displayName)}</td>
+                            <td>${Admin.esc(employeeId)}</td>
                             <td>${Admin.esc(r.c || '')}</td>
-                            <td style="color:${r.s >= 80 ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
+                            <td style="color:${Number(r.s) >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
+                            <td>${Number(r.s) >= PASS_SCORE ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
                             <td>${r.d}</td>
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
@@ -1473,7 +1495,7 @@ const Admin = {
                             </td>
                         </tr>`;
                     }).join('')}
-                    ${filtered.length === 0 ? '<tr><td colspan="8" style="text-align:center; color:#8b949e">無符合條件的成績紀錄</td></tr>' : ''}
+                    ${filtered.length === 0 ? '<tr><td colspan="9" style="text-align:center; color:#8b949e">無符合條件的成績紀錄</td></tr>' : ''}
                 </tbody>
             </table>
         `;
@@ -1484,6 +1506,17 @@ const Quiz = {
     init: function() {
         if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
         if(!App.activeCourse.questions.length) return alert("本科目尚無考題。");
+        if (!App.isInstructor) {
+            const currentEmployeeId = App.getUserEmployeeId(App.user);
+            const input = prompt("請輸入員工編號：", currentEmployeeId || "");
+            if (!input || !input.trim()) return alert("請輸入員工編號後再進入考核。");
+            App.employeeId = input.trim();
+            const account = App.getUserRecord(App.user) || { employeeId: '', name: '', pw: '' };
+            account.employeeId = App.employeeId;
+            account.pw = '';
+            App.state.users[App.user] = account;
+            App.save();
+        }
         this.ans = new Array(App.activeCourse.questions.length).fill(null);
         document.getElementById('quizContainer').innerHTML = App.activeCourse.questions.map((q, i) => `
             <div class="quiz-question-card" style="background:#1c2128; padding:20px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);" id="q-card-${i}">
@@ -1530,6 +1563,7 @@ const Quiz = {
         if (App.isQuizLocked(App.user, App.activeCourse.id)) return;
         App.state.records.push({
             u: App.user,
+            employeeId: App.employeeId || App.getUserEmployeeId(App.user),
             name: App.getUserName(App.user),
             cid: App.activeCourse.id,
             c: App.activeCourse.title,
@@ -1658,13 +1692,15 @@ const Quiz = {
     finishSubmit: function() {
         const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
         if (!App.isInstructor) {
-            App.state.records.push({u:App.user, name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:new Date().toLocaleString()});
+            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:new Date().toLocaleString()});
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
             App.save();
         }
         App.quizInProgress = false;
         App.clearQuizSession();
-        document.getElementById('finalScore').innerText = score;
+        const finalScoreEl = document.getElementById('finalScore');
+        finalScoreEl.innerText = score;
+        finalScoreEl.style.color = score >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)';
         let resultNote = document.getElementById('resultModeNote');
         if (!resultNote) {
             resultNote = document.createElement('div');
@@ -1673,8 +1709,10 @@ const Quiz = {
             resultNote.style.fontWeight = 'bold';
             document.getElementById('finalScore').insertAdjacentElement('afterend', resultNote);
         }
-        resultNote.innerText = App.isInstructor ? '管理員測試模式，本次分數不列入測驗紀錄。' : '';
-        resultNote.style.color = App.isInstructor ? 'var(--warning-color)' : 'transparent';
+        resultNote.innerText = App.isInstructor
+            ? `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${PASS_SCORE} 分。`
+            : (score >= PASS_SCORE ? `及格（及格標準：${PASS_SCORE} 分）` : `未及格（及格標準：${PASS_SCORE} 分）`);
+        resultNote.style.color = App.isInstructor ? 'var(--warning-color)' : (score >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)');
         App.showSec('sec-res');
     }
 };
