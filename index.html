@@ -522,7 +522,7 @@
 
 
 
-        /* v90：跨平台教材瀏覽修復 */
+        /* v91：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -903,7 +903,7 @@ const Backup = {
 };
 const App = {
     state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, adminPw: "rctp3023" },
-    user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null,
+    user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     save: function() { localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state)); Backend.saveState(this.state); },
     normalizeUsers: function() {
@@ -1253,7 +1253,23 @@ const Admin = {
         App.state.courses.forEach((c, ci) => { 
             new Sortable(document.getElementById(`ql-${ci}`), { handle: '.handle', animation: 150, onEnd: function() { Admin.reindexQuestions(ci); Admin.sync(); } }); 
         });
-    },
+    
+        // 新增題目定位：手動加題後自動捲動到新題目並聚焦
+        if (App.pendingScrollQuestion) {
+            const targetList = document.getElementById(`ql-${App.pendingScrollQuestion.courseIndex}`);
+            const targetRow = targetList ? targetList.querySelectorAll('.q-row')[App.pendingScrollQuestion.questionIndex] : null;
+            setTimeout(() => {
+                if (targetRow) {
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetRow.style.boxShadow = '0 0 0 3px rgba(88,166,255,0.35), 0 2px 8px rgba(0,0,0,0.18)';
+                    const input = targetRow.querySelector('.q-t');
+                    if (input) input.focus();
+                    setTimeout(() => { targetRow.style.boxShadow = ''; }, 1600);
+                }
+                App.pendingScrollQuestion = null;
+            }, 80);
+        }
+},
     toggleCourse: function(id, el) { el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
     sync: function() {
         document.querySelectorAll('.course-item').forEach(item => {
@@ -1287,7 +1303,15 @@ const Admin = {
         });
     },
     addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", questions:[]}); App.save(); Admin.renderEditor(); }},
-    addQ: function(ci) { Admin.sync(); App.state.courses[ci].questions.push({q:"", o:["","","",""], a:0}); Admin.renderEditor(); },
+    addQ: function(ci) {
+        Admin.sync();
+        const course = App.state.courses[ci];
+        if (!course) return;
+        course.questions.push({q:"", o:["","","",""], a:0});
+        App.lastOpenedCourseId = course.id;
+        App.pendingScrollQuestion = { courseIndex: ci, questionIndex: course.questions.length - 1 };
+        Admin.renderEditor();
+    },
     delQ: function(ci, qi) { Admin.sync(); App.state.courses[ci].questions.splice(qi, 1); Admin.renderEditor(); },
     delAllQ: function(ci) {
         Admin.sync();
