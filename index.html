@@ -522,7 +522,7 @@
 
 
 
-        /* v94：跨平台教材瀏覽修復 */
+        /* v95：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v94：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v95：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,10 +654,20 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v94 backup tools safety */
+        /* v95 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
+        }
+
+        /* v95：登入操作保險 */
+        #sec-login.active,
+        #sec-login.active * {
+            pointer-events: auto;
+        }
+        #sec-login .login-card-wrap {
+            position: relative;
+            z-index: 10;
         }
 </style>
 </head>
@@ -1344,8 +1354,6 @@ const Admin = {
                         }
                     }
                 }
-                const titleInput = item.querySelector('.c-title');
-                if (titleInput && titleInput.value.trim()) target.title = titleInput.value.trim();
                 target.embedUrl = item.querySelector('.c-url').value.trim();
                 const passInput = item.querySelector('.c-pass-score');
                 const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
