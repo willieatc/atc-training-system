@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATC 訓練管理系統</title>
+    <title>ATC 專業訓練管理系統</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="config.js"></script>
@@ -522,7 +522,7 @@
 
 
 
-        /* v91：跨平台教材瀏覽修復 */
+        /* v92：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -567,6 +567,47 @@
             #contentBox {
                 min-height: 68vh;
                 height: 68vh;
+            }
+        }
+
+
+        /* v92：各平台登入畫面置中 */
+        #sec-login.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(18px, 4vw, 30px);
+        }
+        .login-card-wrap {
+            margin: 0 auto !important;
+            width: min(400px, 100%) !important;
+        }
+        @media (max-width: 760px) {
+            body {
+                align-items: stretch;
+            }
+            .app-wrapper {
+                width: 100%;
+                min-height: 100vh;
+                align-items: stretch;
+            }
+            @supports (min-height: 100dvh) {
+                .app-wrapper { min-height: 100dvh; }
+            }
+            .main-container {
+                width: 100%;
+                min-height: 100vh;
+                height: auto;
+                border-radius: 0;
+            }
+            @supports (min-height: 100dvh) {
+                .main-container { min-height: 100dvh; }
+            }
+            #sec-login.active {
+                min-height: 100vh;
+            }
+            @supports (min-height: 100dvh) {
+                #sec-login.active { min-height: 100dvh; }
             }
         }
 
@@ -944,6 +985,7 @@ const App = {
     init: async function() {
         if (!Backend.loaded) await Backend.loadState();
         if (!this.state.quizLocks) this.state.quizLocks = {};
+        if (this.state.courses) this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
         this.normalizeUsers();
         this.recoverInterruptedQuiz();
         // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態
@@ -959,6 +1001,10 @@ const App = {
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
         this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: DateUtil.format() };
+    },
+    getPassScore: function(course) {
+        const n = course ? parseInt(course.passScore, 10) : NaN;
+        return Number.isInteger(n) && n >= 0 && n <= 100 ? n : 70;
     },
     unlockQuiz: function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
@@ -996,6 +1042,7 @@ const App = {
                 cid: cid,
                 c: title,
                 s: 0,
+                passScore: App.getPassScore(App.activeCourse),
                 d: DateUtil.format(),
                 note: '測驗頁面刷新或未正常送出，自動記錄零分'
             });
@@ -1198,7 +1245,7 @@ const Admin = {
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
             <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''}" data-id="${c.id}">
                 <div class="course-header" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
-                    <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題</span></strong>
+                    <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70} 分</span></strong>
                     <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
                 </div>
                 <div class="course-content">
@@ -1210,6 +1257,10 @@ const Admin = {
                             </div>
                         </div>
                         <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="請輸入科目名稱">
+                        <div style="margin-top:12px;">
+                            <label style="display:block; font-size:12px; color:#8b949e; margin-bottom:5px;">及格分數</label>
+                            <input type="number" min="0" max="100" class="input-field c-pass-score" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70}" placeholder="請輸入及格分數" style="max-width:180px;">
+                        </div>
                     </div>
                     <div class="editor-card">
                         <div class="editor-card-title">
@@ -1293,7 +1344,12 @@ const Admin = {
                         }
                     }
                 }
+                const titleInput = item.querySelector('.c-title');
+                if (titleInput && titleInput.value.trim()) target.title = titleInput.value.trim();
                 target.embedUrl = item.querySelector('.c-url').value.trim();
+                const passInput = item.querySelector('.c-pass-score');
+                const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
+                target.passScore = Number.isInteger(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 70;
                 target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => ({
                     q: row.querySelector('.q-t').value,
                     o: Array.from(row.querySelectorAll('.q-o')).map(o => o.value),
@@ -1302,7 +1358,7 @@ const Admin = {
             }
         });
     },
-    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", questions:[]}); App.save(); Admin.renderEditor(); }},
+    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", passScore:70, questions:[]}); App.save(); Admin.renderEditor(); }},
     addQ: function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
@@ -1554,7 +1610,7 @@ const Admin = {
         const items = this.getFilteredScoreItems();
         if (!items.length) return alert('目前沒有可匯出的測驗成績。');
         const rows = [[
-            '代字', '員工編號', '測驗科目', '分數', '及格狀態', '考核日期', '測驗狀態', '備註'
+            '代字', '員工編號', '測驗科目', '分數', '及格分數', '及格狀態', '考核日期', '測驗狀態', '備註'
         ]];
         items.forEach(item => {
             const r = item.r;
