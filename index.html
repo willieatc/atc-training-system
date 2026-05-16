@@ -522,7 +522,7 @@
 
 
 
-        /* v95：跨平台教材瀏覽修復 */
+        /* v96：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v95：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v96：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v95 backup tools safety */
+        /* v96 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v95：登入操作保險 */
+        /* v96：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -669,6 +669,29 @@
             position: relative;
             z-index: 10;
         }
+
+        /* v96：科目名稱與及格分數整合 */
+        .course-setting-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 150px;
+            gap: 12px;
+            align-items: end;
+        }
+        .course-setting-grid label {
+            display: block;
+            font-size: 12px;
+            color: #8b949e;
+            margin-bottom: 5px;
+        }
+        .course-setting-grid .input-field {
+            margin: 0;
+        }
+        @media (max-width: 640px) {
+            .course-setting-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -1262,14 +1285,19 @@ const Admin = {
                     <div class="editor-card">
                         <div class="editor-card-title">
                             <div>
-                                <h4>科目名稱</h4>
-                                <div class="editor-helper">修改科目名稱，按下儲存變更即完成。</div>
+                                <h4>科目設定</h4>
+                                <div class="editor-helper">修改科目名稱或及格分數，按下儲存變更即完成。</div>
                             </div>
                         </div>
-                        <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="請輸入科目名稱">
-                        <div style="margin-top:12px;">
-                            <label style="display:block; font-size:12px; color:#8b949e; margin-bottom:5px;">及格分數</label>
-                            <input type="number" min="0" max="100" class="input-field c-pass-score" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70}" placeholder="請輸入及格分數" style="max-width:180px;">
+                        <div class="course-setting-grid">
+                            <div>
+                                <label>科目名稱</label>
+                                <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="請輸入科目名稱">
+                            </div>
+                            <div>
+                                <label>及格分數</label>
+                                <input type="number" min="0" max="100" class="input-field c-pass-score" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70}" placeholder="及格分數">
+                            </div>
                         </div>
                     </div>
                     <div class="editor-card">
