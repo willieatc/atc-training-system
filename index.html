@@ -522,7 +522,7 @@
 
 
 
-        /* v96：跨平台教材瀏覽修復 */
+        /* v97：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v96：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v97：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v96 backup tools safety */
+        /* v97 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v96：登入操作保險 */
+        /* v97：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v96：科目名稱與及格分數整合 */
+        /* v97：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -1266,7 +1266,10 @@ const Admin = {
         const listDiv = document.getElementById('panel-edit');
         listDiv.innerHTML = `
             <div class="sticky-header">
-                <h3>📚 教材與題庫編輯</h3>
+                <div>
+                    <h3>📚 教材與題庫編輯</h3>
+                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材及題庫記得按下儲存變更才會生效。</div>
+                </div>
                 <div class="header-actions">
                     <button class="btn btn-outline btn-sm" onclick="Admin.downloadTemplate()">📁 下載範本</button>
                     <button class="btn btn-primary btn-sm" onclick="Admin.addCourse()">➕ 新增科目</button>
@@ -1286,7 +1289,7 @@ const Admin = {
                         <div class="editor-card-title">
                             <div>
                                 <h4>科目設定</h4>
-                                <div class="editor-helper">修改科目名稱或及格分數，按下儲存變更即完成。</div>
+                                
                             </div>
                         </div>
                         <div class="course-setting-grid">
