@@ -522,7 +522,7 @@
 
 
 
-        /* v92：跨平台教材瀏覽修復 */
+        /* v94：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,43 +571,37 @@
         }
 
 
-        /* v92：各平台登入畫面置中 */
+        /* v94：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
             justify-content: center;
             padding: clamp(18px, 4vw, 30px);
+            min-height: 100%;
+            overflow-y: auto;
         }
-        .login-card-wrap {
+        #sec-login .login-card-wrap {
+            position: relative;
+            z-index: 5;
             margin: 0 auto !important;
             width: min(400px, 100%) !important;
+            pointer-events: auto;
+        }
+        #sec-login input,
+        #sec-login select,
+        #sec-login button {
+            pointer-events: auto;
         }
         @media (max-width: 760px) {
-            body {
-                align-items: stretch;
-            }
-            .app-wrapper {
-                width: 100%;
-                min-height: 100vh;
-                align-items: stretch;
-            }
-            @supports (min-height: 100dvh) {
-                .app-wrapper { min-height: 100dvh; }
-            }
             .main-container {
-                width: 100%;
-                min-height: 100vh;
-                height: auto;
+                width: min(100vw, 1280px);
+                height: 100dvh;
+                min-height: 100dvh;
                 border-radius: 0;
             }
-            @supports (min-height: 100dvh) {
-                .main-container { min-height: 100dvh; }
-            }
             #sec-login.active {
-                min-height: 100vh;
-            }
-            @supports (min-height: 100dvh) {
-                #sec-login.active { min-height: 100dvh; }
+                min-height: 100dvh;
+                padding: 20px;
             }
         }
 
@@ -659,7 +653,13 @@
         .account-name { font-size:15px; font-weight:700; color:#fff; }
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    </style>
+    
+        /* v94 backup tools safety */
+        #sec-login ~ .backup-floating-tools,
+        #sec-login .backup-floating-tools {
+            display: none !important;
+        }
+</style>
 </head>
 <body oncontextmenu="return false;"> 
 
