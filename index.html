@@ -522,7 +522,7 @@
 
 
 
-        /* v100：跨平台教材瀏覽修復 */
+        /* v101：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v100：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v101：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v100 backup tools safety */
+        /* v101 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v100：登入操作保險 */
+        /* v101：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v100：科目名稱與及格分數整合 */
+        /* v101：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -891,7 +891,7 @@ const DateUtil = {
 };
 
 const Backup = {
-    version: 'sheets_v81_backup_floating_tools',
+    version: 'sheets_v101_backup_floating_tools',
     buildEnvelope: function() {
         const state = JSON.parse(JSON.stringify(App.state || {}));
         return {
@@ -1275,10 +1275,12 @@ const Admin = {
         const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
         link.setAttribute("download", "題庫匯入範本.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
     },
+
     exportCourseQuestions: function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
         if (!course) return alert("找不到科目資料。");
+
         const questions = Array.isArray(course.questions) ? course.questions : [];
         if (!questions.length) return alert("本科目目前沒有題目可匯出。");
 
@@ -1296,21 +1298,22 @@ const Admin = {
             ]);
         });
 
-        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\\n');
+        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\n');
         const safeTitle = String(course.title || '題庫')
-            .replace(/[\\\\/:*?"<>|]/g, '_')
-            .replace(/\\s+/g, '_')
+            .replace(/[\\/:*?"<>|]/g, '_')
+            .replace(/\s+/g, '_')
             .slice(0, 40);
-        const stamp = DateUtil.format().replace(/[/:\\s]/g, '');
-        const blob = new Blob(["\\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const stamp = DateUtil.format().replace(/[\/:\s]/g, '');
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.setAttribute("download", `${safeTitle}_題庫_${stamp}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+        setTimeout(() => URL.revokeObjectURL(link.href), 0);
     },
+
     renderEditor: function() {
         const listDiv = document.getElementById('panel-edit');
         listDiv.innerHTML = `
