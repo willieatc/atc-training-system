@@ -522,7 +522,7 @@
 
 
 
-        /* v97：跨平台教材瀏覽修復 */
+        /* v99：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v97：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v99：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v97 backup tools safety */
+        /* v99 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v97：登入操作保險 */
+        /* v99：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v97：科目名稱與及格分數整合 */
+        /* v99：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -1036,8 +1036,20 @@ const App = {
         this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: DateUtil.format() };
     },
     getPassScore: function(course) {
+        if (!course && this.activeCourse) course = this.activeCourse;
+        if (course && course.id && this.state && Array.isArray(this.state.courses)) {
+            const latest = this.state.courses.find(c => String(c.id) === String(course.id));
+            if (latest) course = latest;
+        }
         const n = course ? parseInt(course.passScore, 10) : NaN;
         return Number.isInteger(n) && n >= 0 && n <= 100 ? n : 70;
+    },
+    refreshActiveCourse: function() {
+        if (this.activeCourse && this.activeCourse.id && this.state && Array.isArray(this.state.courses)) {
+            const latest = this.state.courses.find(c => String(c.id) === String(this.activeCourse.id));
+            if (latest) this.activeCourse = latest;
+        }
+        return this.activeCourse;
     },
     unlockQuiz: function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
@@ -1138,6 +1150,7 @@ const App = {
         this.openView(isReview);
     },
     openView: function(isReview) {
+        this.refreshActiveCourse();
         document.getElementById('viewTitle').innerText = this.activeCourse.title;
         let url = (this.activeCourse.embedUrl || "").trim();
         if (url.includes('<iframe')) { const match = url.match(/src=["']([^"']+)["']/); if (match) url = match[1]; }
@@ -1261,7 +1274,43 @@ const Admin = {
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
         link.setAttribute("download", "題庫匯入範本.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    },
+    },,
+    exportCourseQuestions: function(ci) {
+        Admin.sync();
+        const course = App.state.courses[ci];
+        if (!course) return alert("找不到科目資料。");
+        const questions = Array.isArray(course.questions) ? course.questions : [];
+        if (!questions.length) return alert("本科目目前沒有題目可匯出。");
+
+        const rows = [
+            ['題目 (Question)', '選項列表 (以半形逗號分隔)', '正確答案索引 (1-4)', '備註說明']
+        ];
+
+        questions.forEach((q, index) => {
+            const opts = Array.isArray(q.o) ? q.o : [];
+            rows.push([
+                q.q || '',
+                opts.join(','),
+                Number.isInteger(parseInt(q.a, 10)) ? String(parseInt(q.a, 10) + 1) : '1',
+                `Q${index + 1}`
+            ]);
+        });
+
+        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\\n');
+        const safeTitle = String(course.title || '題庫')
+            .replace(/[\\\\/:*?"<>|]/g, '_')
+            .replace(/\\s+/g, '_')
+            .slice(0, 40);
+        const stamp = DateUtil.format().replace(/[/:\\s]/g, '');
+        const blob = new Blob(["\\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `${safeTitle}_題庫_${stamp}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
     renderEditor: function() {
         const listDiv = document.getElementById('panel-edit');
         listDiv.innerHTML = `
@@ -1317,9 +1366,10 @@ const Admin = {
                         <div class="question-toolbar">
                             <div>
                                 <h4>題庫內容</h4>
-                                <div class="editor-helper">可手動新增題目或用CSV快速匯入；拖曳 ［☰］ 可調整題目順序。</div>
+                                <div class="editor-helper">可手動新增題目，或用 CSV 匯入／匯出題庫；拖曳 ［☰］ 可調整題目順序。</div>
                             </div>
                             <div class="question-actions">
+                                <button class="btn btn-outline btn-sm" onclick="Admin.exportCourseQuestions(${ci})">📤 匯出題庫</button>
                                 <button class="btn btn-outline btn-sm" onclick="document.getElementById('f-csv-${ci}').click()">📥 匯入 CSV</button>
                                 <input type="file" id="f-csv-${ci}" class="hidden" accept=".csv" onchange="Admin.impCSV(event, ${ci})">
                                 <button class="btn btn-primary btn-sm" onclick="Admin.addQ(${ci})">➕ 手動加題</button>
@@ -1838,6 +1888,7 @@ const Quiz = {
         App.showSec('sec-view');
     },
     submit: function() {
+        App.refreshActiveCourse();
         const missingIndexes = this.ans.map((a, i) => a === null ? i : -1).filter(i => i >= 0);
         document.querySelectorAll('.quiz-question-card').forEach(card => {
             card.classList.remove('q-card-unanswered');
