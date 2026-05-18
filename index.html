@@ -522,7 +522,7 @@
 
 
 
-        /* v101：跨平台教材瀏覽修復 */
+        /* v102：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v101：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v102：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v101 backup tools safety */
+        /* v102 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v101：登入操作保險 */
+        /* v102：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v101：科目名稱與及格分數整合 */
+        /* v102：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -689,6 +689,45 @@
         @media (max-width: 640px) {
             .course-setting-grid {
                 grid-template-columns: 1fr;
+            }
+        }
+
+
+        /* v102：本地備份匯出／匯入按鈕 */
+        .backup-floating-tools {
+            position: absolute;
+            right: 18px;
+            bottom: 18px;
+            z-index: 1500;
+            display: none;
+            gap: 8px;
+            align-items: center;
+            justify-content: flex-end;
+            max-width: calc(100% - 36px);
+            pointer-events: auto;
+        }
+        .section.active#sec-admin ~ .backup-floating-tools,
+        #sec-admin.active .backup-floating-tools {
+            display: flex;
+        }
+        .backup-floating-tools .btn {
+            padding: 6px 10px;
+            font-size: 12px;
+            min-width: auto;
+            height: 30px;
+            white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+        }
+        @media (max-width: 760px) {
+            .backup-floating-tools {
+                right: 10px;
+                bottom: 10px;
+                flex-direction: column;
+                align-items: flex-end;
+            }
+            .backup-floating-tools .btn {
+                padding: 6px 9px;
+                font-size: 12px;
             }
         }
 
@@ -891,7 +930,7 @@ const DateUtil = {
 };
 
 const Backup = {
-    version: 'sheets_v101_backup_floating_tools',
+    version: 'sheets_v102_backup_floating_tools',
     buildEnvelope: function() {
         const state = JSON.parse(JSON.stringify(App.state || {}));
         return {
@@ -1209,10 +1248,15 @@ const App = {
     toHome: function() { this.quizInProgress = false; this.employeeId = ""; this.clearQuizSession(); this.showSec('sec-login'); this.init(); },
     toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
     logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
+    toggleBackupTools: function(id) {
+        const box = document.getElementById('backupFloatingTools');
+        if (box) box.style.display = (id === 'sec-admin' && this.isInstructor) ? 'flex' : 'none';
+    },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.getElementById('global-nav-rail').style.display = (id === 'sec-quiz' || id === 'sec-admin') ? 'flex' : 'none';
+        this.toggleBackupTools(id);
         const backupTools = document.getElementById('backupFloatingTools');
         if (backupTools) backupTools.classList.toggle('active', id === 'sec-admin' && this.isInstructor);
     },
