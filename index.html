@@ -522,7 +522,7 @@
 
 
 
-        /* v103：跨平台教材瀏覽修復 */
+        /* v111：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v103：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v111：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v103 backup tools safety */
+        /* v111 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v103：登入操作保險 */
+        /* v111：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v103：科目名稱與及格分數整合 */
+        /* v111：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,35 +692,18 @@
             }
         }
 
-
-        /* v103：本地備份固定於主框右下角 */
-        #backupFloatingTools {
-            position: absolute;
-            right: 18px;
-            bottom: 18px;
-            z-index: 3000;
-            display: none;
+        /* v111：備份按鈕置於管理員登出下方並列 */
+        .backup-inline-tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
-            align-items: center;
-            justify-content: flex-end;
-            max-width: calc(100% - 36px);
-            pointer-events: auto;
+            margin-bottom: 10px;
         }
-        #backupFloatingTools .btn {
-            padding: 6px 10px;
+        .backup-inline-tools .btn {
+            width: 100%;
+            padding: 6px 8px;
             font-size: 12px;
-            min-width: auto;
-            height: 30px;
-            white-space: nowrap;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.35);
-        }
-        @media (max-width: 760px) {
-            #backupFloatingTools {
-                right: 10px;
-                bottom: 10px;
-                flex-direction: column;
-                align-items: flex-end;
-            }
+            min-height: 30px;
         }
 
 </style>
@@ -780,6 +763,7 @@
             <div style="margin:auto; text-align:center; width:min(960px, 100%);">
                 <h1>考核結果</h1>
                 <div id="finalScore" style="font-size:100px; color:var(--success-color); font-weight:bold;">0</div>
+                <div id="resultPassNote" style="margin:0 0 12px 0; font-size:18px; font-weight:bold;"></div>
                 <div id="resultAnswerArea" class="result-answer-area hidden"></div>
                 <button class="btn btn-primary" onclick="App.toHome()">回到首頁</button>
             </div>
@@ -796,13 +780,18 @@
                     </div>
                     <button class="btn btn-primary btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.adminOpenCourseTester()">進入教材/測驗</button>
                     <button class="btn btn-warning btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.logoutInstructor()">管理員登出</button>
+                    <div class="backup-inline-tools">
+                        <button class="btn btn-success btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
+                        <button class="btn btn-primary btn-sm" onclick="document.getElementById('backupImportFile').click()">匯入備份</button>
+                    </div>
+                    <input type="file" id="backupImportFile" accept=".json,application/json" class="hidden" onchange="Backup.importLocal(this)">
                     <button class="btn btn-outline btn-sm" style="width:100%;" onclick="App.toHome()">返回首頁</button>
                 </div>
                 <div class="admin-content scroll-area" id="adminContent">
                     <div id="panel-rec" class="hidden"><div id="userTable"></div></div>
                     <div id="panel-score" class="hidden"></div>
                     <div id="panel-edit" class="hidden"></div>
-                </div>
+</div>
             </div>
         </div>
     <div id="backupFloatingTools" class="backup-floating-tools" aria-label="本地備份工具">
@@ -810,19 +799,11 @@
         <button class="btn btn-primary btn-sm" onclick="Backup.pickImportFile()">匯入備份</button>
     </div>
     </div>
-
-        <div id="backupFloatingTools">
-            <button class="btn btn-outline btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
-            <button class="btn btn-primary btn-sm" onclick="document.getElementById('backupImportFile').click()">匯入備份</button>
-            <input type="file" id="backupImportFile" accept=".json,application/json" class="hidden" onchange="Backup.importLocal(this)">
-        </div>
     <div id="global-nav-rail" class="nav-tools-rail">
         <button class="nav-btn-circle" onclick="App.scrollSide(0)">▲</button>
         <button class="nav-btn-circle" onclick="App.scrollSide(1)">▼</button>
     </div>
 </div>
-<input type="file" id="backupImportFile" class="hidden" accept="application/json,.json" onchange="Backup.importLocal(event)">
-
 <div id="answerReviewOverlay" class="review-modal-overlay" aria-hidden="true">
     <div id="answerReviewModal" class="review-modal" role="dialog" aria-modal="true" aria-labelledby="answerReviewTitle">
         <div id="answerReviewHeader" class="review-modal-header">
@@ -931,21 +912,23 @@ const DateUtil = {
 const Backup = {
     exportLocal: function() {
         try {
-            const state = (window.App && App.state) ? App.state : {};
+            if (!window.App || !App.state) return alert("目前沒有可匯出的系統資料。");
             const payload = {
                 version: "ATC_SHEETS_BACKUP_V1",
                 exportedAt: (window.DateUtil && DateUtil.format) ? DateUtil.format() : new Date().toISOString(),
-                state: state
+                state: App.state
             };
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-            const stamp = ((window.DateUtil && DateUtil.format) ? DateUtil.format() : new Date().toISOString()).replace(/[\/:\s\-T.]/g, "").slice(0, 14);
+            const rawTime = (window.DateUtil && DateUtil.format) ? DateUtil.format() : new Date().toISOString();
+            const stamp = String(rawTime).replace(/[\/:\s\-T.]/g, "").slice(0, 14);
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
+            link.href = url;
             link.download = `ATC本地備份_${stamp}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            setTimeout(() => URL.revokeObjectURL(link.href), 0);
+            setTimeout(() => URL.revokeObjectURL(url), 500);
         } catch (err) {
             alert("匯出本地備份失敗：" + (err && err.message ? err.message : err));
         }
@@ -959,10 +942,12 @@ const Backup = {
                 const data = JSON.parse(ev.target.result);
                 const state = data && data.state ? data.state : data;
                 if (!state || typeof state !== "object") throw new Error("備份檔格式不正確。");
+
                 if (!Array.isArray(state.courses)) state.courses = [];
-                if (!state.records) state.records = [];
-                if (!state.users) state.users = {};
-                if (!state.quizLocks) state.quizLocks = {};
+                if (!Array.isArray(state.records)) state.records = [];
+                if (!state.users || typeof state.users !== "object") state.users = {};
+                if (!state.quizLocks || typeof state.quizLocks !== "object") state.quizLocks = {};
+                if (!state.quizUnlocks || typeof state.quizUnlocks !== "object") state.quizUnlocks = {};
                 if (!state.adminPw) state.adminPw = "rctp3023";
                 state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
 
@@ -988,18 +973,12 @@ const Backup = {
             }
         };
         reader.readAsText(file, "UTF-8");
-    },
-    updateVisibility: function() {
-        const box = document.getElementById("backupFloatingTools");
-        if (!box || !window.App) return;
-        const isAdmin = App.isInstructor && document.getElementById("sec-admin") && document.getElementById("sec-admin").classList.contains("active");
-        box.style.display = isAdmin ? "flex" : "none";
     }
 };
 
 
 const App = {
-    state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, adminPw: "rctp3023" },
+    state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
     user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     save: function() { localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state)); Backend.saveState(this.state); },
@@ -1041,21 +1020,30 @@ const App = {
     init: async function() {
         if (!Backend.loaded) await Backend.loadState();
         if (!this.state.quizLocks) this.state.quizLocks = {};
+        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
         if (this.state.courses) this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
         this.normalizeUsers();
         this.recoverInterruptedQuiz();
         // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態
         (this.state.records || []).forEach(r => {
             const course = this.state.courses.find(c => c.id === r.cid || c.title === r.c);
-            if (course && !this.isQuizLocked(r.u, course.id)) this.lockQuiz(r.u, course.id, course.title);
+            if (course && !this.isQuizLocked(r.u, course.id) && !this.isQuizExplicitlyUnlocked(r.u, course.id)) {
+                this.lockQuiz(r.u, course.id, course.title);
+            }
         });
         this.save();
         this.renderSelects(); this.updateLoginStatus(); this.syncUI();
     },
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
+    unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
+    isQuizExplicitlyUnlocked: function(user, courseId) {
+        return !!(this.state.quizUnlocks && this.state.quizUnlocks[this.unlockKey(user, courseId)]);
+    },
     isQuizLocked: function(user, courseId) { return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]); },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
+        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+        delete this.state.quizUnlocks[this.unlockKey(user, courseId)];
         this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: DateUtil.format() };
     },
     getPassScore: function(course) {
@@ -1076,7 +1064,13 @@ const App = {
     },
     unlockQuiz: function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
+        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
         delete this.state.quizLocks[this.lockKey(user, courseId)];
+        this.state.quizUnlocks[this.unlockKey(user, courseId)] = {
+            u: user,
+            cid: courseId,
+            d: DateUtil.format()
+        };
         this.save();
     },
     beginQuizSession: function() {
@@ -1231,12 +1225,11 @@ const App = {
     },
     toHome: function() { this.quizInProgress = false; this.employeeId = ""; this.clearQuizSession(); this.showSec('sec-login'); this.init(); },
     toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
-    logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); if (window.Backup) Backup.updateVisibility(); },
+    logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.getElementById('global-nav-rail').style.display = (id === 'sec-quiz' || id === 'sec-admin') ? 'flex' : 'none';
-        if (window.Backup) Backup.updateVisibility();
         const backupTools = document.getElementById('backupFloatingTools');
         if (backupTools) backupTools.classList.toggle('active', id === 'sec-admin' && this.isInstructor);
     },
@@ -2052,7 +2045,14 @@ const Quiz = {
         App.clearQuizSession();
         const finalScoreEl = document.getElementById('finalScore');
         finalScoreEl.innerText = score;
-        finalScoreEl.style.color = score >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)';
+        const passScoreNow = App.getPassScore(App.refreshActiveCourse());
+        const passedNow = score >= passScoreNow;
+        finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+        const resultPassNote = document.getElementById('resultPassNote');
+        if (resultPassNote) {
+            resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
+            resultPassNote.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+        }
         let resultNote = document.getElementById('resultModeNote');
         if (!resultNote) {
             resultNote = document.createElement('div');
@@ -2061,10 +2061,8 @@ const Quiz = {
             resultNote.style.fontWeight = 'bold';
             document.getElementById('finalScore').insertAdjacentElement('afterend', resultNote);
         }
-        resultNote.innerText = App.isInstructor
-            ? `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${PASS_SCORE} 分。`
-            : (score >= PASS_SCORE ? `及格（及格標準：${PASS_SCORE} 分）` : `未及格（及格標準：${PASS_SCORE} 分）`);
-        resultNote.style.color = App.isInstructor ? 'var(--warning-color)' : (score >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)');
+        resultNote.innerText = App.isInstructor ? '管理員測試模式，本次分數不列入測驗紀錄。' : '';
+        resultNote.style.color = App.isInstructor ? 'var(--warning-color)' : 'transparent';
         this.renderResultAnswers();
         App.showSec('sec-res');
     }
