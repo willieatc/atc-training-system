@@ -522,7 +522,7 @@
 
 
 
-        /* v113：跨平台教材瀏覽修復 */
+        /* v114：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v113：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v114：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v113 backup tools safety */
+        /* v114 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v113：登入操作保險 */
+        /* v114：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v113：科目名稱與及格分數整合 */
+        /* v114：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v113：備份按鈕置於管理員登出下方並列 */
+        /* v114：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -912,18 +912,38 @@ const DateUtil = {
 const Backup = {
     exportLocal: async function() {
         try {
-            if (typeof App === "undefined") return alert("系統尚未完成初始化，請稍後再試。");
+            let state = null;
 
-            // 匯出前先嘗試從 Google Sheets 重新讀取，避免前端狀態尚未同步而誤判無資料。
-            if (window.Backend && Backend.enabled && Backend.enabled()) {
+            // 優先使用目前系統狀態；若 App 尚未可用，改從 localStorage 讀取。
+            try {
+                if (typeof App !== "undefined" && App && App.state) {
+                    // 若可連線雲端，先嘗試同步最新資料。
+                    if (typeof Backend !== "undefined" && Backend.enabled && Backend.enabled()) {
+                        try {
+                            await Backend.loadState();
+                        } catch (syncErr) {
+                            console.warn("Backup export cloud refresh failed; using current/local state.", syncErr);
+                        }
+                    }
+                    state = App.state;
+                }
+            } catch (appErr) {
+                console.warn("App state unavailable; falling back to localStorage.", appErr);
+            }
+
+            if (!state) {
                 try {
-                    await Backend.loadState();
-                } catch (syncErr) {
-                    console.warn("Backup export cloud refresh failed; using local state.", syncErr);
+                    state = JSON.parse(localStorage.getItem("ATC_PRO_CLOUD") || "null");
+                } catch (lsErr) {
+                    console.warn("localStorage backup state parse failed.", lsErr);
                 }
             }
 
-            const state = App.state || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" };
+            // 即使沒有任何資料，也建立完整空白結構，避免顯示無法匯出。
+            if (!state || typeof state !== "object") {
+                state = { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" };
+            }
+
             if (!Array.isArray(state.courses)) state.courses = [];
             if (!Array.isArray(state.records)) state.records = [];
             if (!state.users || typeof state.users !== "object") state.users = {};
@@ -931,14 +951,16 @@ const Backup = {
             if (!state.quizUnlocks || typeof state.quizUnlocks !== "object") state.quizUnlocks = {};
             if (!state.adminPw) state.adminPw = "rctp3023";
 
+            const nowText = (typeof DateUtil !== "undefined" && DateUtil.format) ? DateUtil.format() : new Date().toISOString();
             const payload = {
                 version: "ATC_SHEETS_BACKUP_V1",
-                exportedAt: (window.DateUtil && DateUtil.format) ? DateUtil.format() : new Date().toISOString(),
+                exportedAt: nowText,
+                source: (typeof App !== "undefined" && App && App.state) ? "app-state" : "localStorage-fallback",
                 state: state
             };
+
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-            const rawTime = (window.DateUtil && DateUtil.format) ? DateUtil.format() : new Date().toISOString();
-            const stamp = String(rawTime).replace(/[\/\:\s\-T.]/g, "").slice(0, 14);
+            const stamp = String(nowText).replace(/[\/\:\s\-T.]/g, "").slice(0, 14) || String(Date.now());
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
