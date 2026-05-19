@@ -522,7 +522,7 @@
 
 
 
-        /* v117：跨平台教材瀏覽修復 */
+        /* v118：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v117：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v118：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v117 backup tools safety */
+        /* v118 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v117：登入操作保險 */
+        /* v118：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v117：科目名稱與及格分數整合 */
+        /* v118：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v117：備份按鈕置於管理員登出下方並列 */
+        /* v118：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1626,6 +1626,20 @@ const Admin = {
             }
         }; r.readAsText(f, 'UTF-8');
     },
+    refreshCourseHeaderBadges: function() {
+        document.querySelectorAll('.course-item').forEach(item => {
+            const cid = parseInt(item.dataset.id);
+            const course = App.state.courses.find(c => c.id === cid);
+            if (!course) return;
+            const titleSpan = item.querySelector('.course-header strong span:first-child');
+            const badge = item.querySelector('.course-count-badge');
+            if (titleSpan) titleSpan.innerText = course.title || '';
+            if (badge) {
+                const qCount = Array.isArray(course.questions) ? course.questions.length : 0;
+                badge.innerText = `${qCount} 題｜及格 ${App.getPassScore(course)} 分`;
+            }
+        });
+    },
     saveAll: async function(evt) {
         Admin.sync();
         const btn = evt && evt.currentTarget ? evt.currentTarget : null;
@@ -1635,15 +1649,14 @@ const Admin = {
             btn.innerText = '儲存同步中...';
         }
         try {
-            // 先立即寫入本機，避免畫面或登入頁回到舊資料。
+            // 先立即寫入本機並更新登入頁科目，不重新渲染整個題庫編輯器。
             App.saveLocalOnly();
             App.renderSelects();
 
-            // 再等待 Google Sheets 完成同步。
+            // 等待 Google Sheets 完成同步。
             await App.save();
 
-            Admin.renderEditor();
-            App.renderSelects();
+            Admin.refreshCourseHeaderBadges();
             alert("✅ 變更已儲存並同步完成");
         } catch (err) {
             console.error(err);
