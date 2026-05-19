@@ -522,7 +522,7 @@
 
 
 
-        /* v122：跨平台教材瀏覽修復 */
+        /* v123：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v122：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v123：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v122 backup tools safety */
+        /* v123 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v122：登入操作保險 */
+        /* v123：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v122：科目名稱與及格分數整合 */
+        /* v123：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v122：備份按鈕置於管理員登出下方並列 */
+        /* v123：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -707,7 +707,7 @@
         }
 
 
-        /* v122：手機後台先顯示功能選單，點選後再展開內容 */
+        /* v123：手機後台先顯示功能選單，點選後再展開內容 */
         .admin-mobile-current {
             display: none;
         }
@@ -799,7 +799,7 @@
         }
 
 
-        /* v122：手機後台頁首／頁尾快捷按鈕 */
+        /* v123：手機後台頁首／頁尾快捷按鈕 */
         .admin-mobile-jump-tools {
             display: none;
         }
@@ -827,7 +827,7 @@
         }
 
 
-        /* v122：教材播放器黑邊縮小，手機版完整顯示開始考核按鈕 */
+        /* v123：教材播放器黑邊縮小，手機版完整顯示開始考核按鈕 */
         #contentBox {
             background: #05070a;
             padding: 0;
@@ -919,6 +919,61 @@
             #viewActionArea .btn,
             #viewActionArea button {
                 min-height: 40px;
+            }
+        }
+
+
+        /* v123：手機教材畫面置中，保留按鈕可視空間 */
+        @media (max-width: 760px) {
+            #sec-view.active {
+                display: flex;
+                flex-direction: column;
+                overflow-y: auto;
+                padding: 12px;
+            }
+            #sec-view.active #contentBox {
+                width: 100%;
+                max-width: 100%;
+                margin-left: auto;
+                margin-right: auto;
+                align-self: center;
+                height: 54vh !important;
+                flex: 0 0 54vh !important;
+            }
+            @supports (height: 100dvh) {
+                #sec-view.active #contentBox {
+                    height: 54dvh !important;
+                    flex-basis: 54dvh !important;
+                }
+            }
+            #viewActionArea {
+                position: relative;
+                z-index: 5;
+                flex-shrink: 0;
+                margin-top: 10px !important;
+                padding-bottom: max(18px, env(safe-area-inset-bottom));
+                background: var(--panel-color);
+            }
+            #viewActionArea > div {
+                width: 100%;
+            }
+        }
+        @media (max-width: 480px) {
+            #sec-view.active #contentBox {
+                height: 50vh !important;
+                flex-basis: 50vh !important;
+            }
+            @supports (height: 100dvh) {
+                #sec-view.active #contentBox {
+                    height: 50dvh !important;
+                    flex-basis: 50dvh !important;
+                }
+            }
+        }
+        @media (orientation: landscape) and (max-height: 620px) {
+            #sec-view.active #contentBox {
+                height: 50vh !important;
+                flex-basis: 50vh !important;
             }
         }
 
@@ -1059,7 +1114,7 @@ const Backend = {
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
-        // v122：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
+        // v123：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
         if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
             this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
             this.loaded = true;
@@ -1921,7 +1976,7 @@ const Admin = {
             btn.innerText = '已存本機，雲端同步中...';
         }
 
-        // v122 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
+        // v123 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
         App.saveLocalOnly();
         App.renderSelects();
         Admin.refreshCourseHeaderBadges();
