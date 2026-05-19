@@ -522,7 +522,7 @@
 
 
 
-        /* v118：跨平台教材瀏覽修復 */
+        /* v119：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v118：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v119：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v118 backup tools safety */
+        /* v119 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v118：登入操作保險 */
+        /* v119：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v118：科目名稱與及格分數整合 */
+        /* v119：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v118：備份按鈕置於管理員登出下方並列 */
+        /* v119：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -838,6 +838,12 @@ const Backend = {
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
+        // v119：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
+        if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
+            this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
+            this.loaded = true;
+            return false;
+        }
         this.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
         try {
             const url = SHEETS_WEB_APP_URL + (SHEETS_WEB_APP_URL.includes('?') ? '&' : '?') + 'action=getState&ts=' + Date.now();
@@ -879,6 +885,7 @@ const Backend = {
             });
             const data = await res.json();
             if (!data || !data.ok) throw new Error(data && data.error ? data.error : '儲存失敗');
+            localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
             return true;
         } catch (err) {
@@ -1020,14 +1027,29 @@ const App = {
     user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     savePromise: null,
+    markPendingCloudSync: function() {
+        localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
+    },
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        this.markPendingCloudSync();
         this.savePromise = Backend.saveState(JSON.parse(JSON.stringify(this.state)));
         return this.savePromise;
     },
     saveLocalOnly: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
         return true;
+    },
+    saveBackground: function() {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        this.markPendingCloudSync();
+        const snapshot = JSON.parse(JSON.stringify(this.state));
+        this.savePromise = Backend.saveState(snapshot)
+            .catch(err => {
+                console.error('Background cloud save failed:', err);
+                Backend.setStatus('雲端同步失敗，已保留本機資料', 'var(--danger-color)');
+            });
+        return this.savePromise;
     },
     normalizeUsers: function() {
         if (!this.state.users) this.state.users = {};
@@ -1640,32 +1662,34 @@ const Admin = {
             }
         });
     },
-    saveAll: async function(evt) {
+    saveAll: function(evt) {
         Admin.sync();
         const btn = evt && evt.currentTarget ? evt.currentTarget : null;
         const oldText = btn ? btn.innerText : '';
         if (btn) {
             btn.disabled = true;
-            btn.innerText = '儲存同步中...';
+            btn.innerText = '已存本機，雲端同步中...';
         }
-        try {
-            // 先立即寫入本機並更新登入頁科目，不重新渲染整個題庫編輯器。
-            App.saveLocalOnly();
-            App.renderSelects();
 
-            // 等待 Google Sheets 完成同步。
-            await App.save();
+        // v119 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
+        App.saveLocalOnly();
+        App.renderSelects();
+        Admin.refreshCourseHeaderBadges();
 
-            Admin.refreshCourseHeaderBadges();
-            alert("✅ 變更已儲存並同步完成");
-        } catch (err) {
-            console.error(err);
-            alert("⚠️ 變更已先儲存在本機，但雲端同步可能失敗，請檢查 Web App URL 或網路連線。");
-        } finally {
-            if (btn) {
+        App.saveBackground();
+
+        if (btn) {
+            setTimeout(() => {
                 btn.disabled = false;
                 btn.innerText = oldText || '💾 儲存變更';
-            }
+            }, 450);
+        }
+
+        const cloudStatus = document.getElementById('cloudStatus');
+        if (cloudStatus && App.isInstructor) {
+            cloudStatus.style.display = 'block';
+            cloudStatus.innerText = '已先儲存本機，Google Sheets 背景同步中...';
+            cloudStatus.style.color = 'var(--warning-color)';
         }
     },
     renderUsers: function() {
@@ -2238,6 +2262,15 @@ const RefreshGuard = {
         }, true);
     }
 };
+
+
+window.addEventListener('beforeunload', function(e) {
+    if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+}); // beforeunloadPendingCloudSync
 
 RefreshGuard.init();
 App.init();
