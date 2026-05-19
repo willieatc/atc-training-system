@@ -977,6 +977,69 @@
             }
         }
 
+
+        /* V123 修正版：手機教材畫面垂直置中偏下，不遮擋按鈕 */
+        @media (max-width: 760px) {
+            #sec-view.active {
+                display: flex;
+                flex-direction: column;
+                overflow-y: auto;
+                padding: 12px;
+            }
+            #sec-view > div:first-child {
+                flex: 0 0 auto;
+            }
+            #sec-view.active #contentBox {
+                width: 100%;
+                max-width: 100%;
+                align-self: center;
+                margin-left: auto;
+                margin-right: auto;
+                margin-top: clamp(14px, 5vh, 42px) !important;
+                height: 48vh !important;
+                flex: 0 0 48vh !important;
+                min-height: 280px !important;
+            }
+            @supports (height: 100dvh) {
+                #sec-view.active #contentBox {
+                    margin-top: clamp(14px, 5dvh, 42px) !important;
+                    height: 48dvh !important;
+                    flex-basis: 48dvh !important;
+                }
+            }
+            #viewActionArea {
+                flex: 0 0 auto;
+                margin-top: 12px !important;
+                padding-bottom: max(18px, env(safe-area-inset-bottom));
+            }
+            #viewActionArea > div {
+                width: 100%;
+            }
+        }
+        @media (max-width: 480px) {
+            #sec-view.active #contentBox {
+                margin-top: clamp(18px, 6vh, 46px) !important;
+                height: 46vh !important;
+                flex-basis: 46vh !important;
+                min-height: 250px !important;
+            }
+            @supports (height: 100dvh) {
+                #sec-view.active #contentBox {
+                    margin-top: clamp(18px, 6dvh, 46px) !important;
+                    height: 46dvh !important;
+                    flex-basis: 46dvh !important;
+                }
+            }
+        }
+        @media (orientation: landscape) and (max-height: 620px) {
+            #sec-view.active #contentBox {
+                margin-top: 8px !important;
+                height: 48vh !important;
+                flex-basis: 48vh !important;
+                min-height: 0 !important;
+            }
+        }
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
