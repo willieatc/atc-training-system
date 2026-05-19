@@ -522,7 +522,7 @@
 
 
 
-        /* v121：跨平台教材瀏覽修復 */
+        /* v122：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v121：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v122：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v121 backup tools safety */
+        /* v122 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v121：登入操作保險 */
+        /* v122：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v121：科目名稱與及格分數整合 */
+        /* v122：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v121：備份按鈕置於管理員登出下方並列 */
+        /* v122：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -707,7 +707,7 @@
         }
 
 
-        /* v121：手機後台先顯示功能選單，點選後再展開內容 */
+        /* v122：手機後台先顯示功能選單，點選後再展開內容 */
         .admin-mobile-current {
             display: none;
         }
@@ -799,7 +799,7 @@
         }
 
 
-        /* v121：手機後台頁首／頁尾快捷按鈕 */
+        /* v122：手機後台頁首／頁尾快捷按鈕 */
         .admin-mobile-jump-tools {
             display: none;
         }
@@ -823,6 +823,102 @@
                 border-radius: 999px;
                 font-size: 15px;
                 box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+            }
+        }
+
+
+        /* v122：教材播放器黑邊縮小，手機版完整顯示開始考核按鈕 */
+        #contentBox {
+            background: #05070a;
+            padding: 0;
+        }
+        #contentBox iframe {
+            background: #000;
+        }
+        @media (min-width: 1025px) {
+            #contentBox {
+                min-height: min(700px, calc(90vh - 160px));
+            }
+            @supports (height: 100dvh) {
+                #contentBox { min-height: min(700px, calc(90dvh - 160px)); }
+            }
+        }
+        @media (max-width: 760px) {
+            #sec-view.active {
+                padding: 12px;
+                overflow-y: auto;
+                justify-content: flex-start;
+            }
+            #sec-view > div:first-child {
+                margin-bottom: 8px !important;
+                gap: 8px;
+                align-items: flex-start !important;
+            }
+            #sec-view #viewTitle {
+                font-size: 20px;
+                line-height: 1.35;
+            }
+            #contentBox {
+                min-height: 0 !important;
+                height: 58vh !important;
+                flex: 0 0 58vh !important;
+                border-radius: 6px;
+                border-width: 1px;
+                margin: 0;
+            }
+            @supports (height: 100dvh) {
+                #contentBox {
+                    height: 58dvh !important;
+                    flex-basis: 58dvh !important;
+                }
+            }
+            #viewActionArea {
+                margin-top: 10px !important;
+                padding-bottom: 18px;
+                flex-shrink: 0;
+            }
+            #viewActionArea > div {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+            #viewActionArea .viewer-hint-below {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+            #viewActionArea .btn,
+            #viewActionArea button {
+                width: 100%;
+                min-height: 44px;
+                font-size: 15px;
+            }
+        }
+        @media (max-width: 480px) {
+            #contentBox {
+                height: 54vh !important;
+                flex-basis: 54vh !important;
+            }
+            @supports (height: 100dvh) {
+                #contentBox {
+                    height: 54dvh !important;
+                    flex-basis: 54dvh !important;
+                }
+            }
+        }
+        @media (orientation: landscape) and (max-height: 620px) {
+            #sec-view.active {
+                padding: 10px;
+                overflow-y: auto;
+            }
+            #contentBox {
+                height: 56vh !important;
+                flex-basis: 56vh !important;
+                min-height: 0 !important;
+            }
+            #viewActionArea .btn,
+            #viewActionArea button {
+                min-height: 40px;
             }
         }
 
@@ -963,7 +1059,7 @@ const Backend = {
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
-        // v121：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
+        // v122：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
         if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
             this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
             this.loaded = true;
@@ -1394,9 +1490,7 @@ const App = {
         let url = (this.activeCourse.embedUrl || "").trim();
         if (url.includes('<iframe')) { const match = url.match(/src=["']([^"']+)["']/); if (match) url = match[1]; }
         const contentBox = document.getElementById('contentBox');
-        contentBox.innerHTML = url ? `
-            <iframe src="${url}" allow="autoplay; fullscreen" allowfullscreen="true" style="width: 100%; height: 100%; border: none;"></iframe>
-        ` : `<div style="text-align:center; padding-top:100px; width:100%;">⚠️ 尚未設定連結</div>`;
+        contentBox.innerHTML = url ? `<iframe src="${url}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen="true" style="width:100%; height:100%; border:none; display:block;"></iframe>` : `<div style="text-align:center; padding-top:100px; width:100%;">⚠️ 尚未設定連結</div>`;
         contentBox.oncontextmenu = function(e) { e.preventDefault(); return false; };
         const adminBackBtn = document.getElementById('adminBackFromViewBtn');
         if (adminBackBtn) adminBackBtn.classList.toggle('hidden', !this.isInstructor);
@@ -1827,7 +1921,7 @@ const Admin = {
             btn.innerText = '已存本機，雲端同步中...';
         }
 
-        // v121 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
+        // v122 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
         App.saveLocalOnly();
         App.renderSelects();
         Admin.refreshCourseHeaderBadges();
