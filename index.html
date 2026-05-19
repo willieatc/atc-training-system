@@ -522,7 +522,7 @@
 
 
 
-        /* v120：跨平台教材瀏覽修復 */
+        /* v121：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v120：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v121：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v120 backup tools safety */
+        /* v121 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v120：登入操作保險 */
+        /* v121：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v120：科目名稱與及格分數整合 */
+        /* v121：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v120：備份按鈕置於管理員登出下方並列 */
+        /* v121：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -707,7 +707,7 @@
         }
 
 
-        /* v120：手機後台先顯示功能選單，點選後再展開內容 */
+        /* v121：手機後台先顯示功能選單，點選後再展開內容 */
         .admin-mobile-current {
             display: none;
         }
@@ -798,6 +798,34 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+
+        /* v121：手機後台頁首／頁尾快捷按鈕 */
+        .admin-mobile-jump-tools {
+            display: none;
+        }
+        @media (max-width: 760px) {
+            .admin-mobile-jump-tools {
+                position: fixed;
+                right: 12px;
+                bottom: 12px;
+                z-index: 4500;
+                display: none;
+                flex-direction: column;
+                gap: 8px;
+            }
+            #sec-admin.active .admin-mobile-jump-tools {
+                display: flex;
+            }
+            .admin-mobile-jump-tools .btn {
+                width: 48px;
+                height: 42px;
+                padding: 0;
+                border-radius: 999px;
+                font-size: 15px;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+            }
+        }
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -884,6 +912,10 @@
                     <div id="panel-rec" class="hidden"><div id="userTable"></div></div>
                     <div id="panel-score" class="hidden"></div>
                     <div id="panel-edit" class="hidden"></div>
+                    <div id="adminMobileJumpTools" class="admin-mobile-jump-tools" aria-label="手機後台快速跳轉">
+                        <button class="btn btn-outline btn-sm" onclick="App.adminJumpToTop()" title="回到頁首">▲</button>
+                        <button class="btn btn-outline btn-sm" onclick="App.adminJumpToBottom()" title="前往頁尾">▼</button>
+                    </div>
 </div>
             </div>
         </div>
@@ -931,7 +963,7 @@ const Backend = {
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
-        // v120：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
+        // v121：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
         if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
             this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
             this.loaded = true;
@@ -1434,6 +1466,24 @@ const App = {
         const backupTools = document.getElementById('backupFloatingTools');
         if (backupTools) backupTools.classList.toggle('active', id === 'sec-admin' && this.isInstructor);
     },
+    adminJumpToTop: function() {
+        const adminSec = document.getElementById('sec-admin');
+        const content = document.getElementById('adminContent');
+        if (adminSec && window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+            adminSec.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+        if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    adminJumpToBottom: function() {
+        const adminSec = document.getElementById('sec-admin');
+        const content = document.getElementById('adminContent');
+        if (adminSec && window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+            adminSec.scrollTo({ top: adminSec.scrollHeight, behavior: 'smooth' });
+            return;
+        }
+        if (content) content.scrollTo({ top: content.scrollHeight, behavior: 'smooth' });
+    },
     switchAdmin: function(tab) {
         this.currentAdminTab = tab;
         ['rec', 'score', 'edit'].forEach(p => { document.getElementById(`panel-${p}`).classList.add('hidden'); document.getElementById(`t-${p}`).classList.remove('active'); });
@@ -1777,7 +1827,7 @@ const Admin = {
             btn.innerText = '已存本機，雲端同步中...';
         }
 
-        // v120 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
+        // v121 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
         App.saveLocalOnly();
         App.renderSelects();
         Admin.refreshCourseHeaderBadges();
