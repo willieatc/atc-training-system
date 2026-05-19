@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATC 訓練管理系統</title>
+    <title>ATC 專業訓練管理系統</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="config.js"></script>
@@ -522,7 +522,7 @@
 
 
 
-        /* v114：跨平台教材瀏覽修復 */
+        /* v115：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v114：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v115：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v114 backup tools safety */
+        /* v115 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v114：登入操作保險 */
+        /* v115：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v114：科目名稱與及格分數整合 */
+        /* v115：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v114：備份按鈕置於管理員登出下方並列 */
+        /* v115：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -794,11 +794,7 @@
 </div>
             </div>
         </div>
-    <div id="backupFloatingTools" class="backup-floating-tools" aria-label="本地備份工具">
-        <button class="btn btn-success btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
-        <button class="btn btn-primary btn-sm" onclick="Backup.pickImportFile()">匯入備份</button>
-    </div>
-    </div>
+</div>
     <div id="global-nav-rail" class="nav-tools-rail">
         <button class="nav-btn-circle" onclick="App.scrollSide(0)">▲</button>
         <button class="nav-btn-circle" onclick="App.scrollSide(1)">▼</button>
@@ -837,7 +833,7 @@ const Backend = {
         if (el) {
             el.innerText = text;
             el.style.color = color || '#8b949e';
-            el.style.display = (window.App && App.isInstructor) ? 'block' : 'none';
+            el.style.display = (typeof App !== 'undefined' && App.isInstructor) ? 'block' : 'none';
         }
     },
     loadState: async function() {
@@ -855,8 +851,10 @@ const Backend = {
                 users: st.users && typeof st.users === 'object' ? st.users : {},
                 userNames: st.userNames && typeof st.userNames === 'object' ? st.userNames : {},
                 quizLocks: st.quizLocks && typeof st.quizLocks === 'object' ? st.quizLocks : {},
+                quizUnlocks: st.quizUnlocks && typeof st.quizUnlocks === 'object' ? st.quizUnlocks : {},
                 adminPw: st.adminPw || 'rctp3023'
             };
+            App.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
             this.loaded = true;
             this.setStatus('Google Sheets 雲端同步中', 'var(--success-color)');
@@ -1021,7 +1019,16 @@ const App = {
     state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
     user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
-    save: function() { localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state)); Backend.saveState(this.state); },
+    savePromise: null,
+    save: function() {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        this.savePromise = Backend.saveState(JSON.parse(JSON.stringify(this.state)));
+        return this.savePromise;
+    },
+    saveLocalOnly: function() {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        return true;
+    },
     normalizeUsers: function() {
         if (!this.state.users) this.state.users = {};
         Object.keys(this.state.users).forEach(code => {
@@ -1058,21 +1065,49 @@ const App = {
         return record.name || this.getUserName(record.u) || '';
     },
     init: async function() {
-        if (!Backend.loaded) await Backend.loadState();
+        // 先用本機資料立即渲染登入科目，避免等 Google Sheets 造成登入頁空白太久。
+        if (!this.state.courses) this.state.courses = [];
+        if (!this.state.records) this.state.records = [];
+        if (!this.state.users) this.state.users = {};
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
-        if (this.state.courses) this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+        this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
         this.normalizeUsers();
+        this.renderSelects();
+        this.updateLoginStatus();
+        this.syncUI();
+
+        if (!Backend.loaded) {
+            await Backend.loadState();
+            if (!this.state.quizLocks) this.state.quizLocks = {};
+            if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+            if (!this.state.courses) this.state.courses = [];
+            if (!this.state.records) this.state.records = [];
+            if (!this.state.users) this.state.users = {};
+            this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+            this.normalizeUsers();
+        }
+
         this.recoverInterruptedQuiz();
-        // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態
+
+        // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態。
+        // 僅在真的補鎖時才儲存，避免每次回登入頁都覆蓋雲端資料。
+        let lockChanged = false;
         (this.state.records || []).forEach(r => {
             const course = this.state.courses.find(c => c.id === r.cid || c.title === r.c);
             if (course && !this.isQuizLocked(r.u, course.id) && !this.isQuizExplicitlyUnlocked(r.u, course.id)) {
                 this.lockQuiz(r.u, course.id, course.title);
+                lockChanged = true;
             }
         });
-        this.save();
-        this.renderSelects(); this.updateLoginStatus(); this.syncUI();
+        if (lockChanged) {
+            await this.save();
+        } else {
+            this.saveLocalOnly();
+        }
+        this.renderSelects();
+        this.updateLoginStatus();
+        this.syncUI();
     },
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
     unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
@@ -1144,7 +1179,7 @@ const App = {
                 cid: cid,
                 c: title,
                 s: 0,
-                passScore: App.getPassScore(App.activeCourse),
+                passScore: App.getPassScore(course),
                 d: DateUtil.format(),
                 note: '測驗頁面刷新或未正常送出，自動記錄零分'
             });
@@ -1263,7 +1298,18 @@ const App = {
         this.clearQuizSession();
         this.switchAdmin(this.currentAdminTab || 'score');
     },
-    toHome: function() { this.quizInProgress = false; this.employeeId = ""; this.clearQuizSession(); this.showSec('sec-login'); this.init(); },
+    refreshHomeUI: function() {
+        this.renderSelects();
+        this.updateLoginStatus();
+        this.syncUI();
+    },
+    toHome: function() {
+        this.quizInProgress = false;
+        this.employeeId = "";
+        this.clearQuizSession();
+        this.showSec('sec-login');
+        this.refreshHomeUI();
+    },
     toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
     logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
     showSec: function(id) {
@@ -1580,7 +1626,18 @@ const Admin = {
             }
         }; r.readAsText(f, 'UTF-8');
     },
-    saveAll: function() { Admin.sync(); App.save(); alert("✅ 變更已儲存"); Admin.renderEditor(); App.renderSelects(); },
+    saveAll: async function() {
+        Admin.sync();
+        try {
+            await App.save();
+            App.renderSelects();
+            Admin.renderEditor();
+            alert("✅ 變更已儲存並同步完成");
+        } catch (err) {
+            console.error(err);
+            alert("⚠️ 變更已先儲存在本機，但雲端同步可能失敗，請檢查 Web App URL 或網路連線。");
+        }
+    },
     renderUsers: function() {
         App.normalizeUsers();
         const users = Object.keys(App.state.users).sort((a,b) => a.localeCompare(b, 'zh-Hant'));
@@ -1765,12 +1822,14 @@ const Admin = {
             const r = item.r;
             const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
             const locked = course ? App.isQuizLocked(r.u, course.id) : false;
+            const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
             rows.push([
                 r.u || '',
                 App.getRecordEmployeeId(r),
                 r.c || '',
                 String(r.s ?? ''),
-                Number(r.s) >= PASS_SCORE ? '及格' : '未及格',
+                String(passScore),
+                Number(r.s) >= passScore ? '及格' : '未及格',
                 DateUtil.format(r.d),
                 locked ? '已鎖定' : '可測驗',
                 r.note || ''
@@ -1838,6 +1897,7 @@ const Admin = {
                         const employeeId = App.getRecordEmployeeId(r);
                         const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
                         const locked = course ? App.isQuizLocked(r.u, course.id) : false;
+                        const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
                         const safeUser = String(r.u).replace(/'/g, "\'");
                         return `
                         <tr>
@@ -1845,8 +1905,8 @@ const Admin = {
                             <td>${Admin.esc(r.u || '')}</td>
                             <td>${Admin.esc(employeeId)}</td>
                             <td>${Admin.esc(r.c || '')}</td>
-                            <td style="color:${Number(r.s) >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
-                            <td>${Number(r.s) >= PASS_SCORE ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
+                            <td style="color:${Number(r.s) >= passScore ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
+                            <td>${Number(r.s) >= passScore ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
                             <td>${DateUtil.format(r.d)}</td>
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
@@ -2077,7 +2137,7 @@ const Quiz = {
     finishSubmit: function() {
         const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
         if (!App.isInstructor) {
-            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, d:DateUtil.format()});
+            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, passScore:App.getPassScore(App.refreshActiveCourse()), d:DateUtil.format()});
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
             App.save();
         }
