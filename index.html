@@ -522,7 +522,7 @@
 
 
 
-        /* v119：跨平台教材瀏覽修復 */
+        /* v120：跨平台教材瀏覽修復 */
         #sec-view.active {
             min-height: 0;
         }
@@ -571,7 +571,7 @@
         }
 
 
-        /* v119：安全版登入頁置中，不覆蓋其他頁面操作 */
+        /* v120：安全版登入頁置中，不覆蓋其他頁面操作 */
         #sec-login.active {
             display: flex;
             align-items: center;
@@ -654,13 +654,13 @@
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     
-        /* v119 backup tools safety */
+        /* v120 backup tools safety */
         #sec-login ~ .backup-floating-tools,
         #sec-login .backup-floating-tools {
             display: none !important;
         }
 
-        /* v119：登入操作保險 */
+        /* v120：登入操作保險 */
         #sec-login.active,
         #sec-login.active * {
             pointer-events: auto;
@@ -670,7 +670,7 @@
             z-index: 10;
         }
 
-        /* v119：科目名稱與及格分數整合 */
+        /* v120：科目名稱與及格分數整合 */
         .course-setting-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 150px;
@@ -692,7 +692,7 @@
             }
         }
 
-        /* v119：備份按鈕置於管理員登出下方並列 */
+        /* v120：備份按鈕置於管理員登出下方並列 */
         .backup-inline-tools {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -704,6 +704,98 @@
             padding: 6px 8px;
             font-size: 12px;
             min-height: 30px;
+        }
+
+
+        /* v120：手機後台先顯示功能選單，點選後再展開內容 */
+        .admin-mobile-current {
+            display: none;
+        }
+        @media (max-width: 760px) {
+            #sec-admin {
+                overflow-y: auto;
+            }
+            .admin-layout {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                min-height: 0;
+            }
+            .admin-sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 0 0 10px 0;
+                flex: 0 0 auto;
+            }
+            .admin-sidebar h3 {
+                margin-bottom: 10px;
+            }
+            .admin-sidebar > div[style*="flex-grow"] {
+                margin-top: 8px !important;
+                flex-grow: 0 !important;
+                display: grid !important;
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .admin-tab {
+                margin-bottom: 0;
+                border: 1px solid var(--border-color);
+                background: #0d1117;
+                min-height: 42px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .admin-tab.active::after {
+                content: "已展開";
+                font-size: 12px;
+                color: var(--success-color);
+                font-weight: 700;
+            }
+            .admin-mobile-current {
+                display: block;
+                padding: 8px 10px;
+                margin: 8px 0 10px;
+                background: rgba(88,166,255,0.12);
+                border: 1px solid rgba(88,166,255,0.35);
+                border-radius: 8px;
+                color: var(--accent-color);
+                font-size: 13px;
+                font-weight: 700;
+            }
+            .admin-content {
+                flex: 1 1 auto;
+                min-height: 58vh;
+                max-height: none;
+                overflow-y: visible;
+                padding: 0 0 90px 0;
+            }
+            .admin-content.scroll-area {
+                overflow-y: visible;
+            }
+            #panel-score, #panel-edit, #panel-rec {
+                width: 100%;
+            }
+            #panel-score:not(.hidden),
+            #panel-edit:not(.hidden),
+            #panel-rec:not(.hidden) {
+                display: block;
+                animation: adminPanelFadeIn 0.18s ease-out;
+            }
+            .sticky-header {
+                position: sticky;
+                top: 0;
+                z-index: 900;
+                padding-top: 10px;
+                margin-bottom: 12px;
+            }
+            .backup-inline-tools {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @keyframes adminPanelFadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
 </style>
@@ -773,6 +865,7 @@
             <div class="admin-layout">
                 <div class="admin-sidebar">
                     <h3>⚙️ 管理後台</h3>
+                    <div id="adminMobileCurrent" class="admin-mobile-current">目前展開：測驗成績查詢</div>
                     <div style="margin-top:20px; flex-grow:1; display:flex; flex-direction:column;">
                         <div class="admin-tab active" id="t-score" onclick="App.switchAdmin('score')">🔍 測驗成績查詢</div>
                         <div class="admin-tab" id="t-edit" onclick="App.switchAdmin('edit')">📚 教材與題庫編輯</div>
@@ -838,7 +931,7 @@ const Backend = {
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
-        // v119：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
+        // v120：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
         if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
             this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
             this.loaded = true;
@@ -1345,8 +1438,21 @@ const App = {
         this.currentAdminTab = tab;
         ['rec', 'score', 'edit'].forEach(p => { document.getElementById(`panel-${p}`).classList.add('hidden'); document.getElementById(`t-${p}`).classList.remove('active'); });
         document.getElementById(`panel-${tab}`).classList.remove('hidden'); document.getElementById(`t-${tab}`).classList.add('active');
+
+        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', rec: '人員帳號管理' };
+        const currentLabel = document.getElementById('adminMobileCurrent');
+        if (currentLabel) currentLabel.innerText = `目前展開：${labelMap[tab] || ''}`;
+
         this.showSec('sec-admin');
         if (tab === 'edit') Admin.renderEditor(); else if (tab === 'rec') Admin.renderUsers(); else Admin.renderScores();
+
+        // 手機後台：點選功能後自動把畫面帶到內容區，避免只看到側欄。
+        if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+            setTimeout(() => {
+                const content = document.getElementById('adminContent');
+                if (content) content.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+        }
     },
     scrollSide: function(dir) {
         const target = document.getElementById('sec-quiz').classList.contains('active') ? document.getElementById('quizContainer') : document.getElementById('adminContent');
@@ -1671,7 +1777,7 @@ const Admin = {
             btn.innerText = '已存本機，雲端同步中...';
         }
 
-        // v119 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
+        // v120 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
         App.saveLocalOnly();
         App.renderSelects();
         Admin.refreshCourseHeaderBadges();
