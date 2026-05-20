@@ -1309,8 +1309,8 @@ const Backend = {
             return false;
         }
 
-        // 雲端優先：只要 Google Sheets 可讀取，就以雲端資料覆蓋本機暫存。
-        // 這可避免瀏覽器 localStorage 舊資料覆蓋已上傳的雲端資料。
+        // 雲端權威：只要 Google Sheets 可讀取，就用雲端資料覆蓋本機暫存。
+        // 並取得 cloudRevision，之後管理員儲存時必須通過版本比對。
         localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
 
         this.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
@@ -1320,7 +1320,7 @@ const Backend = {
                 method: 'GET',
                 cache: 'no-store',
                 headers: {
-                    'Cache-Control': 'no-cache',
+                    'Cache-Control': 'no-cache, no-store, max-age=0',
                     'Pragma': 'no-cache'
                 }
             });
@@ -1339,17 +1339,22 @@ const Backend = {
             };
             App.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
 
+            App.cloudRevision = String(st.cloudRevision || data.cloudRevision || '');
+            App.cloudLoadedAt = Date.now();
+
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            localStorage.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
             localStorage.setItem('ATC_LAST_CLOUD_LOAD_TS', String(Date.now()));
             this.loaded = true;
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
             return true;
         } catch (err) {
             console.error('Google Sheets load failed:', err);
-            this.setStatus('雲端讀取失敗，暫用本機資料', 'var(--danger-color)');
+            this.setStatus('雲端讀取失敗，暫用本機資料；不可儲存覆蓋雲端', 'var(--danger-color)');
             return false;
         }
     },
+    
     
     submitScore: async function(record) {
         if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
@@ -1382,38 +1387,69 @@ const Backend = {
     saveAdminState: async function(state) {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(state));
         localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
-        if (!this.enabled()) return true;
+        if (!this.enabled()) return { ok: true };
         this.saving = true;
         this.setStatus('Google Sheets 儲存中...', 'var(--warning-color)');
+
         try {
-            const payload = { action: 'saveAdminState', state: state, ts: Date.now() };
+            if (!App.cloudRevision) {
+                return {
+                    ok: false,
+                    conflict: true,
+                    error: '尚未取得雲端版本，請重新整理載入雲端資料後再儲存'
+                };
+            }
+
+            const payload = {
+                action: 'saveAdminState',
+                state: state,
+                baseRevision: App.cloudRevision,
+                clientSavedAt: Date.now()
+            };
+
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 25000);
+            const timer = setTimeout(() => controller.abort(), 30000);
             const res = await fetch(SHEETS_WEB_APP_URL, {
                 method: 'POST',
+                cache: 'no-store',
                 headers: {
                     'Content-Type': 'text/plain;charset=utf-8',
-                    'Cache-Control': 'no-cache'
+                    'Cache-Control': 'no-cache, no-store, max-age=0',
+                    'Pragma': 'no-cache'
                 },
                 body: JSON.stringify(payload),
                 signal: controller.signal
             });
             clearTimeout(timer);
+
             const data = await res.json();
-            if (!data || !data.ok) throw new Error(data && data.error ? data.error : '儲存失敗');
+            if (!data || !data.ok) {
+                return {
+                    ok: false,
+                    conflict: !!(data && data.conflict),
+                    error: data && data.error ? data.error : '儲存失敗',
+                    serverRevision: data && data.serverRevision ? data.serverRevision : ''
+                };
+            }
+
+            App.cloudRevision = String(data.cloudRevision || '');
+            App.cloudLoadedAt = Date.now();
 
             localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
+            localStorage.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
             localStorage.setItem('ATC_LAST_CLOUD_SAVE_TS', String(Date.now()));
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
-            return true;
+            return { ok: true, data };
         } catch (err) {
             console.error('Google Sheets admin save failed:', err);
-            this.setStatus('雲端儲存失敗，請檢查 Web App URL', 'var(--danger-color)');
-            return false;
+            this.setStatus('雲端儲存失敗，請檢查 Web App URL／Apps Script 部署', 'var(--danger-color)');
+            return { ok: false, error: err && err.message ? err.message : String(err) };
         } finally {
             this.saving = false;
         }
     },
+    
+    
     
     saveState: async function(state) {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(state));
@@ -1566,9 +1602,11 @@ const Backup = {
 };
 
 
-const APP_BUILD_VERSION = 'v123-cloud-first-admin-save';
+const APP_BUILD_VERSION = 'v123-authoritative-cloud-revision-stable';
 
 const App = {
+    cloudRevision: '',
+    cloudLoadedAt: 0,
     state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
     user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false,
     scoreSyncPending: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
@@ -1656,13 +1694,14 @@ const App = {
             console.error('retryPendingScores failed:', err);
         }
     },
-    saveAdmin: function() {
+    saveAdmin: async function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
         localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
         const snapshot = JSON.parse(JSON.stringify(this.state));
-        this.savePromise = Backend.saveAdminState(snapshot);
-        return this.savePromise;
+        const result = await Backend.saveAdminState(snapshot);
+        return !!(result && result.ok);
     },
+    
     
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
@@ -2420,7 +2459,7 @@ const Admin = {
         }
         if (cloudStatus && App.isInstructor) {
             cloudStatus.style.display = 'block';
-            cloudStatus.innerText = 'Google Sheets 儲存中，請勿關閉頁面...（將以目前畫面資料覆蓋雲端題庫）';
+            cloudStatus.innerText = 'Google Sheets 儲存中，請勿關閉頁面...（進行雲端版本檢查）';
             cloudStatus.style.color = 'var(--warning-color)';
         }
 
@@ -2445,19 +2484,20 @@ const Admin = {
         } else {
             if (btn) btn.innerText = '⚠️ 儲存失敗';
             if (cloudStatus && App.isInstructor) {
-                cloudStatus.innerText = '雲端儲存失敗，已保留本機資料，請檢查 Web App URL／Apps Script 部署';
+                cloudStatus.innerText = '未覆蓋雲端資料。請重新整理載入最新雲端資料後再編輯。';
                 cloudStatus.style.color = 'var(--danger-color)';
             }
-            alert('雲端儲存失敗，題目已先保存在本機。請檢查 Web App URL／Apps Script 部署後再試。');
+            alert('雲端儲存失敗或偵測到雲端已有較新資料。本次沒有覆蓋雲端資料。請重新整理頁面，確認載入最新資料後再編輯。');
         }
 
         if (btn) {
             setTimeout(() => {
                 btn.disabled = false;
                 btn.innerText = oldText || '💾 儲存變更';
-            }, ok ? 900 : 1400);
+            }, ok ? 900 : 1800);
         }
     },
+    
     
     renderUsers: function() {
         App.normalizeUsers();
