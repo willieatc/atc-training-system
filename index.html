@@ -1392,18 +1392,10 @@ const Backend = {
         this.setStatus('Google Sheets 儲存中...', 'var(--warning-color)');
 
         try {
-            if (!App.cloudRevision) {
-                return {
-                    ok: false,
-                    conflict: true,
-                    error: '尚未取得雲端版本，請重新整理載入雲端資料後再儲存'
-                };
-            }
-
             const payload = {
                 action: 'saveAdminState',
                 state: state,
-                baseRevision: App.cloudRevision,
+                baseRevision: App.cloudRevision || '',
                 clientSavedAt: Date.now()
             };
 
@@ -1424,15 +1416,20 @@ const Backend = {
 
             const data = await res.json();
             if (!data || !data.ok) {
+                const msg = data && data.error ? data.error : '儲存失敗';
+                const finalMsg = data && data.conflict
+                    ? '雲端已有較新題庫資料，請重新整理後再儲存'
+                    : msg;
+                this.setStatus(finalMsg, 'var(--danger-color)');
                 return {
                     ok: false,
                     conflict: !!(data && data.conflict),
-                    error: data && data.error ? data.error : '儲存失敗',
+                    error: finalMsg,
                     serverRevision: data && data.serverRevision ? data.serverRevision : ''
                 };
             }
 
-            App.cloudRevision = String(data.cloudRevision || '');
+            App.cloudRevision = String(data.cloudRevision || App.cloudRevision || '');
             App.cloudLoadedAt = Date.now();
 
             localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
@@ -1442,12 +1439,16 @@ const Backend = {
             return { ok: true, data };
         } catch (err) {
             console.error('Google Sheets admin save failed:', err);
-            this.setStatus('雲端儲存失敗，請檢查 Web App URL／Apps Script 部署', 'var(--danger-color)');
-            return { ok: false, error: err && err.message ? err.message : String(err) };
+            const msg = err && err.name === 'AbortError'
+                ? '雲端儲存逾時，請確認 Apps Script 部署或稍後再試'
+                : '雲端儲存失敗：' + (err && err.message ? err.message : String(err));
+            this.setStatus(msg, 'var(--danger-color)');
+            return { ok: false, error: msg };
         } finally {
             this.saving = false;
         }
     },
+    
     
     
     
@@ -1602,7 +1603,7 @@ const Backup = {
 };
 
 
-const APP_BUILD_VERSION = 'v123-authoritative-cloud-revision-stable';
+const APP_BUILD_VERSION = 'v123-admin-only-cloud-revision-stable';
 
 const App = {
     cloudRevision: '',
@@ -1701,6 +1702,7 @@ const App = {
         const result = await Backend.saveAdminState(snapshot);
         return !!(result && result.ok);
     },
+    
     
     
     save: function() {
@@ -2459,7 +2461,7 @@ const Admin = {
         }
         if (cloudStatus && App.isInstructor) {
             cloudStatus.style.display = 'block';
-            cloudStatus.innerText = 'Google Sheets 儲存中，請勿關閉頁面...（進行雲端版本檢查）';
+            cloudStatus.innerText = 'Google Sheets 儲存中，請勿關閉頁面...（僅同步後台題庫，不覆蓋成績）';
             cloudStatus.style.color = 'var(--warning-color)';
         }
 
@@ -2484,10 +2486,10 @@ const Admin = {
         } else {
             if (btn) btn.innerText = '⚠️ 儲存失敗';
             if (cloudStatus && App.isInstructor) {
-                cloudStatus.innerText = '未覆蓋雲端資料。請重新整理載入最新雲端資料後再編輯。';
+                cloudStatus.innerText = cloudStatus.innerText || '雲端儲存失敗，未覆蓋雲端資料';
                 cloudStatus.style.color = 'var(--danger-color)';
             }
-            alert('雲端儲存失敗或偵測到雲端已有較新資料。本次沒有覆蓋雲端資料。請重新整理頁面，確認載入最新資料後再編輯。');
+            alert('雲端儲存失敗。本次沒有覆蓋雲端資料。請先確認 Web App 部署完成，或重新整理載入最新資料後再試。');
         }
 
         if (btn) {
@@ -2497,6 +2499,7 @@ const Admin = {
             }, ok ? 900 : 1800);
         }
     },
+    
     
     
     renderUsers: function() {
