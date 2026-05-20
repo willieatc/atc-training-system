@@ -1120,6 +1120,52 @@
                 0 0 2px rgba(255,255,255,0.35) !important;
         }
 
+
+.course-order-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.course-order-actions .btn[disabled] {
+    opacity: .45;
+    cursor: not-allowed;
+}
+@media (max-width: 760px) {
+    .course-order-actions {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 8px;
+    }
+}
+
+
+.course-item.drag-over {
+    outline: 2px dashed var(--primary-color);
+    outline-offset: 3px;
+}
+
+
+
+.course-sortable-item {
+    cursor: grab;
+}
+.course-sortable-item:active {
+    cursor: grabbing;
+}
+.course-drag-row strong::before {
+    content: '☰';
+    display: inline-block;
+    margin-right: 8px;
+    color: #8b949e;
+    font-weight: 700;
+}
+.course-sortable-item.drag-over {
+    outline: 2px dashed var(--primary-color);
+    outline-offset: 3px;
+}
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -1500,6 +1546,7 @@ const App = {
     scoreSyncPending: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     pendingScoreKey: 'ATC_PENDING_SCORE_RECORDS',
+    ADMIN_SESSION_KEY: 'ATC_ADMIN_SESSION_ACTIVE',
     savePromise: null,
     markPendingCloudSync: function() {
         try {
@@ -1637,6 +1684,15 @@ const App = {
     getRecordName: function(record) {
         return record.name || this.getUserName(record.u) || '';
     },
+    restoreAdminSession: function() {
+        if (sessionStorage.getItem(this.ADMIN_SESSION_KEY) !== '1') return false;
+        this.isInstructor = true;
+        this.user = '管理員';
+        this.employeeId = '';
+        this.syncUI();
+        this.switchAdmin(this.currentAdminTab || 'score');
+        return true;
+    },
     init: async function() {
         // 先用本機資料立即渲染登入科目，避免等 Google Sheets 造成登入頁空白太久。
         if (!this.state.courses) this.state.courses = [];
@@ -1681,6 +1737,8 @@ const App = {
         this.renderSelects();
         this.updateLoginStatus();
         this.syncUI();
+        this.restoreAdminSession();
+
     },
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
     unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
@@ -1881,7 +1939,15 @@ const App = {
         this.showSec('sec-login');
         this.refreshHomeUI();
     },
-    toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
+    toAdmin: function() {
+        if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) {
+            this.isInstructor = true;
+            sessionStorage.setItem(this.ADMIN_SESSION_KEY, '1');
+            this.switchAdmin('score');
+        } else {
+            alert("拒絕");
+        }
+    },
     logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1935,6 +2001,8 @@ const App = {
 };
 
 const Admin = {
+    dragCourseIndex: null,
+    justDraggedCourse: false,
     esc: function(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); },
     csvCell: function(v) {
         const s = String(v ?? '');
@@ -2025,7 +2093,7 @@ const Admin = {
             <div class="sticky-header">
                 <div>
                     <h3>📚 教材與題庫編輯</h3>
-                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材及題庫記得按下儲存變更才會生效。</div>
+                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材、題庫及拖拉科目卡片調整順序後，記得按下儲存變更才會生效。</div>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-outline btn-sm" onclick="Admin.downloadTemplate()">📁 下載範本</button>
@@ -2036,10 +2104,12 @@ const Admin = {
             <div id="editorList"></div>`;
         
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
-            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''}" data-id="${c.id}">
-                <div class="course-header" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
+            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''} course-sortable-item" data-id="${c.id}" draggable="true" ondragstart="Admin.courseDragStart(event, ${ci})" ondragover="Admin.courseDragOver(event, ${ci})" ondrop="Admin.courseDrop(event, ${ci})" ondragend="Admin.courseDragEnd(event)">
+                <div class="course-header course-drag-row" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
                     <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70} 分</span></strong>
-                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
+                    <div class="course-order-actions">
+                        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
+                    </div>
                 </div>
                 <div class="course-content">
                     <div class="editor-card">
@@ -2120,7 +2190,9 @@ const Admin = {
             }, 80);
         }
 },
-    toggleCourse: function(id, el) { el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
+    toggleCourse: function(id, el) {
+        if (Admin.justDraggedCourse) return;
+ el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
     sync: function() {
         document.querySelectorAll('.course-item').forEach(item => {
             const cid = parseInt(item.dataset.id);
@@ -2178,6 +2250,60 @@ const Admin = {
             alert("✅ 已刪除所有題目");
         }
     },
+    courseDragStart: function(event, index) {
+        Admin.sync();
+        Admin.dragCourseIndex = index;
+        Admin.justDraggedCourse = false;
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(index));
+        }
+        const item = event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('course-item')
+            ? event.currentTarget
+            : (event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null);
+        if (item) item.classList.add('dragging');
+    },
+    courseDragOver: function(event, index) {
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+        const item = event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('course-item')
+            ? event.currentTarget
+            : (event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null);
+        if (item && Admin.dragCourseIndex !== null && Admin.dragCourseIndex !== index) item.classList.add('drag-over');
+    },
+    courseDrop: function(event, targetIndex) {
+        event.preventDefault();
+        document.querySelectorAll('.course-item.drag-over, .course-item.dragging').forEach(el => {
+            el.classList.remove('drag-over');
+            el.classList.remove('dragging');
+        });
+        const fromIndex = Number.isInteger(Admin.dragCourseIndex) ? Admin.dragCourseIndex : Number(event.dataTransfer && event.dataTransfer.getData('text/plain'));
+        Admin.dragCourseIndex = null;
+        Admin.justDraggedCourse = true;
+        setTimeout(() => { Admin.justDraggedCourse = false; }, 250);
+
+        if (!Number.isInteger(fromIndex) || fromIndex === targetIndex) return;
+
+        Admin.sync();
+        const courses = App.state.courses || [];
+        if (fromIndex < 0 || fromIndex >= courses.length || targetIndex < 0 || targetIndex >= courses.length) return;
+        const moved = courses.splice(fromIndex, 1)[0];
+        courses.splice(targetIndex, 0, moved);
+
+        App.lastOpenedCourseId = null;
+        Admin.renderEditor();
+        App.renderSelects();
+    },
+    courseDragEnd: function(event) {
+        Admin.dragCourseIndex = null;
+        document.querySelectorAll('.course-item.drag-over, .course-item.dragging').forEach(el => {
+            el.classList.remove('drag-over');
+            el.classList.remove('dragging');
+        });
+    },
+    
+    
     delCourse: function(ci) { if(confirm("確定刪除？")) { App.state.courses.splice(ci, 1); App.save(); Admin.renderEditor(); }},
     impCSV: function(e, ci) {
         const f = e.target.files[0]; if(!f) return;
