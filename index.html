@@ -2663,13 +2663,12 @@ const Quiz = {
                 resultPassNote.innerText = '成績同步中，請勿關閉網頁...';
                 resultPassNote.style.color = 'var(--warning-color)';
             }
+
             synced = await App.save();
         }
 
         App.quizInProgress = false;
-        if (synced) {
-            App.clearQuizSession();
-        }
+        if (synced) App.clearQuizSession();
 
         const finalScoreEl = document.getElementById('finalScore');
         finalScoreEl.innerText = score;
