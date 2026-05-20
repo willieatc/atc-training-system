@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-passscore-persist-fix';
+const APP_BUILD_VERSION = 'V124-action-button-sync-status';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -2169,7 +2169,7 @@ const Admin = {
                                 <button class="btn btn-outline btn-sm" onclick="document.getElementById('f-csv-${ci}').click()">📥 匯入 CSV</button>
                                 <input type="file" id="f-csv-${ci}" class="hidden" accept=".csv" onchange="Admin.impCSV(event, ${ci})">
                                 <button class="btn btn-primary btn-sm" onclick="Admin.addQ(${ci})">➕ 手動加題</button>
-                                <button class="btn btn-danger btn-sm" onclick="Admin.delAllQ(${ci})">刪除所有題目</button>
+                                <button class="btn btn-danger btn-sm" onclick="Admin.delAllQ(${ci}, this)">刪除所有題目</button>
                             </div>
                         </div>
                         <div class="ql-container" id="ql-${ci}">${c.questions.map((q, qi) => `
@@ -2256,18 +2256,22 @@ const Admin = {
         Admin.renderEditor();
     },
     delQ: function(ci, qi) { Admin.sync(); App.state.courses[ci].questions.splice(qi, 1); Admin.renderEditor(); },
-    delAllQ: async function(ci) {
+    delAllQ: async function(ci, btn) {
         Admin.sync();
         const course = App.state.courses[ci];
         if (!course) return;
         if (!course.questions || course.questions.length === 0) return alert("目前沒有題目可刪除。");
-        if (confirm(`確定刪除「${course.title}」的所有題目？此操作不會刪除教材連結與科目名稱。`)) {
+        if (!confirm(`確定刪除「${course.title}」的所有題目？此操作不會刪除教材連結與科目名稱。`)) return;
+
+        const ok = await Admin.withButtonSyncStatus(btn, async () => {
             course.questions = [];
-            const ok = await App.saveWithNotice('刪除題目已同步完成', '刪除題目已保存在本機，但雲端同步失敗');
-            Admin.renderEditor();
-            alert(ok ? "✅ 已刪除所有題目並同步完成" : "⚠️ 已刪除所有題目，但雲端同步失敗");
-        }
+            return await App.saveWithNotice('刪除題目已同步完成', '刪除題目已保存在本機，但雲端同步失敗');
+        });
+
+        Admin.renderEditor();
+        alert(ok ? "✅ 已刪除所有題目並同步完成" : "⚠️ 已刪除所有題目，但雲端同步失敗");
     },
+    
     
     courseDragStart: function(event, index) {
         Admin.sync();
@@ -2323,14 +2327,18 @@ const Admin = {
     },
     
     
-    delCourse: async function(ci) {
-        if (confirm("確定刪除？")) {
+    delCourse: async function(ci, btn) {
+        if (!confirm("確定刪除？")) return;
+
+        const ok = await Admin.withButtonSyncStatus(btn, async () => {
             App.state.courses.splice(ci, 1);
-            const ok = await App.saveWithNotice('刪除科目已同步完成', '刪除科目已保存在本機，但雲端同步失敗');
-            Admin.renderEditor();
-            alert(ok ? '✅ 已刪除科目並同步完成' : '⚠️ 已刪除科目，但雲端同步失敗');
-        }
+            return await App.saveWithNotice('刪除科目已同步完成', '刪除科目已保存在本機，但雲端同步失敗');
+        });
+
+        Admin.renderEditor();
+        alert(ok ? '✅ 已刪除科目並同步完成' : '⚠️ 已刪除科目，但雲端同步失敗');
     },
+    
     
     impCSV: function(e, ci) {
         const f = e.target.files[0]; if(!f) return;
@@ -2395,6 +2403,36 @@ const Admin = {
             }
         });
     },
+    withButtonSyncStatus: async function(btn, actionFn, options = {}) {
+        const oldText = btn ? btn.innerText : '';
+        const syncingText = options.syncingText || '同步中...';
+        const successText = options.successText || '✅ 已同步';
+        const failText = options.failText || '⚠️ 同步失敗';
+        const restoreText = options.restoreText || oldText;
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = syncingText;
+        }
+
+        let ok = false;
+        try {
+            ok = await actionFn();
+        } catch (err) {
+            console.error('withButtonSyncStatus failed:', err);
+            ok = false;
+        }
+
+        if (btn) {
+            btn.innerText = ok ? successText : failText;
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerText = restoreText || oldText;
+            }, ok ? 900 : 1500);
+        }
+
+        return ok;
+    },
     saveAll: async function(evt) {
         Admin.sync();
 
@@ -2457,7 +2495,7 @@ const Admin = {
                     <div class="account-meta">員工編號：${Admin.esc(employeeText)}｜成績紀錄：${recordCount} 筆</div>
                 </div>
                 <div class="account-actions">
-                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${safeU}')">刪除帳號</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${safeU}', this)">刪除帳號</button>
                 </div>
             </div>`;
         }).join('') : '<div style="background:#1c2128; border:1px dashed var(--border-color); padding:25px; border-radius:10px; text-align:center; color:#8b949e;">目前尚無帳號資料</div>';
@@ -2480,7 +2518,7 @@ const Admin = {
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e; white-space:nowrap;">
                         <input type="checkbox" class="row-check" id="selectVisibleAccounts" onchange="Admin.toggleVisibleUsers(this.checked)"> 選取目前顯示帳號
                     </label>
-                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteUsers()">批次刪除帳號</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteUsers(this)">批次刪除帳號</button>
                 </div>
             </div>
             <div id="accountListArea">${listHtml}</div>
@@ -2520,15 +2558,20 @@ const Admin = {
             }
         });
     },
-    batchDeleteUsers: async function() {
+    batchDeleteUsers: async function(btn) {
         const selected = Array.from(document.querySelectorAll('#accountListArea .account-select:checked')).map(cb => decodeURIComponent(cb.value));
         if (!selected.length) return alert('請先勾選要刪除的帳號。');
         if (!confirm(`確定批次刪除 ${selected.length} 個登入帳號？既有測驗紀錄將會保留。`)) return;
-        selected.forEach(u => { delete App.state.users[u]; });
-        const ok = await App.saveWithNotice('批次刪除帳號已同步完成', '批次刪除帳號已保存在本機，但雲端同步失敗');
+
+        const ok = await Admin.withButtonSyncStatus(btn, async () => {
+            selected.forEach(u => { delete App.state.users[u]; });
+            return await App.saveWithNotice('批次刪除帳號已同步完成', '批次刪除帳號已保存在本機，但雲端同步失敗');
+        });
+
         Admin.renderUsers();
         alert(ok ? '✅ 已批次刪除帳號並同步完成' : '⚠️ 已批次刪除帳號，但雲端同步失敗');
     },
+    
     
     
     resetUserPassword: function(encodedU) {
@@ -2548,81 +2591,100 @@ const Admin = {
     },
     changeUserPassword: function(encodedU) { this.resetUserPassword(encodedU); },
     
-    deleteUser: async function(encodedU) {
+    deleteUser: async function(encodedU, btn) {
         const u = decodeURIComponent(encodedU);
-        if (confirm(`確定刪除「${u}」的登入帳號？既有測驗紀錄將會保留。`)) {
+        if (!confirm(`確定刪除「${u}」的登入帳號？既有測驗紀錄將會保留。`)) return;
+
+        const ok = await Admin.withButtonSyncStatus(btn, async () => {
             delete App.state.users[u];
-            const ok = await App.saveWithNotice('刪除帳號已同步完成', '刪除帳號已保存在本機，但雲端同步失敗');
-            Admin.renderUsers();
-            alert(ok ? '✅ 已刪除帳號並同步完成' : '⚠️ 已刪除帳號，但雲端同步失敗');
-        }
+            return await App.saveWithNotice('刪除帳號已同步完成', '刪除帳號已保存在本機，但雲端同步失敗');
+        });
+
+        Admin.renderUsers();
+        alert(ok ? '✅ 已刪除帳號並同步完成' : '⚠️ 已刪除帳號，但雲端同步失敗');
     },
     
     
-    unlockStudentQuiz: async function(u, courseId) {
+    
+    unlockStudentQuiz: async function(u, courseId, btn) {
         const course = App.state.courses.find(c => c.id === courseId);
         if (!course) return alert('找不到科目，無法解鎖。');
         if (!confirm(`確定解鎖「${u}」的「${course.title}」測驗？解鎖後即可再次測驗。`)) return;
-        const ok = await App.unlockQuiz(u, courseId);
+
+        const ok = await Admin.withButtonSyncStatus(btn, async () => {
+            return await App.unlockQuiz(u, courseId);
+        });
+
         Admin.applyScoreFilter();
         App.updateLoginStatus();
         alert(ok ? '✅ 解鎖已同步完成' : '⚠️ 已解鎖，但雲端同步失敗');
     },
     
-    deleteScoreRecord: async function(recordIndex) {
+    
+    deleteScoreRecord: async function(recordIndex, btn) {
         const r = App.state.records[recordIndex];
         if (!r) return alert('找不到此筆測驗紀錄。');
         if (!confirm(`確定刪除「${r.u}」的「${r.c}」測驗紀錄？`)) return;
-        const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
-        App.state.records.splice(recordIndex, 1);
-        if (course) {
-            const stillHasRecord = App.state.records.some(x => x.u === r.u && (x.cid === course.id || x.c === course.title));
-            if (!stillHasRecord) {
-                if (!App.state.quizLocks) App.state.quizLocks = {};
-                if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
-                delete App.state.quizLocks[App.lockKey(r.u, course.id)];
-                App.state.quizUnlocks[App.unlockKey(r.u, course.id)] = { u: r.u, cid: course.id, d: DateUtil.format() };
+
+        const ok = await Admin.withButtonSyncStatus(btn, async () => {
+            const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
+            App.state.records.splice(recordIndex, 1);
+            if (course) {
+                const stillHasRecord = App.state.records.some(x => x.u === r.u && (x.cid === course.id || x.c === course.title));
+                if (!stillHasRecord) {
+                    if (!App.state.quizLocks) App.state.quizLocks = {};
+                    if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
+                    delete App.state.quizLocks[App.lockKey(r.u, course.id)];
+                    App.state.quizUnlocks[App.unlockKey(r.u, course.id)] = { u: r.u, cid: course.id, d: DateUtil.format() };
+                }
             }
-        }
-        const ok = await App.saveWithNotice('刪除測驗紀錄已同步完成', '刪除測驗紀錄已保存在本機，但雲端同步失敗');
+            return await App.saveWithNotice('刪除測驗紀錄已同步完成', '刪除測驗紀錄已保存在本機，但雲端同步失敗');
+        });
+
         Admin.applyScoreFilter();
         App.updateLoginStatus();
         alert(ok ? '✅ 已刪除測驗紀錄並同步完成' : '⚠️ 已刪除測驗紀錄，但雲端同步失敗');
     },
     
+    
     toggleVisibleScoreRecords: function(checked) {
         document.querySelectorAll('#scoreTableArea .score-select').forEach(cb => { cb.checked = checked; });
     },
-    batchDeleteScoreRecords: async function() {
+    batchDeleteScoreRecords: async function(btn) {
         const indices = Array.from(document.querySelectorAll('#scoreTableArea .score-select:checked'))
             .map(cb => parseInt(cb.value, 10))
             .filter(n => Number.isInteger(n));
         const uniqueIndices = Array.from(new Set(indices)).sort((a,b) => b - a);
         if (!uniqueIndices.length) return alert('請先勾選要刪除的測驗紀錄。');
         if (!confirm(`確定批次刪除 ${uniqueIndices.length} 筆測驗紀錄？`)) return;
-        const affected = [];
-        uniqueIndices.forEach(idx => {
-            const r = App.state.records[idx];
-            if (r) {
-                const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
-                if (course) affected.push({ u: r.u, courseId: course.id, courseTitle: course.title });
-                App.state.records.splice(idx, 1);
-            }
+
+        const ok = await Admin.withButtonSyncStatus(btn, async () => {
+            const affected = [];
+            uniqueIndices.forEach(idx => {
+                const r = App.state.records[idx];
+                if (r) {
+                    const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
+                    if (course) affected.push({ u: r.u, courseId: course.id, courseTitle: course.title });
+                    App.state.records.splice(idx, 1);
+                }
+            });
+            affected.forEach(item => {
+                const stillHasRecord = App.state.records.some(x => x.u === item.u && (x.cid === item.courseId || x.c === item.courseTitle));
+                if (!stillHasRecord) {
+                    if (!App.state.quizLocks) App.state.quizLocks = {};
+                    if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
+                    delete App.state.quizLocks[App.lockKey(item.u, item.courseId)];
+                    App.state.quizUnlocks[App.unlockKey(item.u, item.courseId)] = { u: item.u, cid: item.courseId, d: DateUtil.format() };
+                }
+            });
+            return await App.saveWithNotice('批次刪除測驗紀錄已同步完成', '批次刪除測驗紀錄已保存在本機，但雲端同步失敗');
         });
-        affected.forEach(item => {
-            const stillHasRecord = App.state.records.some(x => x.u === item.u && (x.cid === item.courseId || x.c === item.courseTitle));
-            if (!stillHasRecord) {
-                if (!App.state.quizLocks) App.state.quizLocks = {};
-                if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
-                delete App.state.quizLocks[App.lockKey(item.u, item.courseId)];
-                App.state.quizUnlocks[App.unlockKey(item.u, item.courseId)] = { u: item.u, cid: item.courseId, d: DateUtil.format() };
-            }
-        });
-        const ok = await App.saveWithNotice('批次刪除測驗紀錄已同步完成', '批次刪除測驗紀錄已保存在本機，但雲端同步失敗');
+
         Admin.applyScoreFilter();
         App.updateLoginStatus();
         alert(ok ? '✅ 已批次刪除測驗紀錄並同步完成' : '⚠️ 已批次刪除測驗紀錄，但雲端同步失敗');
     },
+    
     
     getFilteredScoreItems: function() {
         const userInput = document.getElementById('searchUser');
@@ -2710,7 +2772,7 @@ const Admin = {
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e;">
                         <input type="checkbox" class="row-check" id="selectVisibleScores" onchange="Admin.toggleVisibleScoreRecords(this.checked)"> 選取目前顯示紀錄
                     </label>
-                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords()">批次刪除紀錄</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords(this)">批次刪除紀錄</button>
                 </div>
             </div>
             <table>
@@ -2737,8 +2799,8 @@ const Admin = {
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockStudentQuiz('${safeUser}', ${course.id})">解鎖再測驗</button>` : ''}
-                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteScoreRecord(${item.idx})">刪除紀錄</button>
+                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockStudentQuiz('${safeUser}', ${course.id}, this)">解鎖再測驗</button>` : ''}
+                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteScoreRecord(${item.idx}, this)">刪除紀錄</button>
                                 </div>
                             </td>
                         </tr>`;
