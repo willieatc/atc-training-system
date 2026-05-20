@@ -1250,6 +1250,8 @@ const Backend = {
     setStatus: function(text, color) {
         const el = document.getElementById('cloudStatus');
         if (el) {
+            if (el.innerText === text && this._lastStatusText === text) return;
+            this._lastStatusText = text;
             el.innerText = text;
             el.style.color = color || '#8b949e';
             el.style.display = (typeof App !== 'undefined' && App.isInstructor) ? 'block' : 'none';
@@ -1257,12 +1259,34 @@ const Backend = {
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
-        // v122：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
-        if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
-            this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
-            this.loaded = true;
-            return false;
+
+        // 修正版：避免「本機變更待同步，暫不覆蓋」一直卡住或重複顯示。
+        // 若是剛剛才產生的待同步標記，先保護本機資料；
+        // 若已超過保護時間，視為舊標記，清除後繼續讀取雲端。
+        const pendingRaw = localStorage.getItem('ATC_PENDING_CLOUD_SYNC');
+        if (pendingRaw) {
+            let pendingAge = 0;
+            try {
+                const pendingObj = JSON.parse(pendingRaw);
+                pendingAge = Date.now() - Number(pendingObj.ts || pendingObj.time || 0);
+            } catch (e) {
+                pendingAge = 999999999;
+            }
+
+            // 90 秒內的變更先保護；超過 90 秒視為舊標記，避免一直不能讀雲端。
+            if (pendingAge > 0 && pendingAge < 90000) {
+                if (this._lastPendingNotice !== 'shown') {
+                    this.setStatus('本機變更待同步，暫不覆蓋雲端資料', 'var(--warning-color)');
+                    this._lastPendingNotice = 'shown';
+                }
+                this.loaded = true;
+                return false;
+            }
+
+            localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
+            this._lastPendingNotice = '';
         }
+
         this.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
         try {
             const url = SHEETS_WEB_APP_URL + (SHEETS_WEB_APP_URL.includes('?') ? '&' : '?') + 'action=getState&ts=' + Date.now();
@@ -1282,7 +1306,8 @@ const Backend = {
             App.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
             this.loaded = true;
-            this.setStatus('Google Sheets 雲端同步中', 'var(--success-color)');
+            this._lastPendingNotice = '';
+            this.setStatus('Google Sheets 已同步', 'var(--success-color)');
             return true;
         } catch (err) {
             console.error('Google Sheets load failed:', err);
@@ -1447,7 +1472,11 @@ const App = {
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     savePromise: null,
     markPendingCloudSync: function() {
-        localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
+        try {
+            localStorage.setItem('ATC_PENDING_CLOUD_SYNC', JSON.stringify({ ts: Date.now() }));
+        } catch (err) {
+            console.error('markPendingCloudSync failed:', err);
+        }
     },
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
