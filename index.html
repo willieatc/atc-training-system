@@ -1287,7 +1287,7 @@ const PASS_SCORE = 70;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-passScore-employeeId-sync-v123-ui';
+const APP_BUILD_VERSION = 'V124-account-delete-only-sync-notice';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1614,6 +1614,32 @@ const App = {
         this.savePromise = Backend.saveState(JSON.parse(JSON.stringify(this.state)));
         return this.savePromise;
     },
+    saveWithNotice: async function(successText, failureText) {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        if (Backend.enabled() && !this.cloudReady) {
+            Backend.setStatus('尚未成功讀取雲端，禁止儲存以避免覆蓋', 'var(--danger-color)');
+            alert('尚未成功讀取雲端資料。為避免本機舊資料覆蓋雲端，請重新整理並確認 Google Sheets 已同步後再操作。');
+            return false;
+        }
+
+        Backend.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
+        let ok = false;
+        try {
+            ok = await Backend.saveState(JSON.parse(JSON.stringify(this.state)));
+        } catch (err) {
+            console.error('saveWithNotice failed:', err);
+            ok = false;
+        }
+
+        if (ok) {
+            Backend.setStatus(successText || 'Google Sheets 已同步', 'var(--success-color)');
+            return true;
+        }
+
+        Backend.setStatus(failureText || '雲端同步失敗，已保留本機資料', 'var(--danger-color)');
+        alert(failureText || '雲端同步失敗，資料已先保存在本機。請檢查 Web App URL／部署。');
+        return false;
+    },
     saveLocalOnly: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
         return true;
@@ -1634,14 +1660,18 @@ const App = {
         Object.keys(this.state.users).forEach(code => {
             const v = this.state.users[code];
             if (typeof v === 'string') {
-                this.state.users[code] = { employeeId: '', name: this.state.userNames && this.state.userNames[code] ? this.state.userNames[code] : '', pw: v };
+                this.state.users[code] = {
+                    employeeId: '',
+                    name: this.state.userNames && this.state.userNames[code] ? this.state.userNames[code] : '',
+                    pw: v
+                };
             } else if (!v || typeof v !== 'object') {
                 this.state.users[code] = { employeeId: '', name: '', pw: '' };
             } else {
                 this.state.users[code] = {
-                    employeeId: String(v.employeeId ?? v.empId ?? ''),
+                    employeeId: String(v.employeeId || ''),
                     name: String(v.name || (this.state.userNames && this.state.userNames[code] ? this.state.userNames[code] : '')),
-                    pw: String(v.pw ?? v.password ?? '')
+                    pw: String(v.pw || v.password || '')
                 };
             }
         });
@@ -1652,10 +1682,10 @@ const App = {
     },
     getUserEmployeeId: function(code) {
         const rec = this.getUserRecord(code);
-        return rec ? (rec.employeeId || '') : '';
+        return rec ? String(rec.employeeId || '') : '';
     },
     getRecordEmployeeId: function(record) {
-        return record.employeeId || record.empId || this.getUserEmployeeId(record.u) || '';
+        return String(record.employeeId || this.getUserEmployeeId(record.u) || '');
     },
     getUserName: function(code) {
         const rec = this.getUserRecord(code);
@@ -1748,7 +1778,7 @@ const App = {
         }
         return this.activeCourse;
     },
-    unlockQuiz: function(user, courseId) {
+    unlockQuiz: async function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
         delete this.state.quizLocks[this.lockKey(user, courseId)];
@@ -1757,8 +1787,9 @@ const App = {
             cid: courseId,
             d: DateUtil.format()
         };
-        this.save();
+        return await this.saveWithNotice('解鎖已同步完成', '解鎖已保存在本機，但雲端同步失敗');
     },
+    
     beginQuizSession: function() {
         if (this.isInstructor || !this.user || !this.activeCourse) return;
         localStorage.setItem(this.pendingQuizKey, JSON.stringify({
@@ -2218,18 +2249,19 @@ const Admin = {
         Admin.renderEditor();
     },
     delQ: function(ci, qi) { Admin.sync(); App.state.courses[ci].questions.splice(qi, 1); Admin.renderEditor(); },
-    delAllQ: function(ci) {
+    delAllQ: async function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
         if (!course) return;
         if (!course.questions || course.questions.length === 0) return alert("目前沒有題目可刪除。");
         if (confirm(`確定刪除「${course.title}」的所有題目？此操作不會刪除教材連結與科目名稱。`)) {
             course.questions = [];
-            App.save();
+            const ok = await App.saveWithNotice('刪除題目已同步完成', '刪除題目已保存在本機，但雲端同步失敗');
             Admin.renderEditor();
-            alert("✅ 已刪除所有題目");
+            alert(ok ? "✅ 已刪除所有題目並同步完成" : "⚠️ 已刪除所有題目，但雲端同步失敗");
         }
     },
+    
     courseDragStart: function(event, index) {
         Admin.sync();
         Admin.dragCourseIndex = index;
@@ -2284,7 +2316,15 @@ const Admin = {
     },
     
     
-    delCourse: function(ci) { if(confirm("確定刪除？")) { App.state.courses.splice(ci, 1); App.save(); Admin.renderEditor(); }},
+    delCourse: async function(ci) {
+        if (confirm("確定刪除？")) {
+            App.state.courses.splice(ci, 1);
+            const ok = await App.saveWithNotice('刪除科目已同步完成', '刪除科目已保存在本機，但雲端同步失敗');
+            Admin.renderEditor();
+            alert(ok ? '✅ 已刪除科目並同步完成' : '⚠️ 已刪除科目，但雲端同步失敗');
+        }
+    },
+    
     impCSV: function(e, ci) {
         const f = e.target.files[0]; if(!f) return;
         const r = new FileReader(); r.onload=(ev)=>{
@@ -2400,8 +2440,8 @@ const Admin = {
         const listHtml = users.length ? users.map((u, idx) => {
             const safeU = encodeURIComponent(u);
             const recordCount = App.state.records.filter(r => r.u === u).length;
-            const account = App.getUserRecord(u) || { employeeId: '' };
-            const employeeText = account.employeeId ? account.employeeId : '尚未登錄';
+            const employeeId = App.getUserEmployeeId(u);
+            const employeeText = employeeId ? employeeId : '未登錄';
             return `
             <div class="account-card" data-account-user="${Admin.esc(String(u).toLowerCase())}">
                 <input type="checkbox" class="row-check account-select" value="${safeU}" aria-label="選取 ${Admin.esc(u)}">
@@ -2473,14 +2513,17 @@ const Admin = {
             }
         });
     },
-    batchDeleteUsers: function() {
+    batchDeleteUsers: async function() {
         const selected = Array.from(document.querySelectorAll('#accountListArea .account-select:checked')).map(cb => decodeURIComponent(cb.value));
         if (!selected.length) return alert('請先勾選要刪除的帳號。');
         if (!confirm(`確定批次刪除 ${selected.length} 個登入帳號？既有測驗紀錄將會保留。`)) return;
         selected.forEach(u => { delete App.state.users[u]; });
-        App.save();
+        const ok = await App.saveWithNotice('批次刪除帳號已同步完成', '批次刪除帳號已保存在本機，但雲端同步失敗');
         Admin.renderUsers();
+        alert(ok ? '✅ 已批次刪除帳號並同步完成' : '⚠️ 已批次刪除帳號，但雲端同步失敗');
     },
+    
+    
     resetUserPassword: function(encodedU) {
         alert('目前登入不使用密碼，無需重設密碼。');
     },
@@ -2497,23 +2540,29 @@ const Admin = {
         alert("✅ 管理員密碼已修改");
     },
     changeUserPassword: function(encodedU) { this.resetUserPassword(encodedU); },
-    deleteUser: function(encodedU) {
+    
+    deleteUser: async function(encodedU) {
         const u = decodeURIComponent(encodedU);
-        if(confirm(`確定刪除「${u}」的登入帳號？既有測驗紀錄將會保留。`)) {
+        if (confirm(`確定刪除「${u}」的登入帳號？既有測驗紀錄將會保留。`)) {
             delete App.state.users[u];
-            App.save();
+            const ok = await App.saveWithNotice('刪除帳號已同步完成', '刪除帳號已保存在本機，但雲端同步失敗');
             Admin.renderUsers();
+            alert(ok ? '✅ 已刪除帳號並同步完成' : '⚠️ 已刪除帳號，但雲端同步失敗');
         }
     },
-    unlockStudentQuiz: function(u, courseId) {
+    
+    
+    unlockStudentQuiz: async function(u, courseId) {
         const course = App.state.courses.find(c => c.id === courseId);
         if (!course) return alert('找不到科目，無法解鎖。');
         if (!confirm(`確定解鎖「${u}」的「${course.title}」測驗？解鎖後即可再次測驗。`)) return;
-        App.unlockQuiz(u, courseId);
+        const ok = await App.unlockQuiz(u, courseId);
         Admin.applyScoreFilter();
         App.updateLoginStatus();
+        alert(ok ? '✅ 解鎖已同步完成' : '⚠️ 已解鎖，但雲端同步失敗');
     },
-    deleteScoreRecord: function(recordIndex) {
+    
+    deleteScoreRecord: async function(recordIndex) {
         const r = App.state.records[recordIndex];
         if (!r) return alert('找不到此筆測驗紀錄。');
         if (!confirm(`確定刪除「${r.u}」的「${r.c}」測驗紀錄？`)) return;
@@ -2521,16 +2570,23 @@ const Admin = {
         App.state.records.splice(recordIndex, 1);
         if (course) {
             const stillHasRecord = App.state.records.some(x => x.u === r.u && (x.cid === course.id || x.c === course.title));
-            if (!stillHasRecord) App.unlockQuiz(r.u, course.id);
+            if (!stillHasRecord) {
+                if (!App.state.quizLocks) App.state.quizLocks = {};
+                if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
+                delete App.state.quizLocks[App.lockKey(r.u, course.id)];
+                App.state.quizUnlocks[App.unlockKey(r.u, course.id)] = { u: r.u, cid: course.id, d: DateUtil.format() };
+            }
         }
-        App.save();
+        const ok = await App.saveWithNotice('刪除測驗紀錄已同步完成', '刪除測驗紀錄已保存在本機，但雲端同步失敗');
         Admin.applyScoreFilter();
         App.updateLoginStatus();
+        alert(ok ? '✅ 已刪除測驗紀錄並同步完成' : '⚠️ 已刪除測驗紀錄，但雲端同步失敗');
     },
+    
     toggleVisibleScoreRecords: function(checked) {
         document.querySelectorAll('#scoreTableArea .score-select').forEach(cb => { cb.checked = checked; });
     },
-    batchDeleteScoreRecords: function() {
+    batchDeleteScoreRecords: async function() {
         const indices = Array.from(document.querySelectorAll('#scoreTableArea .score-select:checked'))
             .map(cb => parseInt(cb.value, 10))
             .filter(n => Number.isInteger(n));
@@ -2548,12 +2604,19 @@ const Admin = {
         });
         affected.forEach(item => {
             const stillHasRecord = App.state.records.some(x => x.u === item.u && (x.cid === item.courseId || x.c === item.courseTitle));
-            if (!stillHasRecord) App.unlockQuiz(item.u, item.courseId);
+            if (!stillHasRecord) {
+                if (!App.state.quizLocks) App.state.quizLocks = {};
+                if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
+                delete App.state.quizLocks[App.lockKey(item.u, item.courseId)];
+                App.state.quizUnlocks[App.unlockKey(item.u, item.courseId)] = { u: item.u, cid: item.courseId, d: DateUtil.format() };
+            }
         });
-        App.save();
+        const ok = await App.saveWithNotice('批次刪除測驗紀錄已同步完成', '批次刪除測驗紀錄已保存在本機，但雲端同步失敗');
         Admin.applyScoreFilter();
         App.updateLoginStatus();
+        alert(ok ? '✅ 已批次刪除測驗紀錄並同步完成' : '⚠️ 已批次刪除測驗紀錄，但雲端同步失敗');
     },
+    
     getFilteredScoreItems: function() {
         const userInput = document.getElementById('searchUser');
         const courseSelect = document.getElementById('searchCourse');
