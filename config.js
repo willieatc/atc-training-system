@@ -9,5 +9,5 @@
  */
 
 window.ATC_CONFIG = {
-    SHEETS_WEB_APP_URL: "請貼上你的 Google Apps Script Web App URL"
+    SHEETS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbxMFkEY5ApRPOoisnCePL96XNLvbYwzpB99Eh_x-3doOF00NvYk0YKMhEjuSFIXXIaz/exec"
 };
