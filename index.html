@@ -1280,9 +1280,10 @@ const Backend = {
                 adminPw: st.adminPw || 'rctp3023'
             };
             App.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+            App.state.records.forEach(r => { if (!Number.isFinite(Number(r.passScore))) r.passScore = 70; });
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
             this.loaded = true;
-            this.setStatus('Google Sheets 雲端同步中', 'var(--success-color)');
+            this.setStatus('Google Sheets 已同步', 'var(--success-color)');
             return true;
         } catch (err) {
             console.error('Google Sheets load failed:', err);
@@ -1453,8 +1454,7 @@ const App = {
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
         this.markPendingCloudSync();
-        const snapshot = JSON.parse(JSON.stringify(this.state));
-        this.savePromise = Backend.saveState(snapshot);
+        this.savePromise = Backend.saveState(JSON.parse(JSON.stringify(this.state)));
         return this.savePromise;
     },
     saveLocalOnly: function() {
@@ -1514,10 +1514,7 @@ const App = {
         this.user = '管理員';
         this.employeeId = '';
         this.syncUI();
-        this.showSec('sec-admin');
-        if (this.currentAdminTab === 'edit') Admin.renderEditor();
-        else if (this.currentAdminTab === 'rec') Admin.renderUsers();
-        else Admin.renderScores();
+        this.switchAdmin(this.currentAdminTab || 'score');
         return true;
     },
     init: async function() {
@@ -1528,6 +1525,7 @@ const App = {
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
         this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+        this.state.records.forEach(r => { if (!Number.isFinite(Number(r.passScore))) r.passScore = 70; });
         this.normalizeUsers();
         this.renderSelects();
         this.updateLoginStatus();
@@ -1541,13 +1539,12 @@ const App = {
             if (!this.state.records) this.state.records = [];
             if (!this.state.users) this.state.users = {};
             this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+            this.state.records.forEach(r => { if (!Number.isFinite(Number(r.passScore))) r.passScore = 70; });
             this.normalizeUsers();
         }
 
         this.recoverInterruptedQuiz();
 
-        // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態。
-        // 僅在真的補鎖時才儲存，避免每次回登入頁都覆蓋雲端資料。
         let lockChanged = false;
         (this.state.records || []).forEach(r => {
             const course = this.state.courses.find(c => c.id === r.cid || c.title === r.c);
@@ -1556,14 +1553,12 @@ const App = {
                 lockChanged = true;
             }
         });
-        if (lockChanged) {
-            await this.save();
-        } else {
-            this.saveLocalOnly();
-        }
+        if (lockChanged) await this.save();
+        else this.saveLocalOnly();
         this.renderSelects();
         this.updateLoginStatus();
         this.syncUI();
+        this.restoreAdminSession();
     },
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
     unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
@@ -1764,8 +1759,20 @@ const App = {
         this.showSec('sec-login');
         this.refreshHomeUI();
     },
-    toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
-    logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
+    toAdmin: function() {
+        if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) {
+            this.isInstructor = true;
+            sessionStorage.setItem(this.ADMIN_SESSION_KEY, '1');
+            this.switchAdmin('score');
+        } else alert("拒絕");
+    },
+    logoutInstructor: function() {
+        this.quizInProgress = false;
+        this.clearQuizSession();
+        this.isInstructor = false;
+        sessionStorage.removeItem(this.ADMIN_SESSION_KEY);
+        this.toHome();
+    },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -2125,23 +2132,35 @@ const Admin = {
             }
         });
     },
-    saveAll: async function(evt) {
+    saveAll: function(evt) {
         Admin.sync();
         const btn = evt && evt.currentTarget ? evt.currentTarget : null;
         const oldText = btn ? btn.innerText : '';
         if (btn) {
             btn.disabled = true;
-            btn.innerText = '儲存同步中...';
+            btn.innerText = '已存本機，雲端同步中...';
         }
+
+        // v123 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
         App.saveLocalOnly();
         App.renderSelects();
         Admin.refreshCourseHeaderBadges();
-        const ok = await App.save();
+
+        App.saveBackground();
+
         if (btn) {
-            btn.disabled = false;
-            btn.innerText = oldText || '💾 儲存變更';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerText = oldText || '💾 儲存變更';
+            }, 450);
         }
-        alert(ok ? "✅ 變更已儲存並同步完成" : "⚠️ 變更已先儲存在本機，但雲端同步失敗，請檢查 Web App URL。");
+
+        const cloudStatus = document.getElementById('cloudStatus');
+        if (cloudStatus && App.isInstructor) {
+            cloudStatus.style.display = 'block';
+            cloudStatus.innerText = '已先儲存本機，Google Sheets 背景同步中...';
+            cloudStatus.style.color = 'var(--warning-color)';
+        }
     },
     renderUsers: function() {
         App.normalizeUsers();
@@ -2643,8 +2662,26 @@ const Quiz = {
         const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
         const courseNow = App.refreshActiveCourse();
         const passScoreNow = App.getPassScore(courseNow);
-        let synced = true;
+        const passedNow = score >= passScoreNow;
 
+        App.showSec('sec-res');
+        const finalScoreEl = document.getElementById('finalScore');
+        finalScoreEl.innerText = score;
+        finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+
+        const resultPassNote = document.getElementById('resultPassNote');
+        if (resultPassNote) {
+            if (App.isInstructor) {
+                resultPassNote.innerText = `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${passScoreNow} 分。`;
+                resultPassNote.style.color = 'var(--warning-color)';
+            } else {
+                resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）｜成績同步中，請勿關閉網頁...`;
+                resultPassNote.style.color = 'var(--warning-color)';
+            }
+        }
+        App.renderResultAnswers();
+
+        let synced = true;
         if (!App.isInstructor) {
             App.state.records.push({
                 u: App.user,
@@ -2654,44 +2691,32 @@ const Quiz = {
                 c: App.activeCourse.title,
                 s: Number(score),
                 passScore: Number(passScoreNow),
-                d: DateUtil.format()
+                d: DateUtil.format(),
+                note: ''
             });
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
-
-            const resultPassNote = document.getElementById('resultPassNote');
-            if (resultPassNote) {
-                resultPassNote.innerText = '成績同步中，請勿關閉網頁...';
-                resultPassNote.style.color = 'var(--warning-color)';
+            App.saveLocalOnly();
+            try {
+                synced = await App.save();
+            } catch (err) {
+                synced = false;
+                console.error('Score sync failed:', err);
             }
-
-            synced = await App.save();
         }
 
         App.quizInProgress = false;
         if (synced) App.clearQuizSession();
 
-        const finalScoreEl = document.getElementById('finalScore');
-        finalScoreEl.innerText = score;
-        const passedNow = score >= passScoreNow;
-        finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
-
-        const resultPassNote = document.getElementById('resultPassNote');
-        if (resultPassNote) {
-            if (App.isInstructor) {
-                resultPassNote.innerText = `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${passScoreNow} 分。`;
-                resultPassNote.style.color = 'var(--warning-color)';
-            } else if (synced) {
-                resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）｜成績已同步，可關閉網頁。`;
+        if (resultPassNote && !App.isInstructor) {
+            if (synced) {
+                resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）｜成績已同步，可以關閉頁面。`;
                 resultPassNote.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
             } else {
-                resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）｜⚠️ 雲端同步失敗，請勿關閉網頁，請通知管理員檢查 Web App URL。`;
+                resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）｜⚠️ 成績尚未完成雲端同步，請勿關閉頁面，請通知管理員檢查 Web App URL。`;
                 resultPassNote.style.color = 'var(--danger-color)';
             }
         }
-
-        App.renderResultAnswers();
-        App.showSec('sec-res');
-    }
+    },
 };
 
 
@@ -2737,20 +2762,20 @@ const RefreshGuard = {
 
 
 window.addEventListener('beforeunload', function(e) {
-    if (App && App.quizInProgress) {
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
-    }
-}); // scoreSyncBeforeUnload
-
-window.addEventListener('beforeunload', function(e) {
     if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
         e.preventDefault();
         e.returnValue = '';
         return '';
     }
 }); // beforeunloadPendingCloudSync
+
+window.addEventListener('beforeunload', function(e) {
+    if (typeof App !== 'undefined' && App && App.quizInProgress) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+}); // scoreSyncBeforeUnload
 
 RefreshGuard.init();
 App.init();
