@@ -1287,7 +1287,7 @@ const PASS_SCORE = 70;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-core-fix-v123-ui-preserved';
+const APP_BUILD_VERSION = 'V124-passScore-employeeId-sync-v123-ui';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1634,14 +1634,14 @@ const App = {
         Object.keys(this.state.users).forEach(code => {
             const v = this.state.users[code];
             if (typeof v === 'string') {
-                this.state.users[code] = { employeeId: '', name: '', pw: '' };
+                this.state.users[code] = { employeeId: '', name: this.state.userNames && this.state.userNames[code] ? this.state.userNames[code] : '', pw: v };
             } else if (!v || typeof v !== 'object') {
                 this.state.users[code] = { employeeId: '', name: '', pw: '' };
             } else {
                 this.state.users[code] = {
                     employeeId: String(v.employeeId ?? v.empId ?? ''),
-                    name: String(v.name || ''),
-                    pw: ''
+                    name: String(v.name || (this.state.userNames && this.state.userNames[code] ? this.state.userNames[code] : '')),
+                    pw: String(v.pw ?? v.password ?? '')
                 };
             }
         });
@@ -2086,7 +2086,7 @@ const Admin = {
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
             <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''} course-sortable-item" data-id="${c.id}" draggable="true" ondragstart="Admin.courseDragStart(event, ${ci})" ondragover="Admin.courseDragOver(event, ${ci})" ondrop="Admin.courseDrop(event, ${ci})" ondragend="Admin.courseDragEnd(event)">
                 <div class="course-header course-drag-row" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
-                    <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70} 分</span></strong>
+                    <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 80} 分</span></strong>
                     <div class="course-order-actions">
                         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
                     </div>
@@ -2106,7 +2106,7 @@ const Admin = {
                             </div>
                             <div>
                                 <label>及格分數</label>
-                                <input type="number" min="0" max="100" class="input-field c-pass-score" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70}" placeholder="及格分數">
+                                <input type="number" min="0" max="100" class="input-field c-pass-score" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 80}" placeholder="及格分數">
                             </div>
                         </div>
                     </div>
@@ -2198,7 +2198,7 @@ const Admin = {
                 target.embedUrl = item.querySelector('.c-url').value.trim();
                 const passInput = item.querySelector('.c-pass-score');
                 const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
-                target.passScore = Number.isInteger(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 70;
+                target.passScore = Number.isInteger(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 80;
                 target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => ({
                     q: row.querySelector('.q-t').value,
                     o: Array.from(row.querySelectorAll('.q-o')).map(o => o.value),
