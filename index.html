@@ -1120,6 +1120,52 @@
                 0 0 2px rgba(255,255,255,0.35) !important;
         }
 
+
+.course-order-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.course-order-actions .btn[disabled] {
+    opacity: .45;
+    cursor: not-allowed;
+}
+@media (max-width: 760px) {
+    .course-order-actions {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 8px;
+    }
+}
+
+
+.course-item.drag-over {
+    outline: 2px dashed var(--primary-color);
+    outline-offset: 3px;
+}
+
+
+
+.course-sortable-item {
+    cursor: grab;
+}
+.course-sortable-item:active {
+    cursor: grabbing;
+}
+.course-drag-row strong::before {
+    content: '☰';
+    display: inline-block;
+    margin-right: 8px;
+    color: #8b949e;
+    font-weight: 700;
+}
+.course-sortable-item.drag-over {
+    outline: 2px dashed var(--primary-color);
+    outline-offset: 3px;
+}
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -1258,41 +1304,29 @@ const Backend = {
         }
     },
     loadState: async function() {
-        if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
-
-        // 修正版：避免「本機變更待同步，暫不覆蓋」一直卡住或重複顯示。
-        // 若是剛剛才產生的待同步標記，先保護本機資料；
-        // 若已超過保護時間，視為舊標記，清除後繼續讀取雲端。
-        const pendingRaw = localStorage.getItem('ATC_PENDING_CLOUD_SYNC');
-        if (pendingRaw) {
-            let pendingAge = 0;
-            try {
-                const pendingObj = JSON.parse(pendingRaw);
-                pendingAge = Date.now() - Number(pendingObj.ts || pendingObj.time || 0);
-            } catch (e) {
-                pendingAge = 999999999;
-            }
-
-            // 90 秒內的變更先保護；超過 90 秒視為舊標記，避免一直不能讀雲端。
-            if (pendingAge > 0 && pendingAge < 90000) {
-                if (this._lastPendingNotice !== 'shown') {
-                    this.setStatus('本機變更待同步，暫不覆蓋雲端資料', 'var(--warning-color)');
-                    this._lastPendingNotice = 'shown';
-                }
-                this.loaded = true;
-                return false;
-            }
-
-            localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
-            this._lastPendingNotice = '';
+        if (!this.enabled()) {
+            this.setStatus('本機資料模式', '#8b949e');
+            return false;
         }
+
+        // 雲端優先：只要 Google Sheets 可讀取，就以雲端資料覆蓋本機暫存。
+        // 這可避免瀏覽器 localStorage 舊資料覆蓋已上傳的雲端資料。
+        localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
 
         this.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
         try {
             const url = SHEETS_WEB_APP_URL + (SHEETS_WEB_APP_URL.includes('?') ? '&' : '?') + 'action=getState&ts=' + Date.now();
-            const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+            const res = await fetch(url, {
+                method: 'GET',
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
             const data = await res.json();
             if (!data || !data.ok) throw new Error(data && data.error ? data.error : '讀取失敗');
+
             const st = data.state || {};
             App.state = {
                 courses: Array.isArray(st.courses) ? st.courses : [],
@@ -1304,9 +1338,10 @@ const Backend = {
                 adminPw: st.adminPw || 'rctp3023'
             };
             App.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            localStorage.setItem('ATC_LAST_CLOUD_LOAD_TS', String(Date.now()));
             this.loaded = true;
-            this._lastPendingNotice = '';
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
             return true;
         } catch (err) {
@@ -1315,6 +1350,7 @@ const Backend = {
             return false;
         }
     },
+    
     submitScore: async function(record) {
         if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
             this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
@@ -1343,6 +1379,42 @@ const Backend = {
             return { ok: false, error: String(err && err.message ? err.message : err) };
         }
     },
+    saveAdminState: async function(state) {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(state));
+        localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
+        if (!this.enabled()) return true;
+        this.saving = true;
+        this.setStatus('Google Sheets 儲存中...', 'var(--warning-color)');
+        try {
+            const payload = { action: 'saveAdminState', state: state, ts: Date.now() };
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 25000);
+            const res = await fetch(SHEETS_WEB_APP_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                    'Cache-Control': 'no-cache'
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            const data = await res.json();
+            if (!data || !data.ok) throw new Error(data && data.error ? data.error : '儲存失敗');
+
+            localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
+            localStorage.setItem('ATC_LAST_CLOUD_SAVE_TS', String(Date.now()));
+            this.setStatus('Google Sheets 已同步', 'var(--success-color)');
+            return true;
+        } catch (err) {
+            console.error('Google Sheets admin save failed:', err);
+            this.setStatus('雲端儲存失敗，請檢查 Web App URL', 'var(--danger-color)');
+            return false;
+        } finally {
+            this.saving = false;
+        }
+    },
+    
     saveState: async function(state) {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(state));
         if (!this.enabled()) return true;
@@ -1494,12 +1566,15 @@ const Backup = {
 };
 
 
+const APP_BUILD_VERSION = 'v123-cloud-first-admin-save';
+
 const App = {
     state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
     user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false,
     scoreSyncPending: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     pendingScoreKey: 'ATC_PENDING_SCORE_RECORDS',
+    ADMIN_SESSION_KEY: 'ATC_ADMIN_SESSION_ACTIVE',
     savePromise: null,
     markPendingCloudSync: function() {
         try {
@@ -1581,6 +1656,14 @@ const App = {
             console.error('retryPendingScores failed:', err);
         }
     },
+    saveAdmin: function() {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
+        const snapshot = JSON.parse(JSON.stringify(this.state));
+        this.savePromise = Backend.saveAdminState(snapshot);
+        return this.savePromise;
+    },
+    
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
         this.markPendingCloudSync();
@@ -1637,6 +1720,15 @@ const App = {
     getRecordName: function(record) {
         return record.name || this.getUserName(record.u) || '';
     },
+    restoreAdminSession: function() {
+        if (sessionStorage.getItem(this.ADMIN_SESSION_KEY) !== '1') return false;
+        this.isInstructor = true;
+        this.user = '管理員';
+        this.employeeId = '';
+        this.syncUI();
+        this.switchAdmin(this.currentAdminTab || 'score');
+        return true;
+    },
     init: async function() {
         // 先用本機資料立即渲染登入科目，避免等 Google Sheets 造成登入頁空白太久。
         if (!this.state.courses) this.state.courses = [];
@@ -1681,6 +1773,8 @@ const App = {
         this.renderSelects();
         this.updateLoginStatus();
         this.syncUI();
+        this.restoreAdminSession();
+
     },
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
     unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
@@ -1881,7 +1975,15 @@ const App = {
         this.showSec('sec-login');
         this.refreshHomeUI();
     },
-    toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
+    toAdmin: function() {
+        if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) {
+            this.isInstructor = true;
+            sessionStorage.setItem(this.ADMIN_SESSION_KEY, '1');
+            this.switchAdmin('score');
+        } else {
+            alert("拒絕");
+        }
+    },
     logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1935,6 +2037,8 @@ const App = {
 };
 
 const Admin = {
+    dragCourseIndex: null,
+    justDraggedCourse: false,
     esc: function(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); },
     csvCell: function(v) {
         const s = String(v ?? '');
@@ -2025,7 +2129,7 @@ const Admin = {
             <div class="sticky-header">
                 <div>
                     <h3>📚 教材與題庫編輯</h3>
-                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材及題庫記得按下儲存變更才會生效。</div>
+                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材、題庫及拖拉科目卡片調整順序後，記得按下儲存變更才會生效。</div>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-outline btn-sm" onclick="Admin.downloadTemplate()">📁 下載範本</button>
@@ -2036,10 +2140,12 @@ const Admin = {
             <div id="editorList"></div>`;
         
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
-            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''}" data-id="${c.id}">
-                <div class="course-header" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
+            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''} course-sortable-item" data-id="${c.id}" draggable="true" ondragstart="Admin.courseDragStart(event, ${ci})" ondragover="Admin.courseDragOver(event, ${ci})" ondrop="Admin.courseDrop(event, ${ci})" ondragend="Admin.courseDragEnd(event)">
+                <div class="course-header course-drag-row" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
                     <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70} 分</span></strong>
-                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
+                    <div class="course-order-actions">
+                        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
+                    </div>
                 </div>
                 <div class="course-content">
                     <div class="editor-card">
@@ -2120,7 +2226,9 @@ const Admin = {
             }, 80);
         }
 },
-    toggleCourse: function(id, el) { el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
+    toggleCourse: function(id, el) {
+        if (Admin.justDraggedCourse) return;
+ el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
     sync: function() {
         document.querySelectorAll('.course-item').forEach(item => {
             const cid = parseInt(item.dataset.id);
@@ -2147,11 +2255,14 @@ const Admin = {
                 const passInput = item.querySelector('.c-pass-score');
                 const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
                 target.passScore = Number.isInteger(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 70;
-                target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => ({
-                    q: row.querySelector('.q-t').value,
-                    o: Array.from(row.querySelectorAll('.q-o')).map(o => o.value),
-                    a: parseInt(row.querySelector(`input[type="radio"]:checked`)?.value || 0)
-                }));
+                target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => {
+                    const checked = row.querySelector('input[type="radio"]:checked');
+                    return {
+                        q: row.querySelector('.q-t').value,
+                        o: Array.from(row.querySelectorAll('.q-o')).map(o => o.value),
+                        a: checked ? parseInt(checked.value, 10) : 0
+                    };
+                }).filter(q => q.q.trim() !== '');
             }
         });
     },
@@ -2178,6 +2289,60 @@ const Admin = {
             alert("✅ 已刪除所有題目");
         }
     },
+    courseDragStart: function(event, index) {
+        Admin.sync();
+        Admin.dragCourseIndex = index;
+        Admin.justDraggedCourse = false;
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(index));
+        }
+        const item = event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('course-item')
+            ? event.currentTarget
+            : (event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null);
+        if (item) item.classList.add('dragging');
+    },
+    courseDragOver: function(event, index) {
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+        const item = event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('course-item')
+            ? event.currentTarget
+            : (event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null);
+        if (item && Admin.dragCourseIndex !== null && Admin.dragCourseIndex !== index) item.classList.add('drag-over');
+    },
+    courseDrop: function(event, targetIndex) {
+        event.preventDefault();
+        document.querySelectorAll('.course-item.drag-over, .course-item.dragging').forEach(el => {
+            el.classList.remove('drag-over');
+            el.classList.remove('dragging');
+        });
+        const fromIndex = Number.isInteger(Admin.dragCourseIndex) ? Admin.dragCourseIndex : Number(event.dataTransfer && event.dataTransfer.getData('text/plain'));
+        Admin.dragCourseIndex = null;
+        Admin.justDraggedCourse = true;
+        setTimeout(() => { Admin.justDraggedCourse = false; }, 250);
+
+        if (!Number.isInteger(fromIndex) || fromIndex === targetIndex) return;
+
+        Admin.sync();
+        const courses = App.state.courses || [];
+        if (fromIndex < 0 || fromIndex >= courses.length || targetIndex < 0 || targetIndex >= courses.length) return;
+        const moved = courses.splice(fromIndex, 1)[0];
+        courses.splice(targetIndex, 0, moved);
+
+        App.lastOpenedCourseId = null;
+        Admin.renderEditor();
+        App.renderSelects();
+    },
+    courseDragEnd: function(event) {
+        Admin.dragCourseIndex = null;
+        document.querySelectorAll('.course-item.drag-over, .course-item.dragging').forEach(el => {
+            el.classList.remove('drag-over');
+            el.classList.remove('dragging');
+        });
+    },
+    
+    
     delCourse: function(ci) { if(confirm("確定刪除？")) { App.state.courses.splice(ci, 1); App.save(); Admin.renderEditor(); }},
     impCSV: function(e, ci) {
         const f = e.target.files[0]; if(!f) return;
@@ -2242,36 +2407,58 @@ const Admin = {
             }
         });
     },
-    saveAll: function(evt) {
+    saveAll: async function(evt) {
         Admin.sync();
+
         const btn = evt && evt.currentTarget ? evt.currentTarget : null;
         const oldText = btn ? btn.innerText : '';
+        const cloudStatus = document.getElementById('cloudStatus');
+
         if (btn) {
             btn.disabled = true;
-            btn.innerText = '已存本機，雲端同步中...';
+            btn.innerText = '儲存中...';
+        }
+        if (cloudStatus && App.isInstructor) {
+            cloudStatus.style.display = 'block';
+            cloudStatus.innerText = 'Google Sheets 儲存中，請勿關閉頁面...（將以目前畫面資料覆蓋雲端題庫）';
+            cloudStatus.style.color = 'var(--warning-color)';
         }
 
-        // v123 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
         App.saveLocalOnly();
         App.renderSelects();
         Admin.refreshCourseHeaderBadges();
 
-        App.saveBackground();
+        let ok = false;
+        try {
+            ok = await App.saveAdmin();
+        } catch (err) {
+            console.error('Admin.saveAll failed:', err);
+            ok = false;
+        }
+
+        if (ok) {
+            if (btn) btn.innerText = '✅ 已儲存';
+            if (cloudStatus && App.isInstructor) {
+                cloudStatus.innerText = 'Google Sheets 已同步';
+                cloudStatus.style.color = 'var(--success-color)';
+            }
+        } else {
+            if (btn) btn.innerText = '⚠️ 儲存失敗';
+            if (cloudStatus && App.isInstructor) {
+                cloudStatus.innerText = '雲端儲存失敗，已保留本機資料，請檢查 Web App URL／Apps Script 部署';
+                cloudStatus.style.color = 'var(--danger-color)';
+            }
+            alert('雲端儲存失敗，題目已先保存在本機。請檢查 Web App URL／Apps Script 部署後再試。');
+        }
 
         if (btn) {
             setTimeout(() => {
                 btn.disabled = false;
                 btn.innerText = oldText || '💾 儲存變更';
-            }, 450);
-        }
-
-        const cloudStatus = document.getElementById('cloudStatus');
-        if (cloudStatus && App.isInstructor) {
-            cloudStatus.style.display = 'block';
-            cloudStatus.innerText = '已先儲存本機，Google Sheets 背景同步中...';
-            cloudStatus.style.color = 'var(--warning-color)';
+            }, ok ? 900 : 1400);
         }
     },
+    
     renderUsers: function() {
         App.normalizeUsers();
         const users = Object.keys(App.state.users).sort((a,b) => a.localeCompare(b, 'zh-Hant'));
