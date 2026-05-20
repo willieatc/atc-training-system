@@ -1257,7 +1257,7 @@ const Backend = {
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
-        // v123：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
+        // v122：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
         if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
             this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
             this.loaded = true;
@@ -1288,33 +1288,6 @@ const Backend = {
             console.error('Google Sheets load failed:', err);
             this.setStatus('雲端讀取失敗，暫用本機資料', 'var(--danger-color)');
             return false;
-        }
-    },
-    submitScore: async function(record) {
-        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
-            this.setStatus('⚠️ 尚未設定 Web App URL', 'warn');
-            return { ok: false, error: '尚未設定 Web App URL' };
-        }
-        try {
-            this.setStatus('成績同步中...', 'warn');
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 12000);
-            const res = await fetch(SHEETS_WEB_APP_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'submitScore', record }),
-                signal: controller.signal
-            });
-            clearTimeout(timer);
-            const json = await res.json();
-            if (!json || json.ok !== true) throw new Error(json && json.error ? json.error : 'submitScore failed');
-            this.setStatus('成績已同步', 'ok');
-            return { ok: true, via: 'submitScore', response: json };
-        } catch (err) {
-            console.error('submitScore failed:', err);
-            this.setStatus('⚠️ submitScore 失敗，準備使用備援同步', 'warn');
-            return { ok: false, error: String(err && err.message ? err.message : err), via: 'submitScore' };
         }
     },
     saveState: async function(state) {
@@ -1470,126 +1443,11 @@ const Backup = {
 
 const App = {
     state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
-    user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false,
-    scoreSyncPending: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
+    user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
-    pendingScoreKey: 'ATC_PENDING_SCORE_RECORDS',
     savePromise: null,
     markPendingCloudSync: function() {
         localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
-    },
-    syncScoreToCloudStable: function(record, timeoutMs = 12000) {
-        this.scoreSyncPending = true;
-        const note = document.getElementById('resultPassNote');
-        const baseText = note ? (note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '') : '';
-
-        if (note && !App.isInstructor) {
-            note.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
-            note.style.color = 'var(--warning-color)';
-        }
-
-        const finish = (ok, via, error) => {
-            App.scoreSyncPending = false;
-
-            if (!note || App.isInstructor) return;
-
-            if (ok) {
-                App.removePendingScore(record);
-                const viaText = via === 'saveStateFallback' ? '（備援同步完成）' : '';
-                note.innerText = `${baseText}｜成績已同步，可以關閉頁面。${viaText}`;
-                note.style.color = baseText.includes('未及格') ? 'var(--danger-color)' : 'var(--success-color)';
-                App.clearQuizSession();
-            } else {
-                App.queuePendingScore(record);
-                const errText = error ? `（錯誤：${String(error).slice(0, 80)}）` : '';
-                note.innerText = `${baseText}｜⚠️ 成績尚未完成雲端同步，已先保存在本機。請勿重複測驗，請通知管理員檢查 Web App URL／Apps Script 部署。${errText}`;
-                note.style.color = 'var(--danger-color)';
-            }
-        };
-
-        let done = false;
-        const safeFinish = (ok, via, error) => {
-            if (done) return;
-            done = true;
-            finish(ok, via, error);
-        };
-
-        try {
-            const timer = setTimeout(() => safeFinish(false, 'timeout', '同步逾時'), timeoutMs + 5000);
-
-            Backend.submitScore(record).then(result => {
-                if (result && result.ok) {
-                    clearTimeout(timer);
-                    safeFinish(true, 'submitScore', '');
-                    return;
-                }
-
-                console.warn('submitScore failed, fallback to saveState', result);
-                if (note && !App.isInstructor) {
-                    note.innerText = `${baseText}｜submitScore 未成功，改用備援同步中...`;
-                    note.style.color = 'var(--warning-color)';
-                }
-
-                return Promise.resolve(App.save()).then(ok => {
-                    clearTimeout(timer);
-                    if (ok) safeFinish(true, 'saveStateFallback', '');
-                    else safeFinish(false, 'saveStateFallback', result && result.error ? result.error : '備援同步失敗');
-                }).catch(err => {
-                    clearTimeout(timer);
-                    safeFinish(false, 'saveStateFallback', err && err.message ? err.message : err);
-                });
-            }).catch(err => {
-                console.error('stable score sync failed:', err);
-                clearTimeout(timer);
-                safeFinish(false, 'submitScore', err && err.message ? err.message : err);
-            });
-        } catch (err) {
-            console.error('stable score sync failed:', err);
-            safeFinish(false, 'exception', err && err.message ? err.message : err);
-        }
-    },
-    
-    queuePendingScore: function(record) {
-        try {
-            const list = JSON.parse(localStorage.getItem(this.pendingScoreKey) || '[]');
-            if (!list.some(r => r.recordId === record.recordId)) list.push(record);
-            localStorage.setItem(this.pendingScoreKey, JSON.stringify(list));
-        } catch (err) {
-            console.error('queuePendingScore failed:', err);
-        }
-    },
-    removePendingScore: function(record) {
-        try {
-            const list = JSON.parse(localStorage.getItem(this.pendingScoreKey) || '[]');
-            const next = list.filter(r => r.recordId !== record.recordId);
-            localStorage.setItem(this.pendingScoreKey, JSON.stringify(next));
-        } catch (err) {
-            console.error('removePendingScore failed:', err);
-        }
-    },
-    retryPendingScores: function() {
-        try {
-            const list = JSON.parse(localStorage.getItem(this.pendingScoreKey) || '[]');
-            if (!Array.isArray(list) || !list.length) return;
-            list.forEach(record => {
-                Backend.submitScore(record).then(ok => {
-                    if (ok) App.removePendingScore(record);
-                }).catch(err => console.error('retryPendingScores failed:', err));
-            });
-        } catch (err) {
-            console.error('retryPendingScores failed:', err);
-        }
-    },
-    
-    saveWithTimeout: async function(timeoutMs = 12000) {
-        const saveTask = Promise.resolve(this.save());
-        const timeoutTask = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
-        try {
-            return await Promise.race([saveTask, timeoutTask]);
-        } catch (err) {
-            console.error('saveWithTimeout failed:', err);
-            return false;
-        }
     },
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
@@ -2756,10 +2614,7 @@ const Quiz = {
     },
     confirmReviewedSubmit: function() {
         this.closeReviewModal();
-        const self = this;
-        requestAnimationFrame(function() {
-            self.finishSubmit();
-        });
+        this.finishSubmit();
     },
     renderResultAnswers: function() {
         const area = document.getElementById('resultAnswerArea');
@@ -2782,114 +2637,41 @@ const Quiz = {
         `;
     },
     finishSubmit: function() {
-        try {
-            const course = App.activeCourse;
-            const questions = course && Array.isArray(course.questions) ? course.questions : [];
-            const answers = Array.isArray(this.ans) ? this.ans : [];
-
-            if (!course || !questions.length || !answers.length) {
-                console.error('Missing quiz data', { course, questions, answers });
-                alert('找不到本次測驗資料，請返回首頁後重新進入測驗。');
-                return;
-            }
-
-            const correctCount = answers.filter((a, i) => questions[i] && a === questions[i].a).length;
-            const score = Math.round((correctCount / answers.length) * 100);
-            const passScoreNow = App.getPassScore(course);
-            const passedNow = score >= passScoreNow;
-            const nowText = DateUtil.format();
-            const record = {
-                recordId: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                u: App.user,
-                userCode: App.user,
-                employeeId: App.employeeId || App.getUserEmployeeId(App.user),
-                name: App.getUserName(App.user),
-                cid: course.id,
-                courseId: course.id,
-                c: course.title,
-                courseTitle: course.title,
-                s: Number(score),
-                score: Number(score),
-                passScore: Number(passScoreNow),
-                d: nowText,
-                date: nowText,
-                note: ''
-            };
-
-            if (!App.isInstructor) {
-                App.state.records.push(record);
-                App.lockQuiz(App.user, course.id, course.title);
-                App.queuePendingScore(record);
-                if (typeof App.saveLocalOnly === 'function') {
-                    App.saveLocalOnly();
-                } else {
-                    localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
-                }
-            }
-
-            App.quizInProgress = false;
-
-            App.showSec('sec-res');
-
-            const finalScoreEl = document.getElementById('finalScore');
-            if (finalScoreEl) {
-                finalScoreEl.innerText = score;
-                finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
-            }
-
-            const resultPassNote = document.getElementById('resultPassNote');
-            if (resultPassNote) {
-                if (App.isInstructor) {
-                    resultPassNote.innerText = `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${passScoreNow} 分。`;
-                    resultPassNote.style.color = 'var(--warning-color)';
-                } else {
-                    const baseText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
-                    resultPassNote.setAttribute('data-result-base', baseText);
-                    resultPassNote.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
-                    resultPassNote.style.color = 'var(--warning-color)';
-                }
-            }
-
-            try {
-                if (typeof Quiz !== 'undefined' && typeof Quiz.renderResultAnswers === 'function') {
-                    Quiz.renderResultAnswers();
-                } else if (typeof this.renderResultAnswers === 'function') {
-                    this.renderResultAnswers();
-                }
-            } catch (answerErr) {
-                console.error('renderResultAnswers failed:', answerErr);
-                const answerArea = document.getElementById('resultAnswerArea');
-                if (answerArea) {
-                    answerArea.classList.remove('hidden');
-                    answerArea.innerHTML = '<div class="result-answer-title">正確答案</div><div style="color:var(--danger-color); margin-top:10px;">正確答案區塊顯示時發生錯誤，但分數已正常計算。</div>';
-                }
-            }
-
-            if (!App.isInstructor) {
-                setTimeout(function() {
-                    App.syncScoreToCloudStable(record, 12000);
-                }, 300);
-            }
-        } catch (err) {
-            console.error('finishSubmit failed:', err);
-            try {
-                App.quizInProgress = false;
-                App.showSec('sec-res');
-                const note = document.getElementById('resultPassNote');
-                if (note) {
-                    note.innerText = '送出答案時發生錯誤，請通知管理員檢查題目或系統設定。';
-                    note.style.color = 'var(--danger-color)';
-                }
-            } catch (fallbackErr) {
-                console.error('fallback result view failed:', fallbackErr);
-            }
-            alert('送出答案時發生錯誤：' + (err && err.message ? err.message : err));
+        const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
+        if (!App.isInstructor) {
+            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, passScore:App.getPassScore(App.refreshActiveCourse()), d:DateUtil.format()});
+            App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
+            App.save();
         }
-    },};
+        App.quizInProgress = false;
+        App.clearQuizSession();
+        const finalScoreEl = document.getElementById('finalScore');
+        finalScoreEl.innerText = score;
+        const passScoreNow = App.getPassScore(App.refreshActiveCourse());
+        const passedNow = score >= passScoreNow;
+        finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+        const resultPassNote = document.getElementById('resultPassNote');
+        if (resultPassNote) {
+            resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
+            resultPassNote.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+        let resultNote = document.getElementById('resultModeNote');
+        if (!resultNote) {
+            resultNote = document.createElement('div');
+            resultNote.id = 'resultModeNote';
+            resultNote.style.margin = '0 0 25px 0';
+            resultNote.style.fontWeight = 'bold';
+            document.getElementById('finalScore').insertAdjacentElement('afterend', resultNote);
+        }
+        resultNote.innerText = App.isInstructor ? '管理員測試模式，本次分數不列入測驗紀錄。' : '';
+        resultNote.style.color = App.isInstructor ? 'var(--warning-color)' : 'transparent';
+        this.renderResultAnswers();
+        App.showSec('sec-res');
+    }
+};
 
 
-// V123 compatibility: prevent old calls from failing.
-// Some earlier builds called App.renderResultAnswers(), but the method belongs to Quiz.
+// V122/V123 compatibility: if older code calls App.renderResultAnswers(), forward to Quiz.
 try {
     if (typeof App !== 'undefined' && typeof Quiz !== 'undefined' && typeof App.renderResultAnswers !== 'function') {
         App.renderResultAnswers = function() {
@@ -2949,14 +2731,6 @@ window.addEventListener('beforeunload', function(e) {
         return '';
     }
 }); // beforeunloadPendingCloudSync
-
-window.addEventListener('beforeunload', function(e) {
-    if (window.App && App.scoreSyncPending) {
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
-    }
-}); // scoreSyncBeforeUnload
 
 RefreshGuard.init();
 App.init();
