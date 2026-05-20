@@ -1451,6 +1451,18 @@ const App = {
     markPendingCloudSync: function() {
         localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
     },
+    saveWithTimeout: async function(timeoutMs = 10000) {
+        const saveTask = Promise.resolve(this.save());
+        const timeoutTask = new Promise(resolve => {
+            setTimeout(() => resolve(false), timeoutMs);
+        });
+        try {
+            return await Promise.race([saveTask, timeoutTask]);
+        } catch (err) {
+            console.error('saveWithTimeout failed', err);
+            return false;
+        }
+    },
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
         this.markPendingCloudSync();
@@ -2697,7 +2709,7 @@ const Quiz = {
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
             App.saveLocalOnly();
             try {
-                synced = await App.save();
+                synced = await App.saveWithTimeout(10000);
             } catch (err) {
                 synced = false;
                 console.error('Score sync failed:', err);
