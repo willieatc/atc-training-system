@@ -70,8 +70,9 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
         }
 
-        #contentBox { position: relative; flex-grow: 1; background: #000; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
-        #contentBox iframe { width: 100%; height: 100%; border: none; }
+        #contentBox { position: relative; flex: 1 1 auto; min-height: min(660px, calc(90vh - 178px)); background: #000; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
+        @supports (height: 100dvh) { #contentBox { min-height: min(660px, calc(90dvh - 178px)); } }
+        #contentBox iframe { width: 100%; height: 100%; min-height: 100%; border: none; display: block; }
         .viewer-hint-below {
             display: inline-flex;
             align-items: center;
@@ -412,6 +413,57 @@
             border-radius: 8px;
             padding: 10px;
         }
+
+        .result-answer-area {
+            width: min(900px, 100%);
+            max-height: 46vh;
+            overflow-y: auto;
+            margin: 18px auto 24px;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-align: left;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(88,166,255,0.75) #0d1117;
+        }
+        .result-answer-area::-webkit-scrollbar { width: 6px; }
+        .result-answer-area::-webkit-scrollbar-track { background: #0d1117; }
+        .result-answer-area::-webkit-scrollbar-thumb { background: rgba(88,166,255,0.65); border-radius: 999px; }
+        .result-answer-title {
+            color: var(--accent-color);
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .result-answer-card {
+            background: #161b22;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .result-answer-card.correct { border-color: rgba(63,185,80,0.55); }
+        .result-answer-card.wrong { border-color: rgba(248,81,73,0.65); }
+        .result-answer-question {
+            color: var(--accent-color);
+            font-weight: 700;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        .result-answer-row {
+            line-height: 1.6;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        .result-answer-correct {
+            color: var(--success-color);
+            font-weight: 700;
+        }
+        .result-answer-user.wrong {
+            color: var(--danger-color);
+            font-weight: 700;
+        }
         .review-modal-footer {
             padding: 12px 16px;
             background: var(--panel-color);
@@ -421,9 +473,6 @@
             align-items: center;
             gap: 12px;
         }
-        .review-modal-note { font-size: 13px; color: #8b949e; line-height: 1.5; }
-
-
         /* 多平台瀏覽體驗優化：桌機、平板、手機 */
         #scoreTableArea { overflow-x: auto; }
         #scoreTableArea table { min-width: 960px; }
@@ -436,6 +485,16 @@
             .admin-layout { grid-template-columns: 200px 1fr; gap: 14px; }
             .filter-group { flex-wrap: wrap; }
         }
+
+        @media (max-width: 1024px) and (min-width: 761px) {
+            #contentBox { min-height: 62vh; height: 62vh; flex: 0 0 auto; }
+            #sec-view { padding-bottom: 18px; }
+        }
+        @media (orientation: landscape) and (max-height: 620px) {
+            #contentBox { min-height: 70vh; height: 70vh; }
+            #viewActionArea { margin-top: 10px !important; }
+        }
+
         @media (max-width: 760px) {
             body { display: block; }
             .app-wrapper { display: block; padding: 0; width: 100%; }
@@ -454,13 +513,97 @@
             .filter-item, .account-search-box { width: 100%; min-width: 0; flex: 1 1 auto; }
             .account-card { grid-template-columns: auto 1fr; align-items: flex-start; }
             .account-actions { grid-column: 1 / -1; justify-content: flex-start; }
-            #contentBox { min-height: 52vh; }
+            #contentBox { min-height: 64vh; height: 64vh; flex: 0 0 auto; }
             #viewActionArea > div { align-items: stretch !important; flex-direction: column; }
             #sec-quiz > div:last-child { align-items: stretch !important; flex-direction: column; }
             .review-modal { width: 94vw; height: 78vh; min-width: 300px; min-height: 260px; }
             .nav-tools-rail { display: none !important; }
         }
 
+
+
+        /* v122：跨平台教材瀏覽修復 */
+        #sec-view.active {
+            min-height: 0;
+        }
+        #sec-view > div:first-child {
+            flex-shrink: 0;
+        }
+        #viewActionArea {
+            flex-shrink: 0;
+        }
+        @media (min-width: 1025px) {
+            #sec-view.active #contentBox {
+                height: calc(90vh - 178px);
+                max-height: 760px;
+            }
+            @supports (height: 100dvh) {
+                #sec-view.active #contentBox { height: calc(90dvh - 178px); }
+            }
+        }
+        @media (max-width: 760px) {
+            #sec-view.active {
+                min-height: 100vh;
+            }
+            @supports (height: 100dvh) {
+                #sec-view.active { min-height: 100dvh; }
+            }
+            #contentBox {
+                min-height: 64vh;
+                height: 64vh;
+                flex: 0 0 auto;
+            }
+            .viewer-hint-below {
+                width: 100%;
+                justify-content: center;
+                border-radius: 10px;
+                text-align: center;
+            }
+            #viewActionArea .btn {
+                width: 100%;
+            }
+        }
+        @media (max-width: 480px) {
+            #contentBox {
+                min-height: 68vh;
+                height: 68vh;
+            }
+        }
+
+
+        /* v122：安全版登入頁置中，不覆蓋其他頁面操作 */
+        #sec-login.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(18px, 4vw, 30px);
+            min-height: 100%;
+            overflow-y: auto;
+        }
+        #sec-login .login-card-wrap {
+            position: relative;
+            z-index: 5;
+            margin: 0 auto !important;
+            width: min(400px, 100%) !important;
+            pointer-events: auto;
+        }
+        #sec-login input,
+        #sec-login select,
+        #sec-login button {
+            pointer-events: auto;
+        }
+        @media (max-width: 760px) {
+            .main-container {
+                width: min(100vw, 1280px);
+                height: 100dvh;
+                min-height: 100dvh;
+                border-radius: 0;
+            }
+            #sec-login.active {
+                min-height: 100dvh;
+                padding: 20px;
+            }
+        }
 
         .backup-floating-tools {
             position: absolute;
@@ -510,7 +653,276 @@
         .account-name { font-size:15px; font-weight:700; color:#fff; }
         .account-meta { font-size:12px; color:#8b949e; margin-top:4px; }
         .account-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    </style>
+    
+        /* v122 backup tools safety */
+        #sec-login ~ .backup-floating-tools,
+        #sec-login .backup-floating-tools {
+            display: none !important;
+        }
+
+        /* v122：登入操作保險 */
+        #sec-login.active,
+        #sec-login.active * {
+            pointer-events: auto;
+        }
+        #sec-login .login-card-wrap {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* v122：科目名稱與及格分數整合 */
+        .course-setting-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 150px;
+            gap: 12px;
+            align-items: end;
+        }
+        .course-setting-grid label {
+            display: block;
+            font-size: 12px;
+            color: #8b949e;
+            margin-bottom: 5px;
+        }
+        .course-setting-grid .input-field {
+            margin: 0;
+        }
+        @media (max-width: 640px) {
+            .course-setting-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* v122：備份按鈕置於管理員登出下方並列 */
+        .backup-inline-tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .backup-inline-tools .btn {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 12px;
+            min-height: 30px;
+        }
+
+
+        /* v122：手機後台先顯示功能選單，點選後再展開內容 */
+        .admin-mobile-current {
+            display: none;
+        }
+        @media (max-width: 760px) {
+            #sec-admin {
+                overflow-y: auto;
+            }
+            .admin-layout {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                min-height: 0;
+            }
+            .admin-sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 0 0 10px 0;
+                flex: 0 0 auto;
+            }
+            .admin-sidebar h3 {
+                margin-bottom: 10px;
+            }
+            .admin-sidebar > div[style*="flex-grow"] {
+                margin-top: 8px !important;
+                flex-grow: 0 !important;
+                display: grid !important;
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .admin-tab {
+                margin-bottom: 0;
+                border: 1px solid var(--border-color);
+                background: #0d1117;
+                min-height: 42px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .admin-tab.active::after {
+                content: "已展開";
+                font-size: 12px;
+                color: var(--success-color);
+                font-weight: 700;
+            }
+            .admin-mobile-current {
+                display: block;
+                padding: 8px 10px;
+                margin: 8px 0 10px;
+                background: rgba(88,166,255,0.12);
+                border: 1px solid rgba(88,166,255,0.35);
+                border-radius: 8px;
+                color: var(--accent-color);
+                font-size: 13px;
+                font-weight: 700;
+            }
+            .admin-content {
+                flex: 1 1 auto;
+                min-height: 58vh;
+                max-height: none;
+                overflow-y: visible;
+                padding: 0 0 90px 0;
+            }
+            .admin-content.scroll-area {
+                overflow-y: visible;
+            }
+            #panel-score, #panel-edit, #panel-rec {
+                width: 100%;
+            }
+            #panel-score:not(.hidden),
+            #panel-edit:not(.hidden),
+            #panel-rec:not(.hidden) {
+                display: block;
+                animation: adminPanelFadeIn 0.18s ease-out;
+            }
+            .sticky-header {
+                position: sticky;
+                top: 0;
+                z-index: 900;
+                padding-top: 10px;
+                margin-bottom: 12px;
+            }
+            .backup-inline-tools {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @keyframes adminPanelFadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+
+        /* v122：手機後台頁首／頁尾快捷按鈕 */
+        .admin-mobile-jump-tools {
+            display: none;
+        }
+        @media (max-width: 760px) {
+            .admin-mobile-jump-tools {
+                position: fixed;
+                right: 12px;
+                bottom: 12px;
+                z-index: 4500;
+                display: none;
+                flex-direction: column;
+                gap: 8px;
+            }
+            #sec-admin.active .admin-mobile-jump-tools {
+                display: flex;
+            }
+            .admin-mobile-jump-tools .btn {
+                width: 48px;
+                height: 42px;
+                padding: 0;
+                border-radius: 999px;
+                font-size: 15px;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+            }
+        }
+
+
+        /* v122：教材播放器黑邊縮小，手機版完整顯示開始考核按鈕 */
+        #contentBox {
+            background: #05070a;
+            padding: 0;
+        }
+        #contentBox iframe {
+            background: #000;
+        }
+        @media (min-width: 1025px) {
+            #contentBox {
+                min-height: min(700px, calc(90vh - 160px));
+            }
+            @supports (height: 100dvh) {
+                #contentBox { min-height: min(700px, calc(90dvh - 160px)); }
+            }
+        }
+        @media (max-width: 760px) {
+            #sec-view.active {
+                padding: 12px;
+                overflow-y: auto;
+                justify-content: flex-start;
+            }
+            #sec-view > div:first-child {
+                margin-bottom: 8px !important;
+                gap: 8px;
+                align-items: flex-start !important;
+            }
+            #sec-view #viewTitle {
+                font-size: 20px;
+                line-height: 1.35;
+            }
+            #contentBox {
+                min-height: 0 !important;
+                height: 58vh !important;
+                flex: 0 0 58vh !important;
+                border-radius: 6px;
+                border-width: 1px;
+                margin: 0;
+            }
+            @supports (height: 100dvh) {
+                #contentBox {
+                    height: 58dvh !important;
+                    flex-basis: 58dvh !important;
+                }
+            }
+            #viewActionArea {
+                margin-top: 10px !important;
+                padding-bottom: 18px;
+                flex-shrink: 0;
+            }
+            #viewActionArea > div {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+            #viewActionArea .viewer-hint-below {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+            #viewActionArea .btn,
+            #viewActionArea button {
+                width: 100%;
+                min-height: 44px;
+                font-size: 15px;
+            }
+        }
+        @media (max-width: 480px) {
+            #contentBox {
+                height: 54vh !important;
+                flex-basis: 54vh !important;
+            }
+            @supports (height: 100dvh) {
+                #contentBox {
+                    height: 54dvh !important;
+                    flex-basis: 54dvh !important;
+                }
+            }
+        }
+        @media (orientation: landscape) and (max-height: 620px) {
+            #sec-view.active {
+                padding: 10px;
+                overflow-y: auto;
+            }
+            #contentBox {
+                height: 56vh !important;
+                flex-basis: 56vh !important;
+                min-height: 0 !important;
+            }
+            #viewActionArea .btn,
+            #viewActionArea button {
+                min-height: 40px;
+            }
+        }
+
+</style>
 </head>
 <body oncontextmenu="return false;"> 
 
@@ -522,7 +934,7 @@
                     <h1 style="margin-bottom:6px;">ATC 訓練管理系統</h1>
                     <div style="color:var(--accent-color); font-size:16px; font-weight:bold; letter-spacing:0.5px; margin-bottom:6px;">RCTP 臺北機場管制臺</div>
                     <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px;">本機資料模式</div>
-                    <span class="badge-instructor hidden">管理員模式中</span>
+                    <span class="badge-instructor hidden">管理員模式</span>
                 </div>
                 <div style="background:#161b22; padding:30px; border-radius:12px; border:1px solid var(--border-color);">
                     <label>使用者名稱</label>
@@ -564,9 +976,11 @@
         </div>
 
         <div id="sec-res" class="section">
-            <div style="margin:auto; text-align:center;">
+            <div style="margin:auto; text-align:center; width:min(960px, 100%);">
                 <h1>考核結果</h1>
                 <div id="finalScore" style="font-size:100px; color:var(--success-color); font-weight:bold;">0</div>
+                <div id="resultPassNote" style="margin:0 0 12px 0; font-size:18px; font-weight:bold;"></div>
+                <div id="resultAnswerArea" class="result-answer-area hidden"></div>
                 <button class="btn btn-primary" onclick="App.toHome()">回到首頁</button>
             </div>
         </div>
@@ -575,6 +989,7 @@
             <div class="admin-layout">
                 <div class="admin-sidebar">
                     <h3>⚙️ 管理後台</h3>
+                    <div id="adminMobileCurrent" class="admin-mobile-current">目前展開：測驗成績查詢</div>
                     <div style="margin-top:20px; flex-grow:1; display:flex; flex-direction:column;">
                         <div class="admin-tab active" id="t-score" onclick="App.switchAdmin('score')">🔍 測驗成績查詢</div>
                         <div class="admin-tab" id="t-edit" onclick="App.switchAdmin('edit')">📚 教材與題庫編輯</div>
@@ -582,35 +997,37 @@
                     </div>
                     <button class="btn btn-primary btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.adminOpenCourseTester()">進入教材/測驗</button>
                     <button class="btn btn-warning btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.logoutInstructor()">管理員登出</button>
+                    <div class="backup-inline-tools">
+                        <button class="btn btn-success btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
+                        <button class="btn btn-primary btn-sm" onclick="document.getElementById('backupImportFile').click()">匯入備份</button>
+                    </div>
+                    <input type="file" id="backupImportFile" accept=".json,application/json" class="hidden" onchange="Backup.importLocal(this)">
                     <button class="btn btn-outline btn-sm" style="width:100%;" onclick="App.toHome()">返回首頁</button>
                 </div>
                 <div class="admin-content scroll-area" id="adminContent">
                     <div id="panel-rec" class="hidden"><div id="userTable"></div></div>
                     <div id="panel-score" class="hidden"></div>
                     <div id="panel-edit" class="hidden"></div>
-                </div>
+                    <div id="adminMobileJumpTools" class="admin-mobile-jump-tools" aria-label="手機後台快速跳轉">
+                        <button class="btn btn-outline btn-sm" onclick="App.adminJumpToTop()" title="回到頁首">▲</button>
+                        <button class="btn btn-outline btn-sm" onclick="App.adminJumpToBottom()" title="前往頁尾">▼</button>
+                    </div>
+</div>
             </div>
         </div>
-    <div id="backupFloatingTools" class="backup-floating-tools" aria-label="本地備份工具">
-        <button class="btn btn-success btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
-        <button class="btn btn-primary btn-sm" onclick="Backup.pickImportFile()">匯入備份</button>
-    </div>
-    </div>
+</div>
     <div id="global-nav-rail" class="nav-tools-rail">
         <button class="nav-btn-circle" onclick="App.scrollSide(0)">▲</button>
         <button class="nav-btn-circle" onclick="App.scrollSide(1)">▼</button>
     </div>
 </div>
-<input type="file" id="backupImportFile" class="hidden" accept="application/json,.json" onchange="Backup.importLocal(event)">
-
 <div id="answerReviewOverlay" class="review-modal-overlay" aria-hidden="true">
     <div id="answerReviewModal" class="review-modal" role="dialog" aria-modal="true" aria-labelledby="answerReviewTitle">
         <div id="answerReviewHeader" class="review-modal-header">
             <h3 id="answerReviewTitle">作答內容檢查</h3>
         </div>
         <div id="answerReviewBody" class="review-modal-body"></div>
-        <div class="review-modal-footer">
-            <div class="review-modal-note">可拖曳上方標題列移動視窗，也可拖曳右下角調整大小。</div>
+        <div class="review-modal-footer" style="justify-content:flex-end;">
             <div style="display:flex; gap:10px; flex-shrink:0;">
                 <button class="btn btn-outline" onclick="Quiz.closeReviewModal()">返回修改</button>
                 <button class="btn btn-primary" onclick="Quiz.confirmReviewedSubmit()">確認送出</button>
@@ -637,11 +1054,17 @@ const Backend = {
         if (el) {
             el.innerText = text;
             el.style.color = color || '#8b949e';
-            el.style.display = (window.App && App.isInstructor) ? 'block' : 'none';
+            el.style.display = (typeof App !== 'undefined' && App.isInstructor) ? 'block' : 'none';
         }
     },
     loadState: async function() {
         if (!this.enabled()) { this.setStatus('本機資料模式', '#8b949e'); return false; }
+        // v122：若本機有尚未完成的背景同步，不讀取雲端，避免舊雲端資料覆蓋剛修改的本機資料。
+        if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
+            this.setStatus('本機變更待同步，暫不覆蓋', 'var(--warning-color)');
+            this.loaded = true;
+            return false;
+        }
         this.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
         try {
             const url = SHEETS_WEB_APP_URL + (SHEETS_WEB_APP_URL.includes('?') ? '&' : '?') + 'action=getState&ts=' + Date.now();
@@ -655,8 +1078,10 @@ const Backend = {
                 users: st.users && typeof st.users === 'object' ? st.users : {},
                 userNames: st.userNames && typeof st.userNames === 'object' ? st.userNames : {},
                 quizLocks: st.quizLocks && typeof st.quizLocks === 'object' ? st.quizLocks : {},
+                quizUnlocks: st.quizUnlocks && typeof st.quizUnlocks === 'object' ? st.quizUnlocks : {},
                 adminPw: st.adminPw || 'rctp3023'
             };
+            App.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
             this.loaded = true;
             this.setStatus('Google Sheets 雲端同步中', 'var(--success-color)');
@@ -681,154 +1106,170 @@ const Backend = {
             });
             const data = await res.json();
             if (!data || !data.ok) throw new Error(data && data.error ? data.error : '儲存失敗');
+            localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
             return true;
         } catch (err) {
             console.error('Google Sheets save failed:', err);
             this.setStatus('雲端儲存失敗，請檢查 Web App URL', 'var(--danger-color)');
-            return false;
+            throw err;
         } finally {
             this.saving = false;
         }
     }
 };
 
+
+const DateUtil = {
+    pad: function(n) { return String(n).padStart(2, '0'); },
+    format: function(value) {
+        const d = value ? new Date(value) : new Date();
+        if (Number.isNaN(d.getTime())) {
+            const s = String(value || '').trim();
+            const m = s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2}).*?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+            if (m) return `${m[1]}/${this.pad(m[2])}/${this.pad(m[3])} ${this.pad(m[4])}:${this.pad(m[5])}:${this.pad(m[6] || 0)}`;
+            return s;
+        }
+        return `${d.getFullYear()}/${this.pad(d.getMonth()+1)}/${this.pad(d.getDate())} ${this.pad(d.getHours())}:${this.pad(d.getMinutes())}:${this.pad(d.getSeconds())}`;
+    }
+};
+
+
 const Backup = {
-    version: 'sheets_v81_backup_floating_tools',
-    buildEnvelope: function() {
-        const state = JSON.parse(JSON.stringify(App.state || {}));
-        return {
-            app: 'ATC 訓練管理系統',
-            version: this.version,
-            exportedAt: new Date().toLocaleString(),
-            exportedAtISO: new Date().toISOString(),
-            mode: Backend.enabled() ? 'google-sheets' : 'localStorage',
-            state: state
-        };
-    },
-    fileTimestamp: function() {
-        const d = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    },
-    exportLocal: function() {
+    exportLocal: async function() {
         try {
-            const envelope = this.buildEnvelope();
-            const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `ATC本地備份_${this.fileTimestamp()}.json`;
+            let state = null;
+
+            // 優先使用目前系統狀態；若 App 尚未可用，改從 localStorage 讀取。
+            try {
+                if (typeof App !== "undefined" && App && App.state) {
+                    // 若可連線雲端，先嘗試同步最新資料。
+                    if (typeof Backend !== "undefined" && Backend.enabled && Backend.enabled()) {
+                        try {
+                            await Backend.loadState();
+                        } catch (syncErr) {
+                            console.warn("Backup export cloud refresh failed; using current/local state.", syncErr);
+                        }
+                    }
+                    state = App.state;
+                }
+            } catch (appErr) {
+                console.warn("App state unavailable; falling back to localStorage.", appErr);
+            }
+
+            if (!state) {
+                try {
+                    state = JSON.parse(localStorage.getItem("ATC_PRO_CLOUD") || "null");
+                } catch (lsErr) {
+                    console.warn("localStorage backup state parse failed.", lsErr);
+                }
+            }
+
+            // 即使沒有任何資料，也建立完整空白結構，避免顯示無法匯出。
+            if (!state || typeof state !== "object") {
+                state = { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" };
+            }
+
+            if (!Array.isArray(state.courses)) state.courses = [];
+            if (!Array.isArray(state.records)) state.records = [];
+            if (!state.users || typeof state.users !== "object") state.users = {};
+            if (!state.quizLocks || typeof state.quizLocks !== "object") state.quizLocks = {};
+            if (!state.quizUnlocks || typeof state.quizUnlocks !== "object") state.quizUnlocks = {};
+            if (!state.adminPw) state.adminPw = "rctp3023";
+
+            const nowText = (typeof DateUtil !== "undefined" && DateUtil.format) ? DateUtil.format() : new Date().toISOString();
+            const payload = {
+                version: "ATC_SHEETS_BACKUP_V1",
+                exportedAt: nowText,
+                source: (typeof App !== "undefined" && App && App.state) ? "app-state" : "localStorage-fallback",
+                state: state
+            };
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+            const stamp = String(nowText).replace(/[\/\:\s\-T.]/g, "").slice(0, 14) || String(Date.now());
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `ATC本地備份_${stamp}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
+            setTimeout(() => URL.revokeObjectURL(url), 500);
         } catch (err) {
-            console.error('Backup export failed:', err);
-            alert('本地備份匯出失敗。');
+            alert("匯出本地備份失敗：" + (err && err.message ? err.message : err));
         }
     },
-    pickImportFile: function() {
-        const input = document.getElementById('backupImportFile');
-        if (input) input.click();
-    },
-    normalizeImportedState: function(raw) {
-        const st = raw && raw.state ? raw.state : raw;
-        if (!st || typeof st !== 'object') throw new Error('備份檔格式不正確。');
-        return {
-            courses: Array.isArray(st.courses) ? st.courses : [],
-            records: Array.isArray(st.records) ? st.records : [],
-            users: st.users && typeof st.users === 'object' ? st.users : {},
-            userNames: st.userNames && typeof st.userNames === 'object' ? st.userNames : {},
-            quizLocks: st.quizLocks && typeof st.quizLocks === 'object' ? st.quizLocks : {},
-            adminPw: st.adminPw || 'rctp3023'
-        };
-    },
-    importLocal: function(event) {
-        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+    importLocal: function(fileInput) {
+        const file = fileInput && fileInput.files ? fileInput.files[0] : null;
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = async (ev) => {
+        reader.onload = async function(ev) {
             try {
-                const parsed = JSON.parse(ev.target.result);
-                const importedState = this.normalizeImportedState(parsed);
-                const summary = [
-                    `科目：${importedState.courses.length} 筆`,
-                    `帳號：${Object.keys(importedState.users).length} 筆`,
-                    `成績：${importedState.records.length} 筆`,
-                    `鎖定：${Object.keys(importedState.quizLocks).length} 筆`
-                ].join('\n');
-                if (!confirm(`確定匯入此本地備份並覆蓋目前資料？\n\n${summary}\n\n提醒：若已連線 Google Sheets，確認後也會同步覆蓋雲端資料。`)) return;
+                const data = JSON.parse(ev.target.result);
+                const state = data && data.state ? data.state : data;
+                if (!state || typeof state !== "object") throw new Error("備份檔格式不正確。");
 
-                App.state = importedState;
-                App.normalizeUsers();
-                localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
-                const cloudOk = await Backend.saveState(App.state);
-                App.renderSelects();
-                App.updateLoginStatus();
-                App.syncUI();
-                if (App.isInstructor) App.switchAdmin(App.currentAdminTab || 'score');
-                alert(cloudOk ? '✅ 本地備份已匯入並同步完成。' : '⚠️ 本地備份已匯入本機，但雲端同步失敗，請檢查 Web App URL。');
+                if (!Array.isArray(state.courses)) state.courses = [];
+                if (!Array.isArray(state.records)) state.records = [];
+                if (!state.users || typeof state.users !== "object") state.users = {};
+                if (!state.quizLocks || typeof state.quizLocks !== "object") state.quizLocks = {};
+                if (!state.quizUnlocks || typeof state.quizUnlocks !== "object") state.quizUnlocks = {};
+                if (!state.adminPw) state.adminPw = "rctp3023";
+                state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+
+                if (!confirm("確定匯入本地備份？目前系統資料將被備份檔覆蓋。")) {
+                    fileInput.value = "";
+                    return;
+                }
+
+                App.state = state;
+                App.save();
+
+                if (window.Cloud && Cloud.enabled && typeof Cloud.saveState === "function") {
+                    await Cloud.saveState(App.state);
+                }
+
+                alert("✅ 本地備份已匯入");
+                App.init();
+                if (App.isInstructor) App.switchAdmin(App.currentAdminTab || "score");
             } catch (err) {
-                console.error('Backup import failed:', err);
-                alert('本地備份匯入失敗，請確認檔案是否為本系統匯出的 JSON 備份檔。');
+                alert("匯入本地備份失敗：" + (err && err.message ? err.message : err));
             } finally {
-                if (event && event.target) event.target.value = '';
+                fileInput.value = "";
             }
         };
-        reader.readAsText(file, 'UTF-8');
+        reader.readAsText(file, "UTF-8");
     }
 };
+
+
 const App = {
-    state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, adminPw: "rctp3023" },
-    user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false,
-    scoreSyncPending: false, recoveredInterruptedQuiz: null,
+    state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
+    user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
-    syncScoreInBackground: async function(timeoutMs = 12000) {
-        this.scoreSyncPending = true;
-        const note = document.getElementById('resultPassNote');
-        if (note && !App.isInstructor) {
-            const baseText = note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '';
-            note.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
-            note.style.color = 'var(--warning-color)';
-        }
-
-        let ok = false;
-        try {
-            ok = await this.saveWithTimeout(timeoutMs);
-        } catch (err) {
-            console.error('syncScoreInBackground failed:', err);
-            ok = false;
-        }
-
-        this.scoreSyncPending = false;
-        if (note && !App.isInstructor) {
-            const baseText = note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '';
-            if (ok) {
-                note.innerText = `${baseText}｜成績已同步，可以關閉頁面。`;
-                note.style.color = baseText.includes('未及格') ? 'var(--danger-color)' : 'var(--success-color)';
-                App.clearQuizSession();
-            } else {
-                note.innerText = `${baseText}｜⚠️ 成績同步逾時或失敗，成績已先保存在本機。請勿重複測驗，請通知管理員檢查 Web App URL／Apps Script 部署。`;
-                note.style.color = 'var(--danger-color)';
-            }
-        }
-        return ok;
-    },
-    saveWithTimeout: async function(timeoutMs = 12000) {
-        const saveTask = Promise.resolve(this.save());
-        const timeoutTask = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
-        try {
-            return await Promise.race([saveTask, timeoutTask]);
-        } catch (err) {
-            console.error('saveWithTimeout failed:', err);
-            return false;
-        }
+    savePromise: null,
+    markPendingCloudSync: function() {
+        localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
     },
     save: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
-        if (typeof this.markPendingCloudSync === 'function') this.markPendingCloudSync();
+        this.markPendingCloudSync();
+        this.savePromise = Backend.saveState(JSON.parse(JSON.stringify(this.state)));
+        return this.savePromise;
+    },
+    saveLocalOnly: function() {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        return true;
+    },
+    saveBackground: function() {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        this.markPendingCloudSync();
         const snapshot = JSON.parse(JSON.stringify(this.state));
-        this.savePromise = Backend.saveState(snapshot);
+        this.savePromise = Backend.saveState(snapshot)
+            .catch(err => {
+                console.error('Background cloud save failed:', err);
+                Backend.setStatus('雲端同步失敗，已保留本機資料', 'var(--danger-color)');
+            });
         return this.savePromise;
     },
     normalizeUsers: function() {
@@ -867,27 +1308,87 @@ const App = {
         return record.name || this.getUserName(record.u) || '';
     },
     init: async function() {
-        if (!Backend.loaded) await Backend.loadState();
+        // 先用本機資料立即渲染登入科目，避免等 Google Sheets 造成登入頁空白太久。
+        if (!this.state.courses) this.state.courses = [];
+        if (!this.state.records) this.state.records = [];
+        if (!this.state.users) this.state.users = {};
         if (!this.state.quizLocks) this.state.quizLocks = {};
+        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+        this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
         this.normalizeUsers();
+        this.renderSelects();
+        this.updateLoginStatus();
+        this.syncUI();
+
+        if (!Backend.loaded) {
+            await Backend.loadState();
+            if (!this.state.quizLocks) this.state.quizLocks = {};
+            if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+            if (!this.state.courses) this.state.courses = [];
+            if (!this.state.records) this.state.records = [];
+            if (!this.state.users) this.state.users = {};
+            this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+            this.normalizeUsers();
+        }
+
         this.recoverInterruptedQuiz();
-        // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態
+
+        // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態。
+        // 僅在真的補鎖時才儲存，避免每次回登入頁都覆蓋雲端資料。
+        let lockChanged = false;
         (this.state.records || []).forEach(r => {
             const course = this.state.courses.find(c => c.id === r.cid || c.title === r.c);
-            if (course && !this.isQuizLocked(r.u, course.id)) this.lockQuiz(r.u, course.id, course.title);
+            if (course && !this.isQuizLocked(r.u, course.id) && !this.isQuizExplicitlyUnlocked(r.u, course.id)) {
+                this.lockQuiz(r.u, course.id, course.title);
+                lockChanged = true;
+            }
         });
-        this.save();
-        this.renderSelects(); this.updateLoginStatus(); this.syncUI();
+        if (lockChanged) {
+            await this.save();
+        } else {
+            this.saveLocalOnly();
+        }
+        this.renderSelects();
+        this.updateLoginStatus();
+        this.syncUI();
     },
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
+    unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
+    isQuizExplicitlyUnlocked: function(user, courseId) {
+        return !!(this.state.quizUnlocks && this.state.quizUnlocks[this.unlockKey(user, courseId)]);
+    },
     isQuizLocked: function(user, courseId) { return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]); },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
-        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: new Date().toLocaleString() };
+        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+        delete this.state.quizUnlocks[this.unlockKey(user, courseId)];
+        this.state.quizLocks[this.lockKey(user, courseId)] = { u: user, cid: courseId, c: courseTitle, d: DateUtil.format() };
+    },
+    getPassScore: function(course) {
+        if (!course && this.activeCourse) course = this.activeCourse;
+        if (course && course.id && this.state && Array.isArray(this.state.courses)) {
+            const latest = this.state.courses.find(c => String(c.id) === String(course.id));
+            if (latest) course = latest;
+        }
+        const n = course ? parseInt(course.passScore, 10) : NaN;
+        return Number.isInteger(n) && n >= 0 && n <= 100 ? n : 70;
+    },
+    refreshActiveCourse: function() {
+        if (this.activeCourse && this.activeCourse.id && this.state && Array.isArray(this.state.courses)) {
+            const latest = this.state.courses.find(c => String(c.id) === String(this.activeCourse.id));
+            if (latest) this.activeCourse = latest;
+        }
+        return this.activeCourse;
     },
     unlockQuiz: function(user, courseId) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
+        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
         delete this.state.quizLocks[this.lockKey(user, courseId)];
+        this.state.quizUnlocks[this.unlockKey(user, courseId)] = {
+            u: user,
+            cid: courseId,
+            d: DateUtil.format()
+        };
         this.save();
     },
     beginQuizSession: function() {
@@ -897,7 +1398,7 @@ const App = {
             employeeId: this.employeeId || this.getUserEmployeeId(this.user),
             cid: this.activeCourse.id,
             c: this.activeCourse.title,
-            startedAt: new Date().toLocaleString()
+            startedAt: DateUtil.format()
         }));
     },
     clearQuizSession: function() {
@@ -921,7 +1422,8 @@ const App = {
                 cid: cid,
                 c: title,
                 s: 0,
-                d: new Date().toLocaleString(),
+                passScore: App.getPassScore(course),
+                d: DateUtil.format(),
                 note: '測驗頁面刷新或未正常送出，自動記錄零分'
             });
             this.lockQuiz(pending.u, cid, title);
@@ -983,13 +1485,12 @@ const App = {
         this.openView(isReview);
     },
     openView: function(isReview) {
+        this.refreshActiveCourse();
         document.getElementById('viewTitle').innerText = this.activeCourse.title;
         let url = (this.activeCourse.embedUrl || "").trim();
         if (url.includes('<iframe')) { const match = url.match(/src=["']([^"']+)["']/); if (match) url = match[1]; }
         const contentBox = document.getElementById('contentBox');
-        contentBox.innerHTML = url ? `
-            <iframe src="${url}" allow="autoplay; fullscreen" allowfullscreen="true" style="width: 100%; height: 100%; border: none;"></iframe>
-        ` : `<div style="text-align:center; padding-top:100px; width:100%;">⚠️ 尚未設定連結</div>`;
+        contentBox.innerHTML = url ? `<iframe src="${url}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen="true" style="width:100%; height:100%; border:none; display:block;"></iframe>` : `<div style="text-align:center; padding-top:100px; width:100%;">⚠️ 尚未設定連結</div>`;
         contentBox.oncontextmenu = function(e) { e.preventDefault(); return false; };
         const adminBackBtn = document.getElementById('adminBackFromViewBtn');
         if (adminBackBtn) adminBackBtn.classList.toggle('hidden', !this.isInstructor);
@@ -1038,7 +1539,18 @@ const App = {
         this.clearQuizSession();
         this.switchAdmin(this.currentAdminTab || 'score');
     },
-    toHome: function() { this.quizInProgress = false; this.employeeId = ""; this.clearQuizSession(); this.showSec('sec-login'); this.init(); },
+    refreshHomeUI: function() {
+        this.renderSelects();
+        this.updateLoginStatus();
+        this.syncUI();
+    },
+    toHome: function() {
+        this.quizInProgress = false;
+        this.employeeId = "";
+        this.clearQuizSession();
+        this.showSec('sec-login');
+        this.refreshHomeUI();
+    },
     toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
     logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
     showSec: function(id) {
@@ -1048,12 +1560,43 @@ const App = {
         const backupTools = document.getElementById('backupFloatingTools');
         if (backupTools) backupTools.classList.toggle('active', id === 'sec-admin' && this.isInstructor);
     },
+    adminJumpToTop: function() {
+        const adminSec = document.getElementById('sec-admin');
+        const content = document.getElementById('adminContent');
+        if (adminSec && window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+            adminSec.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+        if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    adminJumpToBottom: function() {
+        const adminSec = document.getElementById('sec-admin');
+        const content = document.getElementById('adminContent');
+        if (adminSec && window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+            adminSec.scrollTo({ top: adminSec.scrollHeight, behavior: 'smooth' });
+            return;
+        }
+        if (content) content.scrollTo({ top: content.scrollHeight, behavior: 'smooth' });
+    },
     switchAdmin: function(tab) {
         this.currentAdminTab = tab;
         ['rec', 'score', 'edit'].forEach(p => { document.getElementById(`panel-${p}`).classList.add('hidden'); document.getElementById(`t-${p}`).classList.remove('active'); });
         document.getElementById(`panel-${tab}`).classList.remove('hidden'); document.getElementById(`t-${tab}`).classList.add('active');
+
+        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', rec: '人員帳號管理' };
+        const currentLabel = document.getElementById('adminMobileCurrent');
+        if (currentLabel) currentLabel.innerText = `目前展開：${labelMap[tab] || ''}`;
+
         this.showSec('sec-admin');
         if (tab === 'edit') Admin.renderEditor(); else if (tab === 'rec') Admin.renderUsers(); else Admin.renderScores();
+
+        // 手機後台：點選功能後自動把畫面帶到內容區，避免只看到側欄。
+        if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+            setTimeout(() => {
+                const content = document.getElementById('adminContent');
+                if (content) content.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+        }
     },
     scrollSide: function(dir) {
         const target = document.getElementById('sec-quiz').classList.contains('active') ? document.getElementById('quizContainer') : document.getElementById('adminContent');
@@ -1107,15 +1650,57 @@ const Admin = {
         const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
         link.setAttribute("download", "題庫匯入範本.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
     },
+
+    exportCourseQuestions: function(ci) {
+        Admin.sync();
+        const course = App.state.courses[ci];
+        if (!course) return alert("找不到科目資料。");
+
+        const questions = Array.isArray(course.questions) ? course.questions : [];
+        if (!questions.length) return alert("本科目目前沒有題目可匯出。");
+
+        const rows = [
+            ['題目 (Question)', '選項列表 (以半形逗號分隔)', '正確答案索引 (1-4)', '備註說明']
+        ];
+
+        questions.forEach((q, index) => {
+            const opts = Array.isArray(q.o) ? q.o : [];
+            rows.push([
+                q.q || '',
+                opts.join(','),
+                Number.isInteger(parseInt(q.a, 10)) ? String(parseInt(q.a, 10) + 1) : '1',
+                `Q${index + 1}`
+            ]);
+        });
+
+        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\n');
+        const safeTitle = String(course.title || '題庫')
+            .replace(/[\\/:*?"<>|]/g, '_')
+            .replace(/\s+/g, '_')
+            .slice(0, 40);
+        const stamp = DateUtil.format().replace(/[\/:\s]/g, '');
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `${safeTitle}_題庫_${stamp}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 0);
+    },
+
     renderEditor: function() {
         const listDiv = document.getElementById('panel-edit');
         listDiv.innerHTML = `
             <div class="sticky-header">
-                <h3>📚 教材與題庫編輯</h3>
+                <div>
+                    <h3>📚 教材與題庫編輯</h3>
+                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材及題庫記得按下儲存變更才會生效。</div>
+                </div>
                 <div class="header-actions">
                     <button class="btn btn-outline btn-sm" onclick="Admin.downloadTemplate()">📁 下載範本</button>
                     <button class="btn btn-primary btn-sm" onclick="Admin.addCourse()">➕ 新增科目</button>
-                    <button class="btn btn-success btn-sm" onclick="Admin.saveAll()">💾 儲存變更</button>
+                    <button class="btn btn-success btn-sm" onclick="Admin.saveAll(event)">💾 儲存變更</button>
                 </div>
             </div>
             <div id="editorList"></div>`;
@@ -1123,18 +1708,27 @@ const Admin = {
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
             <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''}" data-id="${c.id}">
                 <div class="course-header" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
-                    <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題</span></strong>
+                    <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70} 分</span></strong>
                     <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
                 </div>
                 <div class="course-content">
                     <div class="editor-card">
                         <div class="editor-card-title">
                             <div>
-                                <h4>科目名稱</h4>
-                                <div class="editor-helper">修改科目名稱，按下儲存變更即完成。</div>
+                                <h4>科目設定</h4>
+                                
                             </div>
                         </div>
-                        <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="請輸入科目名稱">
+                        <div class="course-setting-grid">
+                            <div>
+                                <label>科目名稱</label>
+                                <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="請輸入科目名稱">
+                            </div>
+                            <div>
+                                <label>及格分數</label>
+                                <input type="number" min="0" max="100" class="input-field c-pass-score" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70}" placeholder="及格分數">
+                            </div>
+                        </div>
                     </div>
                     <div class="editor-card">
                         <div class="editor-card-title">
@@ -1150,9 +1744,10 @@ const Admin = {
                         <div class="question-toolbar">
                             <div>
                                 <h4>題庫內容</h4>
-                                <div class="editor-helper">可手動新增題目或用CSV快速匯入；拖曳 ［☰］ 可調整題目順序。</div>
+                                <div class="editor-helper">可手動新增題目，或用 CSV 匯入／匯出題庫；拖曳 ［☰］ 可調整題目順序。</div>
                             </div>
                             <div class="question-actions">
+                                <button class="btn btn-outline btn-sm" onclick="Admin.exportCourseQuestions(${ci})">📤 匯出題庫</button>
                                 <button class="btn btn-outline btn-sm" onclick="document.getElementById('f-csv-${ci}').click()">📥 匯入 CSV</button>
                                 <input type="file" id="f-csv-${ci}" class="hidden" accept=".csv" onchange="Admin.impCSV(event, ${ci})">
                                 <button class="btn btn-primary btn-sm" onclick="Admin.addQ(${ci})">➕ 手動加題</button>
@@ -1178,7 +1773,23 @@ const Admin = {
         App.state.courses.forEach((c, ci) => { 
             new Sortable(document.getElementById(`ql-${ci}`), { handle: '.handle', animation: 150, onEnd: function() { Admin.reindexQuestions(ci); Admin.sync(); } }); 
         });
-    },
+    
+        // 新增題目定位：手動加題後自動捲動到新題目並聚焦
+        if (App.pendingScrollQuestion) {
+            const targetList = document.getElementById(`ql-${App.pendingScrollQuestion.courseIndex}`);
+            const targetRow = targetList ? targetList.querySelectorAll('.q-row')[App.pendingScrollQuestion.questionIndex] : null;
+            setTimeout(() => {
+                if (targetRow) {
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetRow.style.boxShadow = '0 0 0 3px rgba(88,166,255,0.35), 0 2px 8px rgba(0,0,0,0.18)';
+                    const input = targetRow.querySelector('.q-t');
+                    if (input) input.focus();
+                    setTimeout(() => { targetRow.style.boxShadow = ''; }, 1600);
+                }
+                App.pendingScrollQuestion = null;
+            }, 80);
+        }
+},
     toggleCourse: function(id, el) { el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
     sync: function() {
         document.querySelectorAll('.course-item').forEach(item => {
@@ -1203,6 +1814,9 @@ const Admin = {
                     }
                 }
                 target.embedUrl = item.querySelector('.c-url').value.trim();
+                const passInput = item.querySelector('.c-pass-score');
+                const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
+                target.passScore = Number.isInteger(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 70;
                 target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => ({
                     q: row.querySelector('.q-t').value,
                     o: Array.from(row.querySelectorAll('.q-o')).map(o => o.value),
@@ -1211,8 +1825,16 @@ const Admin = {
             }
         });
     },
-    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", questions:[]}); App.save(); Admin.renderEditor(); }},
-    addQ: function(ci) { Admin.sync(); App.state.courses[ci].questions.push({q:"", o:["","","",""], a:0}); Admin.renderEditor(); },
+    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", passScore:70, questions:[]}); App.save(); Admin.renderEditor(); }},
+    addQ: function(ci) {
+        Admin.sync();
+        const course = App.state.courses[ci];
+        if (!course) return;
+        course.questions.push({q:"", o:["","","",""], a:0});
+        App.lastOpenedCourseId = course.id;
+        App.pendingScrollQuestion = { courseIndex: ci, questionIndex: course.questions.length - 1 };
+        Admin.renderEditor();
+    },
     delQ: function(ci, qi) { Admin.sync(); App.state.courses[ci].questions.splice(qi, 1); Admin.renderEditor(); },
     delAllQ: function(ci) {
         Admin.sync();
@@ -1276,7 +1898,50 @@ const Admin = {
             }
         }; r.readAsText(f, 'UTF-8');
     },
-    saveAll: function() { Admin.sync(); App.save(); alert("✅ 變更已儲存"); Admin.renderEditor(); App.renderSelects(); },
+    refreshCourseHeaderBadges: function() {
+        document.querySelectorAll('.course-item').forEach(item => {
+            const cid = parseInt(item.dataset.id);
+            const course = App.state.courses.find(c => c.id === cid);
+            if (!course) return;
+            const titleSpan = item.querySelector('.course-header strong span:first-child');
+            const badge = item.querySelector('.course-count-badge');
+            if (titleSpan) titleSpan.innerText = course.title || '';
+            if (badge) {
+                const qCount = Array.isArray(course.questions) ? course.questions.length : 0;
+                badge.innerText = `${qCount} 題｜及格 ${App.getPassScore(course)} 分`;
+            }
+        });
+    },
+    saveAll: function(evt) {
+        Admin.sync();
+        const btn = evt && evt.currentTarget ? evt.currentTarget : null;
+        const oldText = btn ? btn.innerText : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = '已存本機，雲端同步中...';
+        }
+
+        // v122 快速儲存：立即保存本機與更新畫面，雲端改為背景同步。
+        App.saveLocalOnly();
+        App.renderSelects();
+        Admin.refreshCourseHeaderBadges();
+
+        App.saveBackground();
+
+        if (btn) {
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerText = oldText || '💾 儲存變更';
+            }, 450);
+        }
+
+        const cloudStatus = document.getElementById('cloudStatus');
+        if (cloudStatus && App.isInstructor) {
+            cloudStatus.style.display = 'block';
+            cloudStatus.innerText = '已先儲存本機，Google Sheets 背景同步中...';
+            cloudStatus.style.color = 'var(--warning-color)';
+        }
+    },
     renderUsers: function() {
         App.normalizeUsers();
         const users = Object.keys(App.state.users).sort((a,b) => a.localeCompare(b, 'zh-Hant'));
@@ -1455,19 +2120,21 @@ const Admin = {
         const items = this.getFilteredScoreItems();
         if (!items.length) return alert('目前沒有可匯出的測驗成績。');
         const rows = [[
-            '代字', '員工編號', '測驗科目', '分數', '及格狀態', '考核日期', '測驗狀態', '備註'
+            '代字', '員工編號', '測驗科目', '分數', '及格分數', '及格狀態', '考核日期', '測驗狀態', '備註'
         ]];
         items.forEach(item => {
             const r = item.r;
             const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
             const locked = course ? App.isQuizLocked(r.u, course.id) : false;
+            const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
             rows.push([
                 r.u || '',
                 App.getRecordEmployeeId(r),
                 r.c || '',
                 String(r.s ?? ''),
-                Number(r.s) >= PASS_SCORE ? '及格' : '未及格',
-                r.d || '',
+                String(passScore),
+                Number(r.s) >= passScore ? '及格' : '未及格',
+                DateUtil.format(r.d),
                 locked ? '已鎖定' : '可測驗',
                 r.note || ''
             ]);
@@ -1534,6 +2201,7 @@ const Admin = {
                         const employeeId = App.getRecordEmployeeId(r);
                         const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
                         const locked = course ? App.isQuizLocked(r.u, course.id) : false;
+                        const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
                         const safeUser = String(r.u).replace(/'/g, "\'");
                         return `
                         <tr>
@@ -1541,9 +2209,9 @@ const Admin = {
                             <td>${Admin.esc(r.u || '')}</td>
                             <td>${Admin.esc(employeeId)}</td>
                             <td>${Admin.esc(r.c || '')}</td>
-                            <td style="color:${Number(r.s) >= PASS_SCORE ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
-                            <td>${Number(r.s) >= PASS_SCORE ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
-                            <td>${r.d}</td>
+                            <td style="color:${Number(r.s) >= passScore ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
+                            <td>${Number(r.s) >= passScore ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
+                            <td>${DateUtil.format(r.d)}</td>
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1562,6 +2230,8 @@ const Admin = {
 
 const Quiz = {
     init: function() {
+        const resultArea = document.getElementById('resultAnswerArea');
+        if (resultArea) { resultArea.classList.add('hidden'); resultArea.innerHTML = ''; }
         if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
         if(!App.activeCourse.questions.length) return alert("本科目尚無考題。");
         if (!App.isInstructor) {
@@ -1626,7 +2296,7 @@ const Quiz = {
             cid: App.activeCourse.id,
             c: App.activeCourse.title,
             s: 0,
-            d: new Date().toLocaleString(),
+            d: DateUtil.format(),
             note: '測驗中刷新或離開頁面，自動記錄零分'
         });
         App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
@@ -1642,6 +2312,7 @@ const Quiz = {
         App.showSec('sec-view');
     },
     submit: function() {
+        App.refreshActiveCourse();
         const missingIndexes = this.ans.map((a, i) => a === null ? i : -1).filter(i => i >= 0);
         document.querySelectorAll('.quiz-question-card').forEach(card => {
             card.classList.remove('q-card-unanswered');
@@ -1747,61 +2418,59 @@ const Quiz = {
         this.closeReviewModal();
         this.finishSubmit();
     },
-    finishSubmit: async function() {
+    renderResultAnswers: function() {
+        const area = document.getElementById('resultAnswerArea');
+        if (!area || !App.activeCourse || !App.activeCourse.questions || !this.ans) return;
+        area.classList.remove('hidden');
+        area.innerHTML = `
+            <div class="result-answer-title">正確答案</div>
+            ${App.activeCourse.questions.map((q, i) => {
+                const userIndex = this.ans[i];
+                const correctIndex = q.a;
+                const userText = q.o[userIndex] || '';
+                const correctText = q.o[correctIndex] || '';
+                const isCorrect = userIndex === correctIndex;
+                return `<div class="result-answer-card ${isCorrect ? 'correct' : 'wrong'}">
+                    <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)}</div>
+                    <div class="result-answer-row">答案：<span class="result-answer-correct">(${correctIndex + 1}) ${Admin.esc(correctText)}</span></div>
+                    <div class="result-answer-row">你的作答：<span class="result-answer-user ${isCorrect ? '' : 'wrong'}">(${userIndex + 1}) ${Admin.esc(userText)}</span> ${isCorrect ? '✅' : '❌'}</div>
+                </div>`;
+            }).join('')}
+        `;
+    },
+    finishSubmit: function() {
         const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
-        const courseNow = App.refreshActiveCourse();
-        const passScoreNow = App.getPassScore(courseNow);
-        const passedNow = score >= passScoreNow;
-
-        // 先建立成績紀錄並存到本機，避免雲端同步問題造成成績消失。
         if (!App.isInstructor) {
-            App.state.records.push({
-                u: App.user,
-                employeeId: App.employeeId || App.getUserEmployeeId(App.user),
-                name: App.getUserName(App.user),
-                cid: App.activeCourse.id,
-                c: App.activeCourse.title,
-                s: Number(score),
-                passScore: Number(passScoreNow),
-                d: DateUtil.format(),
-                note: ''
-            });
+            App.state.records.push({u:App.user, employeeId:App.employeeId || App.getUserEmployeeId(App.user), name:App.getUserName(App.user), cid:App.activeCourse.id, c:App.activeCourse.title, s:score, passScore:App.getPassScore(App.refreshActiveCourse()), d:DateUtil.format()});
             App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
-            if (typeof App.saveLocalOnly === 'function') {
-                App.saveLocalOnly();
-            } else {
-                localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
-            }
+            App.save();
         }
-
         App.quizInProgress = false;
-
-        // 立即顯示結果與正確答案，不等待 Google Sheets。
-        App.showSec('sec-res');
+        App.clearQuizSession();
         const finalScoreEl = document.getElementById('finalScore');
         finalScoreEl.innerText = score;
+        const passScoreNow = App.getPassScore(App.refreshActiveCourse());
+        const passedNow = score >= passScoreNow;
         finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
-
         const resultPassNote = document.getElementById('resultPassNote');
         if (resultPassNote) {
-            if (App.isInstructor) {
-                resultPassNote.innerText = `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${passScoreNow} 分。`;
-                resultPassNote.style.color = 'var(--warning-color)';
-            } else {
-                const baseText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
-                resultPassNote.setAttribute('data-result-base', baseText);
-                resultPassNote.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
-                resultPassNote.style.color = 'var(--warning-color)';
-            }
+            resultPassNote.innerText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
+            resultPassNote.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
         }
-
-        App.renderResultAnswers();
-
-        // 結果已顯示後，再背景同步 Google Sheets。
-        if (!App.isInstructor) {
-            setTimeout(() => App.syncScoreInBackground(12000), 100);
+        let resultNote = document.getElementById('resultModeNote');
+        if (!resultNote) {
+            resultNote = document.createElement('div');
+            resultNote.id = 'resultModeNote';
+            resultNote.style.margin = '0 0 25px 0';
+            resultNote.style.fontWeight = 'bold';
+            document.getElementById('finalScore').insertAdjacentElement('afterend', resultNote);
         }
-    },};
+        resultNote.innerText = App.isInstructor ? '管理員測試模式，本次分數不列入測驗紀錄。' : '';
+        resultNote.style.color = App.isInstructor ? 'var(--warning-color)' : 'transparent';
+        this.renderResultAnswers();
+        App.showSec('sec-res');
+    }
+};
 
 
 const RefreshGuard = {
@@ -1844,13 +2513,14 @@ const RefreshGuard = {
     }
 };
 
+
 window.addEventListener('beforeunload', function(e) {
-    if (window.App && App.scoreSyncPending) {
+    if (localStorage.getItem('ATC_PENDING_CLOUD_SYNC')) {
         e.preventDefault();
         e.returnValue = '';
         return '';
     }
-}); // scoreSyncBeforeUnload
+}); // beforeunloadPendingCloudSync
 
 RefreshGuard.init();
 App.init();
