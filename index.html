@@ -1290,6 +1290,33 @@ const Backend = {
             return false;
         }
     },
+    submitScore: async function(record) {
+        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
+            this.setStatus('⚠️ 尚未設定 Web App URL', 'warn');
+            return false;
+        }
+        try {
+            this.setStatus('成績同步中...', 'warn');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 12000);
+            const res = await fetch(SHEETS_WEB_APP_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'submitScore', record }),
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            const json = await res.json();
+            if (!json || json.ok !== true) throw new Error(json && json.error ? json.error : 'submitScore failed');
+            this.setStatus('成績已同步', 'ok');
+            return true;
+        } catch (err) {
+            console.error('submitScore failed:', err);
+            this.setStatus('⚠️ 成績同步失敗', 'warn');
+            return false;
+        }
+    },
     saveState: async function(state) {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(state));
         if (!this.enabled()) return true;
@@ -1446,11 +1473,12 @@ const App = {
     user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false,
     scoreSyncPending: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
+    pendingScoreKey: 'ATC_PENDING_SCORE_RECORDS',
     savePromise: null,
     markPendingCloudSync: function() {
         localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
     },
-    syncScoreInBackground: function(timeoutMs = 12000) {
+    submitScoreInBackground: function(record, timeoutMs = 12000) {
         this.scoreSyncPending = true;
         const note = document.getElementById('resultPassNote');
         const baseText = note ? (note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '') : '';
@@ -1460,42 +1488,78 @@ const App = {
             note.style.color = 'var(--warning-color)';
         }
 
-        let finished = false;
         const finish = (ok) => {
-            if (finished) return;
-            finished = true;
             App.scoreSyncPending = false;
-
             if (!note || App.isInstructor) return;
 
             if (ok) {
+                App.removePendingScore(record);
                 note.innerText = `${baseText}｜成績已同步，可以關閉頁面。`;
                 note.style.color = baseText.includes('未及格') ? 'var(--danger-color)' : 'var(--success-color)';
                 App.clearQuizSession();
             } else {
-                note.innerText = `${baseText}｜⚠️ 成績同步逾時或失敗，成績已先保存在本機。請勿重複測驗，請通知管理員檢查 Web App URL／Apps Script 部署。`;
+                App.queuePendingScore(record);
+                note.innerText = `${baseText}｜⚠️ 成績尚未完成雲端同步，已先保存在本機。請勿重複測驗，請通知管理員檢查 Web App URL／Apps Script 部署。`;
                 note.style.color = 'var(--danger-color)';
             }
         };
 
+        let done = false;
+        const safeFinish = (ok) => {
+            if (done) return;
+            done = true;
+            finish(ok);
+        };
+
         try {
-            const savePromise = Promise.resolve(App.save());
-            const timer = setTimeout(() => finish(false), timeoutMs);
-            savePromise
+            const timer = setTimeout(() => safeFinish(false), timeoutMs);
+            Backend.submitScore(record)
                 .then(ok => {
                     clearTimeout(timer);
-                    finish(!!ok);
+                    safeFinish(!!ok);
                 })
                 .catch(err => {
-                    console.error('syncScoreInBackground failed:', err);
+                    console.error('submitScoreInBackground failed:', err);
                     clearTimeout(timer);
-                    finish(false);
+                    safeFinish(false);
                 });
         } catch (err) {
-            console.error('syncScoreInBackground failed:', err);
-            finish(false);
+            console.error('submitScoreInBackground failed:', err);
+            safeFinish(false);
         }
     },
+    queuePendingScore: function(record) {
+        try {
+            const list = JSON.parse(localStorage.getItem(this.pendingScoreKey) || '[]');
+            if (!list.some(r => r.recordId === record.recordId)) list.push(record);
+            localStorage.setItem(this.pendingScoreKey, JSON.stringify(list));
+        } catch (err) {
+            console.error('queuePendingScore failed:', err);
+        }
+    },
+    removePendingScore: function(record) {
+        try {
+            const list = JSON.parse(localStorage.getItem(this.pendingScoreKey) || '[]');
+            const next = list.filter(r => r.recordId !== record.recordId);
+            localStorage.setItem(this.pendingScoreKey, JSON.stringify(next));
+        } catch (err) {
+            console.error('removePendingScore failed:', err);
+        }
+    },
+    retryPendingScores: function() {
+        try {
+            const list = JSON.parse(localStorage.getItem(this.pendingScoreKey) || '[]');
+            if (!Array.isArray(list) || !list.length) return;
+            list.forEach(record => {
+                Backend.submitScore(record).then(ok => {
+                    if (ok) App.removePendingScore(record);
+                }).catch(err => console.error('retryPendingScores failed:', err));
+            });
+        } catch (err) {
+            console.error('retryPendingScores failed:', err);
+        }
+    },
+    
     saveWithTimeout: async function(timeoutMs = 12000) {
         const saveTask = Promise.resolve(this.save());
         const timeoutTask = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
@@ -2712,30 +2776,38 @@ const Quiz = {
             const score = Math.round((correctCount / answers.length) * 100);
             const passScoreNow = App.getPassScore(course);
             const passedNow = score >= passScoreNow;
+            const record = {
+                recordId: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                u: App.user,
+                userCode: App.user,
+                employeeId: App.employeeId || App.getUserEmployeeId(App.user),
+                name: App.getUserName(App.user),
+                cid: course.id,
+                courseId: course.id,
+                c: course.title,
+                courseTitle: course.title,
+                s: Number(score),
+                score: Number(score),
+                passScore: Number(passScoreNow),
+                d: DateUtil.format(),
+                date: DateUtil.format(),
+                note: ''
+            };
 
             if (!App.isInstructor) {
-                App.state.records.push({
-                    u: App.user,
-                    employeeId: App.employeeId || App.getUserEmployeeId(App.user),
-                    name: App.getUserName(App.user),
-                    cid: course.id,
-                    c: course.title,
-                    s: Number(score),
-                    passScore: Number(passScoreNow),
-                    d: DateUtil.format(),
-                    note: ''
-                });
+                App.state.records.push(record);
                 App.lockQuiz(App.user, course.id, course.title);
                 if (typeof App.saveLocalOnly === 'function') {
                     App.saveLocalOnly();
                 } else {
                     localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
                 }
+                App.queuePendingScore(record);
             }
 
             App.quizInProgress = false;
 
-            // 第一優先：立即顯示結果頁與分數。
+            // 立即顯示結果，不等待任何雲端同步。
             App.showSec('sec-res');
 
             const finalScoreEl = document.getElementById('finalScore');
@@ -2757,7 +2829,6 @@ const Quiz = {
                 }
             }
 
-            // 第二優先：顯示正確答案。正確函式位於 Quiz。
             try {
                 if (typeof Quiz !== 'undefined' && typeof Quiz.renderResultAnswers === 'function') {
                     Quiz.renderResultAnswers();
@@ -2773,15 +2844,14 @@ const Quiz = {
                 }
             }
 
-            // 第三優先：背景同步 Google Sheets，不阻塞畫面。
-            if (!App.isInstructor && typeof App.syncScoreInBackground === 'function') {
+            // 背景只送單筆成績，不再整包 saveState。
+            if (!App.isInstructor) {
                 setTimeout(function() {
-                    App.syncScoreInBackground(12000);
+                    App.submitScoreInBackground(record, 12000);
                 }, 300);
             }
         } catch (err) {
             console.error('finishSubmit failed:', err);
-
             try {
                 App.quizInProgress = false;
                 App.showSec('sec-res');
@@ -2793,7 +2863,6 @@ const Quiz = {
             } catch (fallbackErr) {
                 console.error('fallback result view failed:', fallbackErr);
             }
-
             alert('送出答案時發生錯誤：' + (err && err.message ? err.message : err));
         }
     },};
