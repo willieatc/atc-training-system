@@ -1141,27 +1141,17 @@
 }
 
 
-.course-item.drag-over {
-    outline: 2px dashed var(--primary-color);
-    outline-offset: 3px;
-}
-
-
-
-.course-sortable-item {
+.course-drag-handle {
+    min-width: 42px;
+    font-size: 18px;
+    line-height: 1;
     cursor: grab;
+    user-select: none;
 }
-.course-sortable-item:active {
+.course-drag-handle:active {
     cursor: grabbing;
 }
-.course-drag-row strong::before {
-    content: '☰';
-    display: inline-block;
-    margin-right: 8px;
-    color: #8b949e;
-    font-weight: 700;
-}
-.course-sortable-item.drag-over {
+.course-item.drag-over {
     outline: 2px dashed var(--primary-color);
     outline-offset: 3px;
 }
@@ -2002,7 +1992,6 @@ const App = {
 
 const Admin = {
     dragCourseIndex: null,
-    justDraggedCourse: false,
     esc: function(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); },
     csvCell: function(v) {
         const s = String(v ?? '');
@@ -2093,7 +2082,7 @@ const Admin = {
             <div class="sticky-header">
                 <div>
                     <h3>📚 教材與題庫編輯</h3>
-                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材、題庫及拖拉科目卡片調整順序後，記得按下儲存變更才會生效。</div>
+                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材、題庫及拖拉調整科目順序後，記得按下儲存變更才會生效。</div>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-outline btn-sm" onclick="Admin.downloadTemplate()">📁 下載範本</button>
@@ -2104,10 +2093,15 @@ const Admin = {
             <div id="editorList"></div>`;
         
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
-            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''} course-sortable-item" data-id="${c.id}" draggable="true" ondragstart="Admin.courseDragStart(event, ${ci})" ondragover="Admin.courseDragOver(event, ${ci})" ondrop="Admin.courseDrop(event, ${ci})" ondragend="Admin.courseDragEnd(event)">
-                <div class="course-header course-drag-row" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
+            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''}" data-id="${c.id}" ondragover="Admin.courseDragOver(event, ${ci})" ondrop="Admin.courseDrop(event, ${ci})">
+                <div class="course-header" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
                     <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70} 分</span></strong>
                     <div class="course-order-actions">
+                        <button class="btn btn-outline btn-sm course-drag-handle" title="拖拉調整科目順序" draggable="true"
+                            ondragstart="event.stopPropagation(); Admin.courseDragStart(event, ${ci})"
+                            ondragover="event.preventDefault(); event.stopPropagation(); Admin.courseDragOver(event, ${ci})"
+                            ondrop="event.preventDefault(); event.stopPropagation(); Admin.courseDrop(event, ${ci})"
+                            ondragend="event.stopPropagation(); Admin.courseDragEnd(event)">☰</button>
                         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
                     </div>
                 </div>
@@ -2190,9 +2184,7 @@ const Admin = {
             }, 80);
         }
 },
-    toggleCourse: function(id, el) {
-        if (Admin.justDraggedCourse) return;
- el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
+    toggleCourse: function(id, el) { el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
     sync: function() {
         document.querySelectorAll('.course-item').forEach(item => {
             const cid = parseInt(item.dataset.id);
@@ -2253,36 +2245,23 @@ const Admin = {
     courseDragStart: function(event, index) {
         Admin.sync();
         Admin.dragCourseIndex = index;
-        Admin.justDraggedCourse = false;
         if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', String(index));
         }
-        const item = event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('course-item')
-            ? event.currentTarget
-            : (event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null);
-        if (item) item.classList.add('dragging');
     },
     courseDragOver: function(event, index) {
         event.preventDefault();
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
         document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
-        const item = event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('course-item')
-            ? event.currentTarget
-            : (event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null);
+        const item = event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null;
         if (item && Admin.dragCourseIndex !== null && Admin.dragCourseIndex !== index) item.classList.add('drag-over');
     },
     courseDrop: function(event, targetIndex) {
         event.preventDefault();
-        document.querySelectorAll('.course-item.drag-over, .course-item.dragging').forEach(el => {
-            el.classList.remove('drag-over');
-            el.classList.remove('dragging');
-        });
+        document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
         const fromIndex = Number.isInteger(Admin.dragCourseIndex) ? Admin.dragCourseIndex : Number(event.dataTransfer && event.dataTransfer.getData('text/plain'));
         Admin.dragCourseIndex = null;
-        Admin.justDraggedCourse = true;
-        setTimeout(() => { Admin.justDraggedCourse = false; }, 250);
-
         if (!Number.isInteger(fromIndex) || fromIndex === targetIndex) return;
 
         Admin.sync();
@@ -2291,18 +2270,15 @@ const Admin = {
         const moved = courses.splice(fromIndex, 1)[0];
         courses.splice(targetIndex, 0, moved);
 
+        // 只重繪排序後清單，不自動展開任何科目。
         App.lastOpenedCourseId = null;
         Admin.renderEditor();
         App.renderSelects();
     },
     courseDragEnd: function(event) {
         Admin.dragCourseIndex = null;
-        document.querySelectorAll('.course-item.drag-over, .course-item.dragging').forEach(el => {
-            el.classList.remove('drag-over');
-            el.classList.remove('dragging');
-        });
+        document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
     },
-    
     
     delCourse: function(ci) { if(confirm("確定刪除？")) { App.state.courses.splice(ci, 1); App.save(); Admin.renderEditor(); }},
     impCSV: function(e, ci) {
