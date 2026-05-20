@@ -2700,13 +2700,16 @@ const Quiz = {
         try {
             const course = App.activeCourse;
             const questions = course && Array.isArray(course.questions) ? course.questions : [];
-            if (!course || !questions.length || !this.ans || !this.ans.length) {
+            const answers = Array.isArray(this.ans) ? this.ans : [];
+
+            if (!course || !questions.length || !answers.length) {
+                console.error('Missing quiz data', { course, questions, answers });
                 alert('找不到本次測驗資料，請返回首頁後重新進入測驗。');
                 return;
             }
 
-            const correctCount = this.ans.filter((a, i) => a === questions[i].a).length;
-            const score = Math.round((correctCount / this.ans.length) * 100);
+            const correctCount = answers.filter((a, i) => questions[i] && a === questions[i].a).length;
+            const score = Math.round((correctCount / answers.length) * 100);
             const passScoreNow = App.getPassScore(course);
             const passedNow = score >= passScoreNow;
 
@@ -2732,7 +2735,7 @@ const Quiz = {
 
             App.quizInProgress = false;
 
-            // 立即顯示結果，不等待任何同步。
+            // 第一優先：立即顯示結果頁與分數。
             App.showSec('sec-res');
 
             const finalScoreEl = document.getElementById('finalScore');
@@ -2754,16 +2757,42 @@ const Quiz = {
                 }
             }
 
-            App.renderResultAnswers();
+            // 第二優先：顯示正確答案。這個函式屬於 Quiz，不是 App。
+            try {
+                if (typeof this.renderResultAnswers === 'function') {
+                    this.renderResultAnswers();
+                }
+            } catch (answerErr) {
+                console.error('renderResultAnswers failed:', answerErr);
+                const answerArea = document.getElementById('resultAnswerArea');
+                if (answerArea) {
+                    answerArea.classList.remove('hidden');
+                    answerArea.innerHTML = '<div class="result-answer-title">正確答案</div><div style="color:var(--danger-color); margin-top:10px;">正確答案區塊顯示時發生錯誤，但分數已正常計算。</div>';
+                }
+            }
 
-            // 背景同步，完全不阻塞結果頁。
-            if (!App.isInstructor) {
+            // 第三優先：背景同步 Google Sheets，不阻擋結果頁。
+            if (!App.isInstructor && typeof App.syncScoreInBackground === 'function') {
                 setTimeout(function() {
                     App.syncScoreInBackground(12000);
                 }, 300);
             }
         } catch (err) {
             console.error('finishSubmit failed:', err);
+
+            // 最後保護：即使發生錯誤，也盡量切到結果頁，不讓學生停在送出畫面。
+            try {
+                App.quizInProgress = false;
+                App.showSec('sec-res');
+                const note = document.getElementById('resultPassNote');
+                if (note) {
+                    note.innerText = '送出答案時發生錯誤，請通知管理員檢查題目或系統設定。';
+                    note.style.color = 'var(--danger-color)';
+                }
+            } catch (fallbackErr) {
+                console.error('fallback result view failed:', fallbackErr);
+            }
+
             alert('送出答案時發生錯誤：' + (err && err.message ? err.message : err));
         }
     },};
