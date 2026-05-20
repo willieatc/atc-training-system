@@ -1293,7 +1293,7 @@ const Backend = {
     submitScore: async function(record) {
         if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
             this.setStatus('⚠️ 尚未設定 Web App URL', 'warn');
-            return false;
+            return { ok: false, error: '尚未設定 Web App URL' };
         }
         try {
             this.setStatus('成績同步中...', 'warn');
@@ -1310,11 +1310,11 @@ const Backend = {
             const json = await res.json();
             if (!json || json.ok !== true) throw new Error(json && json.error ? json.error : 'submitScore failed');
             this.setStatus('成績已同步', 'ok');
-            return true;
+            return { ok: true, via: 'submitScore', response: json };
         } catch (err) {
             console.error('submitScore failed:', err);
-            this.setStatus('⚠️ 成績同步失敗', 'warn');
-            return false;
+            this.setStatus('⚠️ submitScore 失敗，準備使用備援同步', 'warn');
+            return { ok: false, error: String(err && err.message ? err.message : err), via: 'submitScore' };
         }
     },
     saveState: async function(state) {
@@ -1478,7 +1478,7 @@ const App = {
     markPendingCloudSync: function() {
         localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
     },
-    submitScoreInBackground: function(record, timeoutMs = 12000) {
+    syncScoreToCloudStable: function(record, timeoutMs = 12000) {
         this.scoreSyncPending = true;
         const note = document.getElementById('resultPassNote');
         const baseText = note ? (note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '') : '';
@@ -1488,46 +1488,67 @@ const App = {
             note.style.color = 'var(--warning-color)';
         }
 
-        const finish = (ok) => {
+        const finish = (ok, via, error) => {
             App.scoreSyncPending = false;
+
             if (!note || App.isInstructor) return;
 
             if (ok) {
                 App.removePendingScore(record);
-                note.innerText = `${baseText}｜成績已同步，可以關閉頁面。`;
+                const viaText = via === 'saveStateFallback' ? '（備援同步完成）' : '';
+                note.innerText = `${baseText}｜成績已同步，可以關閉頁面。${viaText}`;
                 note.style.color = baseText.includes('未及格') ? 'var(--danger-color)' : 'var(--success-color)';
                 App.clearQuizSession();
             } else {
                 App.queuePendingScore(record);
-                note.innerText = `${baseText}｜⚠️ 成績尚未完成雲端同步，已先保存在本機。請勿重複測驗，請通知管理員檢查 Web App URL／Apps Script 部署。`;
+                const errText = error ? `（錯誤：${String(error).slice(0, 80)}）` : '';
+                note.innerText = `${baseText}｜⚠️ 成績尚未完成雲端同步，已先保存在本機。請勿重複測驗，請通知管理員檢查 Web App URL／Apps Script 部署。${errText}`;
                 note.style.color = 'var(--danger-color)';
             }
         };
 
         let done = false;
-        const safeFinish = (ok) => {
+        const safeFinish = (ok, via, error) => {
             if (done) return;
             done = true;
-            finish(ok);
+            finish(ok, via, error);
         };
 
         try {
-            const timer = setTimeout(() => safeFinish(false), timeoutMs);
-            Backend.submitScore(record)
-                .then(ok => {
+            const timer = setTimeout(() => safeFinish(false, 'timeout', '同步逾時'), timeoutMs + 5000);
+
+            Backend.submitScore(record).then(result => {
+                if (result && result.ok) {
                     clearTimeout(timer);
-                    safeFinish(!!ok);
-                })
-                .catch(err => {
-                    console.error('submitScoreInBackground failed:', err);
+                    safeFinish(true, 'submitScore', '');
+                    return;
+                }
+
+                console.warn('submitScore failed, fallback to saveState', result);
+                if (note && !App.isInstructor) {
+                    note.innerText = `${baseText}｜submitScore 未成功，改用備援同步中...`;
+                    note.style.color = 'var(--warning-color)';
+                }
+
+                return Promise.resolve(App.save()).then(ok => {
                     clearTimeout(timer);
-                    safeFinish(false);
+                    if (ok) safeFinish(true, 'saveStateFallback', '');
+                    else safeFinish(false, 'saveStateFallback', result && result.error ? result.error : '備援同步失敗');
+                }).catch(err => {
+                    clearTimeout(timer);
+                    safeFinish(false, 'saveStateFallback', err && err.message ? err.message : err);
                 });
+            }).catch(err => {
+                console.error('stable score sync failed:', err);
+                clearTimeout(timer);
+                safeFinish(false, 'submitScore', err && err.message ? err.message : err);
+            });
         } catch (err) {
-            console.error('submitScoreInBackground failed:', err);
-            safeFinish(false);
+            console.error('stable score sync failed:', err);
+            safeFinish(false, 'exception', err && err.message ? err.message : err);
         }
     },
+    
     queuePendingScore: function(record) {
         try {
             const list = JSON.parse(localStorage.getItem(this.pendingScoreKey) || '[]');
@@ -2776,6 +2797,7 @@ const Quiz = {
             const score = Math.round((correctCount / answers.length) * 100);
             const passScoreNow = App.getPassScore(course);
             const passedNow = score >= passScoreNow;
+            const nowText = DateUtil.format();
             const record = {
                 recordId: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                 u: App.user,
@@ -2789,25 +2811,24 @@ const Quiz = {
                 s: Number(score),
                 score: Number(score),
                 passScore: Number(passScoreNow),
-                d: DateUtil.format(),
-                date: DateUtil.format(),
+                d: nowText,
+                date: nowText,
                 note: ''
             };
 
             if (!App.isInstructor) {
                 App.state.records.push(record);
                 App.lockQuiz(App.user, course.id, course.title);
+                App.queuePendingScore(record);
                 if (typeof App.saveLocalOnly === 'function') {
                     App.saveLocalOnly();
                 } else {
                     localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
                 }
-                App.queuePendingScore(record);
             }
 
             App.quizInProgress = false;
 
-            // 立即顯示結果，不等待任何雲端同步。
             App.showSec('sec-res');
 
             const finalScoreEl = document.getElementById('finalScore');
@@ -2844,10 +2865,9 @@ const Quiz = {
                 }
             }
 
-            // 背景只送單筆成績，不再整包 saveState。
             if (!App.isInstructor) {
                 setTimeout(function() {
-                    App.submitScoreInBackground(record, 12000);
+                    App.syncScoreToCloudStable(record, 12000);
                 }, 300);
             }
         } catch (err) {
