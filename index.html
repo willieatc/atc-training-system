@@ -1281,13 +1281,13 @@
 </div>
 
 <script>
-const PASS_SCORE = 70;
+const PASS_SCORE = 80;
 
 // ================= Google Sheets 後端設定 =================
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-account-delete-only-sync-notice';
+const APP_BUILD_VERSION = 'V124-passscore-persist-fix';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1327,7 +1327,13 @@ const Backend = {
                 quizLocks: st.quizLocks && typeof st.quizLocks === 'object' ? st.quizLocks : {},
                 adminPw: st.adminPw || 'rctp3023'
             };
-            App.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+
+            // V124: 預設 80；只有缺漏或異常時補 80，已修改的及格分數會保留。
+            App.state.courses.forEach(c => {
+                const n = Number(c.passScore);
+                c.passScore = Number.isFinite(n) && n >= 0 && n <= 100 ? n : 80;
+            });
+
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
             localStorage.setItem('ATC_LAST_CLOUD_LOAD_TS', String(Date.now()));
             App.cloudReady = true;
@@ -1342,6 +1348,7 @@ const Backend = {
             return false;
         }
     },
+    
     
     submitScore: async function(record) {
         if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
@@ -2229,7 +2236,7 @@ const Admin = {
                 target.embedUrl = item.querySelector('.c-url').value.trim();
                 const passInput = item.querySelector('.c-pass-score');
                 const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
-                target.passScore = Number.isInteger(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 80;
+                target.passScore = Number.isFinite(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 80;
                 target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => ({
                     q: row.querySelector('.q-t').value,
                     o: Array.from(row.querySelectorAll('.q-o')).map(o => o.value),
@@ -2238,7 +2245,7 @@ const Admin = {
             }
         });
     },
-    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", passScore:70, questions:[]}); App.save(); Admin.renderEditor(); }},
+    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", passScore: 80, questions:[]}); App.save(); Admin.renderEditor(); }},
     addQ: function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
