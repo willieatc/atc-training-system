@@ -2757,9 +2757,11 @@ const Quiz = {
                 }
             }
 
-            // 第二優先：顯示正確答案。這個函式屬於 Quiz，不是 App。
+            // 第二優先：顯示正確答案。正確函式位於 Quiz。
             try {
-                if (typeof this.renderResultAnswers === 'function') {
+                if (typeof Quiz !== 'undefined' && typeof Quiz.renderResultAnswers === 'function') {
+                    Quiz.renderResultAnswers();
+                } else if (typeof this.renderResultAnswers === 'function') {
                     this.renderResultAnswers();
                 }
             } catch (answerErr) {
@@ -2771,7 +2773,7 @@ const Quiz = {
                 }
             }
 
-            // 第三優先：背景同步 Google Sheets，不阻擋結果頁。
+            // 第三優先：背景同步 Google Sheets，不阻塞畫面。
             if (!App.isInstructor && typeof App.syncScoreInBackground === 'function') {
                 setTimeout(function() {
                     App.syncScoreInBackground(12000);
@@ -2780,7 +2782,6 @@ const Quiz = {
         } catch (err) {
             console.error('finishSubmit failed:', err);
 
-            // 最後保護：即使發生錯誤，也盡量切到結果頁，不讓學生停在送出畫面。
             try {
                 App.quizInProgress = false;
                 App.showSec('sec-res');
@@ -2796,6 +2797,19 @@ const Quiz = {
             alert('送出答案時發生錯誤：' + (err && err.message ? err.message : err));
         }
     },};
+
+
+// V123 compatibility: prevent old calls from failing.
+// Some earlier builds called App.renderResultAnswers(), but the method belongs to Quiz.
+try {
+    if (typeof App !== 'undefined' && typeof Quiz !== 'undefined' && typeof App.renderResultAnswers !== 'function') {
+        App.renderResultAnswers = function() {
+            return Quiz.renderResultAnswers();
+        };
+    }
+} catch (e) {
+    console.warn('renderResultAnswers compatibility alias failed', e);
+}
 
 
 const RefreshGuard = {
