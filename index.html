@@ -1120,42 +1120,6 @@
                 0 0 2px rgba(255,255,255,0.35) !important;
         }
 
-
-.course-order-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-.course-order-actions .btn[disabled] {
-    opacity: .45;
-    cursor: not-allowed;
-}
-@media (max-width: 760px) {
-    .course-order-actions {
-        width: 100%;
-        justify-content: flex-start;
-        margin-top: 8px;
-    }
-}
-
-
-.course-drag-handle {
-    min-width: 42px;
-    font-size: 18px;
-    line-height: 1;
-    cursor: grab;
-    user-select: none;
-}
-.course-drag-handle:active {
-    cursor: grabbing;
-}
-.course-item.drag-over {
-    outline: 2px dashed var(--primary-color);
-    outline-offset: 3px;
-}
-
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -1536,7 +1500,6 @@ const App = {
     scoreSyncPending: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
     pendingScoreKey: 'ATC_PENDING_SCORE_RECORDS',
-    ADMIN_SESSION_KEY: 'ATC_ADMIN_SESSION_ACTIVE',
     savePromise: null,
     markPendingCloudSync: function() {
         try {
@@ -1674,15 +1637,6 @@ const App = {
     getRecordName: function(record) {
         return record.name || this.getUserName(record.u) || '';
     },
-    restoreAdminSession: function() {
-        if (sessionStorage.getItem(this.ADMIN_SESSION_KEY) !== '1') return false;
-        this.isInstructor = true;
-        this.user = '管理員';
-        this.employeeId = '';
-        this.syncUI();
-        this.switchAdmin(this.currentAdminTab || 'score');
-        return true;
-    },
     init: async function() {
         // 先用本機資料立即渲染登入科目，避免等 Google Sheets 造成登入頁空白太久。
         if (!this.state.courses) this.state.courses = [];
@@ -1727,8 +1681,6 @@ const App = {
         this.renderSelects();
         this.updateLoginStatus();
         this.syncUI();
-        this.restoreAdminSession();
-
     },
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
     unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
@@ -1929,15 +1881,7 @@ const App = {
         this.showSec('sec-login');
         this.refreshHomeUI();
     },
-    toAdmin: function() {
-        if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) {
-            this.isInstructor = true;
-            sessionStorage.setItem(this.ADMIN_SESSION_KEY, '1');
-            this.switchAdmin('score');
-        } else {
-            alert("拒絕");
-        }
-    },
+    toAdmin: function() { if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) { this.isInstructor = true; this.switchAdmin('score'); } else alert("拒絕"); },
     logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1991,7 +1935,6 @@ const App = {
 };
 
 const Admin = {
-    dragCourseIndex: null,
     esc: function(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); },
     csvCell: function(v) {
         const s = String(v ?? '');
@@ -2082,7 +2025,7 @@ const Admin = {
             <div class="sticky-header">
                 <div>
                     <h3>📚 教材與題庫編輯</h3>
-                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材、題庫及拖拉調整科目順序後，記得按下儲存變更才會生效。</div>
+                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材及題庫記得按下儲存變更才會生效。</div>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-outline btn-sm" onclick="Admin.downloadTemplate()">📁 下載範本</button>
@@ -2093,17 +2036,10 @@ const Admin = {
             <div id="editorList"></div>`;
         
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
-            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''}" data-id="${c.id}" ondragover="Admin.courseDragOver(event, ${ci})" ondrop="Admin.courseDrop(event, ${ci})">
+            <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''}" data-id="${c.id}">
                 <div class="course-header" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
                     <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 70} 分</span></strong>
-                    <div class="course-order-actions">
-                        <button class="btn btn-outline btn-sm course-drag-handle" title="拖拉調整科目順序" draggable="true"
-                            ondragstart="event.stopPropagation(); Admin.courseDragStart(event, ${ci})"
-                            ondragover="event.preventDefault(); event.stopPropagation(); Admin.courseDragOver(event, ${ci})"
-                            ondrop="event.preventDefault(); event.stopPropagation(); Admin.courseDrop(event, ${ci})"
-                            ondragend="event.stopPropagation(); Admin.courseDragEnd(event)">☰</button>
-                        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
-                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
                 </div>
                 <div class="course-content">
                     <div class="editor-card">
@@ -2242,44 +2178,6 @@ const Admin = {
             alert("✅ 已刪除所有題目");
         }
     },
-    courseDragStart: function(event, index) {
-        Admin.sync();
-        Admin.dragCourseIndex = index;
-        if (event.dataTransfer) {
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', String(index));
-        }
-    },
-    courseDragOver: function(event, index) {
-        event.preventDefault();
-        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-        document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
-        const item = event.currentTarget && event.currentTarget.closest ? event.currentTarget.closest('.course-item') : null;
-        if (item && Admin.dragCourseIndex !== null && Admin.dragCourseIndex !== index) item.classList.add('drag-over');
-    },
-    courseDrop: function(event, targetIndex) {
-        event.preventDefault();
-        document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
-        const fromIndex = Number.isInteger(Admin.dragCourseIndex) ? Admin.dragCourseIndex : Number(event.dataTransfer && event.dataTransfer.getData('text/plain'));
-        Admin.dragCourseIndex = null;
-        if (!Number.isInteger(fromIndex) || fromIndex === targetIndex) return;
-
-        Admin.sync();
-        const courses = App.state.courses || [];
-        if (fromIndex < 0 || fromIndex >= courses.length || targetIndex < 0 || targetIndex >= courses.length) return;
-        const moved = courses.splice(fromIndex, 1)[0];
-        courses.splice(targetIndex, 0, moved);
-
-        // 只重繪排序後清單，不自動展開任何科目。
-        App.lastOpenedCourseId = null;
-        Admin.renderEditor();
-        App.renderSelects();
-    },
-    courseDragEnd: function(event) {
-        Admin.dragCourseIndex = null;
-        document.querySelectorAll('.course-item.drag-over').forEach(el => el.classList.remove('drag-over'));
-    },
-    
     delCourse: function(ci) { if(confirm("確定刪除？")) { App.state.courses.splice(ci, 1); App.save(); Admin.renderEditor(); }},
     impCSV: function(e, ci) {
         const f = e.target.files[0]; if(!f) return;
