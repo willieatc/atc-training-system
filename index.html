@@ -1450,26 +1450,24 @@ const App = {
     markPendingCloudSync: function() {
         localStorage.setItem('ATC_PENDING_CLOUD_SYNC', String(Date.now()));
     },
-    syncScoreInBackground: async function(timeoutMs = 12000) {
+    syncScoreInBackground: function(timeoutMs = 12000) {
         this.scoreSyncPending = true;
         const note = document.getElementById('resultPassNote');
+        const baseText = note ? (note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '') : '';
+
         if (note && !App.isInstructor) {
-            const baseText = note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '';
             note.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
             note.style.color = 'var(--warning-color)';
         }
 
-        let ok = false;
-        try {
-            ok = await this.saveWithTimeout(timeoutMs);
-        } catch (err) {
-            console.error('syncScoreInBackground failed:', err);
-            ok = false;
-        }
+        let finished = false;
+        const finish = (ok) => {
+            if (finished) return;
+            finished = true;
+            App.scoreSyncPending = false;
 
-        this.scoreSyncPending = false;
-        if (note && !App.isInstructor) {
-            const baseText = note.getAttribute('data-result-base') || note.innerText.split('｜')[0] || '';
+            if (!note || App.isInstructor) return;
+
             if (ok) {
                 note.innerText = `${baseText}｜成績已同步，可以關閉頁面。`;
                 note.style.color = baseText.includes('未及格') ? 'var(--danger-color)' : 'var(--success-color)';
@@ -1478,8 +1476,25 @@ const App = {
                 note.innerText = `${baseText}｜⚠️ 成績同步逾時或失敗，成績已先保存在本機。請勿重複測驗，請通知管理員檢查 Web App URL／Apps Script 部署。`;
                 note.style.color = 'var(--danger-color)';
             }
+        };
+
+        try {
+            const savePromise = Promise.resolve(App.save());
+            const timer = setTimeout(() => finish(false), timeoutMs);
+            savePromise
+                .then(ok => {
+                    clearTimeout(timer);
+                    finish(!!ok);
+                })
+                .catch(err => {
+                    console.error('syncScoreInBackground failed:', err);
+                    clearTimeout(timer);
+                    finish(false);
+                });
+        } catch (err) {
+            console.error('syncScoreInBackground failed:', err);
+            finish(false);
         }
-        return ok;
     },
     saveWithTimeout: async function(timeoutMs = 12000) {
         const saveTask = Promise.resolve(this.save());
@@ -2656,7 +2671,10 @@ const Quiz = {
     },
     confirmReviewedSubmit: function() {
         this.closeReviewModal();
-        this.finishSubmit();
+        const self = this;
+        requestAnimationFrame(function() {
+            self.finishSubmit();
+        });
     },
     renderResultAnswers: function() {
         const area = document.getElementById('resultAnswerArea');
@@ -2678,56 +2696,75 @@ const Quiz = {
             }).join('')}
         `;
     },
-    finishSubmit: async function() {
-        const score = Math.round((this.ans.filter((a,i)=>a===App.activeCourse.questions[i].a).length / this.ans.length)*100);
-        const courseNow = App.refreshActiveCourse();
-        const passScoreNow = App.getPassScore(courseNow);
-        const passedNow = score >= passScoreNow;
-
-        if (!App.isInstructor) {
-            App.state.records.push({
-                u: App.user,
-                employeeId: App.employeeId || App.getUserEmployeeId(App.user),
-                name: App.getUserName(App.user),
-                cid: App.activeCourse.id,
-                c: App.activeCourse.title,
-                s: Number(score),
-                passScore: Number(passScoreNow),
-                d: DateUtil.format(),
-                note: ''
-            });
-            App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
-            if (typeof App.saveLocalOnly === 'function') {
-                App.saveLocalOnly();
-            } else {
-                localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+    finishSubmit: function() {
+        try {
+            const course = App.activeCourse;
+            const questions = course && Array.isArray(course.questions) ? course.questions : [];
+            if (!course || !questions.length || !this.ans || !this.ans.length) {
+                alert('找不到本次測驗資料，請返回首頁後重新進入測驗。');
+                return;
             }
-        }
 
-        App.quizInProgress = false;
+            const correctCount = this.ans.filter((a, i) => a === questions[i].a).length;
+            const score = Math.round((correctCount / this.ans.length) * 100);
+            const passScoreNow = App.getPassScore(course);
+            const passedNow = score >= passScoreNow;
 
-        App.showSec('sec-res');
-        const finalScoreEl = document.getElementById('finalScore');
-        finalScoreEl.innerText = score;
-        finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
-
-        const resultPassNote = document.getElementById('resultPassNote');
-        if (resultPassNote) {
-            if (App.isInstructor) {
-                resultPassNote.innerText = `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${passScoreNow} 分。`;
-                resultPassNote.style.color = 'var(--warning-color)';
-            } else {
-                const baseText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
-                resultPassNote.setAttribute('data-result-base', baseText);
-                resultPassNote.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
-                resultPassNote.style.color = 'var(--warning-color)';
+            if (!App.isInstructor) {
+                App.state.records.push({
+                    u: App.user,
+                    employeeId: App.employeeId || App.getUserEmployeeId(App.user),
+                    name: App.getUserName(App.user),
+                    cid: course.id,
+                    c: course.title,
+                    s: Number(score),
+                    passScore: Number(passScoreNow),
+                    d: DateUtil.format(),
+                    note: ''
+                });
+                App.lockQuiz(App.user, course.id, course.title);
+                if (typeof App.saveLocalOnly === 'function') {
+                    App.saveLocalOnly();
+                } else {
+                    localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+                }
             }
-        }
 
-        App.renderResultAnswers();
+            App.quizInProgress = false;
 
-        if (!App.isInstructor) {
-            setTimeout(() => App.syncScoreInBackground(12000), 100);
+            // 立即顯示結果，不等待任何同步。
+            App.showSec('sec-res');
+
+            const finalScoreEl = document.getElementById('finalScore');
+            if (finalScoreEl) {
+                finalScoreEl.innerText = score;
+                finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+            }
+
+            const resultPassNote = document.getElementById('resultPassNote');
+            if (resultPassNote) {
+                if (App.isInstructor) {
+                    resultPassNote.innerText = `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${passScoreNow} 分。`;
+                    resultPassNote.style.color = 'var(--warning-color)';
+                } else {
+                    const baseText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
+                    resultPassNote.setAttribute('data-result-base', baseText);
+                    resultPassNote.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
+                    resultPassNote.style.color = 'var(--warning-color)';
+                }
+            }
+
+            App.renderResultAnswers();
+
+            // 背景同步，完全不阻塞結果頁。
+            if (!App.isInstructor) {
+                setTimeout(function() {
+                    App.syncScoreInBackground(12000);
+                }, 300);
+            }
+        } catch (err) {
+            console.error('finishSubmit failed:', err);
+            alert('送出答案時發生錯誤：' + (err && err.message ? err.message : err));
         }
     },};
 
