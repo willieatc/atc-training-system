@@ -1318,11 +1318,7 @@ const Backend = {
             const url = SHEETS_WEB_APP_URL + (SHEETS_WEB_APP_URL.includes('?') ? '&' : '?') + 'action=getState&ts=' + Date.now();
             const res = await fetch(url, {
                 method: 'GET',
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, max-age=0',
-                    'Pragma': 'no-cache'
-                }
+                cache: 'no-store'
             });
             const data = await res.json();
             if (!data || !data.ok) throw new Error(data && data.error ? data.error : '讀取失敗');
@@ -1350,7 +1346,7 @@ const Backend = {
             return true;
         } catch (err) {
             console.error('Google Sheets load failed:', err);
-            this.setStatus('雲端讀取失敗，暫用本機資料；不可儲存覆蓋雲端', 'var(--danger-color)');
+            this.setStatus('雲端讀取失敗：請確認 Web App URL、權限，或是否仍使用舊版快取。', 'var(--danger-color)');
             return false;
         }
     },
@@ -1404,11 +1400,7 @@ const Backend = {
             const res = await fetch(SHEETS_WEB_APP_URL, {
                 method: 'POST',
                 cache: 'no-store',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                    'Cache-Control': 'no-cache, no-store, max-age=0',
-                    'Pragma': 'no-cache'
-                },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload),
                 signal: controller.signal
             });
@@ -1603,7 +1595,7 @@ const Backup = {
 };
 
 
-const APP_BUILD_VERSION = 'v123-admin-only-cloud-revision-stable';
+const APP_BUILD_VERSION = 'v123-no-preflight-cloud-sync';
 
 const App = {
     cloudRevision: '',
