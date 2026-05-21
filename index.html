@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-action-button-sync-status';
+const APP_BUILD_VERSION = 'V124-admin-f5-fast-score-check';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1325,6 +1325,7 @@ const Backend = {
                 users: st.users && typeof st.users === 'object' ? st.users : {},
                 userNames: st.userNames && typeof st.userNames === 'object' ? st.userNames : {},
                 quizLocks: st.quizLocks && typeof st.quizLocks === 'object' ? st.quizLocks : {},
+                quizUnlocks: st.quizUnlocks && typeof st.quizUnlocks === 'object' ? st.quizUnlocks : {},
                 adminPw: st.adminPw || 'rctp3023'
             };
 
@@ -1340,38 +1341,175 @@ const Backend = {
             this.loaded = true;
             this._lastPendingNotice = '';
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
+            if (App.isInstructor && typeof Admin !== 'undefined' && Admin.refreshGsStatusForAdmin) {
+                Admin.refreshGsStatusForAdmin();
+                console.log('管理員重新整理狀態保留：Google Sheets 已同步');
+            }
+            if (App.isInstructor && typeof Admin !== 'undefined' && Admin.refreshGsStatusForAdmin) Admin.refreshGsStatusForAdmin();
             return true;
         } catch (err) {
             console.error('Google Sheets load failed:', err);
             App.cloudReady = false;
             this.setStatus('雲端讀取失敗，為避免舊資料覆蓋雲端，管理員儲存已停用', 'var(--danger-color)');
+            if (App.isInstructor && typeof Admin !== 'undefined' && Admin.refreshGsStatusForAdmin) {
+                Admin.refreshGsStatusForAdmin();
+                console.log('管理員重新整理狀態保留：Google Sheets 同步失敗');
+            }
+            if (App.isInstructor && typeof Admin !== 'undefined' && Admin.refreshGsStatusForAdmin) Admin.refreshGsStatusForAdmin();
             return false;
         }
     },
     
     
-    submitScore: async function(record) {
+    batchUnlockQuiz: async function(items) {
         if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
             this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
             return { ok: false, error: '尚未設定 Web App URL' };
         }
         try {
+            this.setStatus('批次解鎖同步中...', 'var(--warning-color)');
+            const res = await fetch(SHEETS_WEB_APP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'batchUnlockQuiz', items: items || [] })
+            });
+            const data = await res.json();
+            if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'batchUnlockQuiz failed');
+            this.setStatus('批次解鎖已同步', 'var(--success-color)');
+            return { ok: true, data: data };
+        } catch (err) {
+            console.error('batchUnlockQuiz failed:', err);
+            this.setStatus('⚠️ 批次解鎖同步失敗', 'var(--danger-color)');
+            return { ok: false, error: String(err && err.message ? err.message : err) };
+        }
+    },
+    unlockQuiz: async function(userCode, courseId, courseTitle) {
+        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
+            this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
+            return { ok: false, error: '尚未設定 Web App URL' };
+        }
+        try {
+            this.setStatus('解鎖同步中...', 'var(--warning-color)');
+            const res = await fetch(SHEETS_WEB_APP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'unlockQuiz', userCode: userCode, courseId: courseId, courseTitle: courseTitle || '' })
+            });
+            const data = await res.json();
+            if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'unlockQuiz failed');
+            this.setStatus('解鎖已同步', 'var(--success-color)');
+            return { ok: true, data: data };
+        } catch (err) {
+            console.error('unlockQuiz failed:', err);
+            this.setStatus('⚠️ 解鎖同步失敗', 'var(--danger-color)');
+            return { ok: false, error: String(err && err.message ? err.message : err) };
+        }
+    },
+    
+    deleteScoreRecords: async function(recordIds) {
+        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
+            this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
+            return { ok: false, error: '尚未設定 Web App URL' };
+        }
+        try {
+            this.setStatus('刪除測驗紀錄同步中...', 'var(--warning-color)');
+            const res = await fetch(SHEETS_WEB_APP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'deleteScoreRecords', recordIds: recordIds })
+            });
+            const data = await res.json();
+            if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'deleteScoreRecords failed');
+            this.setStatus('刪除測驗紀錄已同步', 'var(--success-color)');
+            return { ok: true, data };
+        } catch (err) {
+            console.error('deleteScoreRecords failed:', err);
+            this.setStatus('⚠️ 刪除測驗紀錄同步失敗', 'var(--danger-color)');
+            return { ok: false, error: String(err && err.message ? err.message : err) };
+        }
+    },
+    syncUsers: async function(users, userNames) {
+        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
+            this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
+            return { ok: false, error: '尚未設定 Web App URL' };
+        }
+        try {
+            this.setStatus('帳號資料同步中...', 'var(--warning-color)');
+            const res = await fetch(SHEETS_WEB_APP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'syncUsers', users: users, userNames: userNames || {} })
+            });
+            const data = await res.json();
+            if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'syncUsers failed');
+            this.setStatus('帳號資料已同步', 'var(--success-color)');
+            return { ok: true, data };
+        } catch (err) {
+            console.error('syncUsers failed:', err);
+            this.setStatus('⚠️ 帳號資料同步失敗', 'var(--danger-color)');
+            return { ok: false, error: String(err && err.message ? err.message : err) };
+        }
+    },
+    submitScore: async function(record) {
+        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
+            this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
+            return { ok: false, error: '尚未設定 Web App URL' };
+        }
+
+        const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        const timeoutMs = 12000;
+        const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+        const verifyRecordWritten = async () => {
+            if (!(record && record.recordId)) return false;
+            for (let i = 0; i < 2; i++) {
+                try {
+                    this.setStatus('成績同步確認中...', 'var(--warning-color)');
+                    await new Promise(resolve => setTimeout(resolve, i === 0 ? 1200 : 2500));
+                    const loaded = await this.loadState();
+                    const found = loaded && Array.isArray(App.state.records) &&
+                        App.state.records.some(r => String(r.recordId || r.id || '') === String(record.recordId));
+                    if (found) return true;
+                } catch (verifyErr) {
+                    console.warn('submitScore verification failed:', verifyErr);
+                }
+            }
+            return false;
+        };
+
+        try {
             this.setStatus('成績同步中...', 'var(--warning-color)');
             const res = await fetch(SHEETS_WEB_APP_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'submitScore', record: record })
+                body: JSON.stringify({ action: 'submitScore', record: record }),
+                signal: controller ? controller.signal : undefined
             });
+            if (timer) clearTimeout(timer);
             const data = await res.json();
             if (!data || data.ok !== true) {
                 throw new Error(data && data.error ? data.error : 'submitScore failed');
             }
             this.setStatus('成績已同步', 'var(--success-color)');
-            return { ok: true, data };
+            return { ok: true, data: data };
         } catch (err) {
+            if (timer) clearTimeout(timer);
+
+            const errMsg = String(err && err.message ? err.message : err);
+            const isTimeout = (err && err.name === 'AbortError') || /timeout|逾時|abort/i.test(errMsg);
+            if (isTimeout) {
+                const verified = await verifyRecordWritten();
+                if (verified) {
+                    this.setStatus('成績已同步', 'var(--success-color)');
+                    return { ok: true, verifiedAfterTimeout: true };
+                }
+                this.setStatus('⚠️ 成績同步確認中', 'var(--warning-color)');
+                return { ok: false, pendingVerify: true, error: '前端等待逾時，尚未確認雲端結果' };
+            }
+
             console.error('submitScore failed:', err);
             this.setStatus('⚠️ 成績同步失敗', 'var(--danger-color)');
-            return { ok: false, error: String(err && err.message ? err.message : err) };
+            return { ok: false, error: errMsg };
         }
     },
     
@@ -1550,36 +1688,35 @@ const App = {
             note.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
             note.style.color = 'var(--warning-color)';
         }
-        let finished = false;
-        const finish = (ok, error) => {
-            if (finished) return;
-            finished = true;
+
+        const finish = (result) => {
             App.scoreSyncPending = false;
             if (!note || App.isInstructor) return;
-            if (ok) {
+
+            if (result && result.ok) {
                 App.removePendingScore(record);
                 note.innerText = `${baseText}｜成績已同步，可以關閉頁面。`;
                 note.style.color = baseText.includes('未及格') ? 'var(--danger-color)' : 'var(--success-color)';
                 App.clearQuizSession();
+                return;
+            }
+
+            App.queuePendingScore(record);
+            if (result && result.pendingVerify) {
+                note.innerText = `${baseText}｜成績已送出，雲端仍在確認中；可先保留此頁，稍後重新整理或請管理員查詢。`;
+                note.style.color = 'var(--warning-color)';
             } else {
-                App.queuePendingScore(record);
-                const errText = error ? `（${String(error).slice(0, 80)}）` : '';
-                note.innerText = `${baseText}｜⚠️ 成績同步失敗，已先保存在本機，請通知管理員。${errText}`;
+                const errText = result && result.error ? `（${String(result.error).slice(0, 80)}）` : '';
+                note.innerText = `${baseText}｜⚠️ 成績尚未確認同步，已先保存在本機，請稍後重新整理或通知管理員。${errText}`;
                 note.style.color = 'var(--danger-color)';
             }
         };
-        try {
-            const timer = setTimeout(() => finish(false, '同步逾時'), timeoutMs + 1000);
-            Backend.submitScore(record).then(result => {
-                clearTimeout(timer);
-                finish(!!(result && result.ok), result && result.error ? result.error : '');
-            }).catch(err => {
-                clearTimeout(timer);
-                finish(false, err && err.message ? err.message : err);
-            });
-        } catch (err) {
-            finish(false, err && err.message ? err.message : err);
-        }
+
+        Backend.submitScore(record).then(result => {
+            finish(result || { ok: false });
+        }).catch(err => {
+            finish({ ok: false, error: err && err.message ? err.message : err });
+        });
     },
     queuePendingScore: function(record) {
         try {
@@ -1620,6 +1757,18 @@ const App = {
         this.markPendingCloudSync();
         this.savePromise = Backend.saveState(JSON.parse(JSON.stringify(this.state)));
         return this.savePromise;
+    },
+    syncUsersOnly: async function(successText = '帳號資料已同步完成', failureText = '帳號資料已保存在本機，但雲端同步失敗') {
+        this.normalizeUsers();
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        const result = await Backend.syncUsers(JSON.parse(JSON.stringify(this.state.users)), JSON.parse(JSON.stringify(this.state.userNames || {})));
+        if (result && result.ok) {
+            Backend.setStatus(successText, 'var(--success-color)');
+            return true;
+        }
+        Backend.setStatus(failureText, 'var(--danger-color)');
+        alert(failureText);
+        return false;
     },
     saveWithNotice: async function(successText, failureText) {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
@@ -1667,11 +1816,7 @@ const App = {
         Object.keys(this.state.users).forEach(code => {
             const v = this.state.users[code];
             if (typeof v === 'string') {
-                this.state.users[code] = {
-                    employeeId: '',
-                    name: this.state.userNames && this.state.userNames[code] ? this.state.userNames[code] : '',
-                    pw: v
-                };
+                this.state.users[code] = { employeeId: '', name: this.state.userNames && this.state.userNames[code] ? this.state.userNames[code] : '', pw: v };
             } else if (!v || typeof v !== 'object') {
                 this.state.users[code] = { employeeId: '', name: '', pw: '' };
             } else {
@@ -1702,23 +1847,60 @@ const App = {
         return record.name || this.getUserName(record.u) || '';
     },
     restoreAdminSession: function() {
-        if (sessionStorage.getItem(this.ADMIN_SESSION_KEY) !== '1') return false;
+        let active = false;
+        try {
+            active = localStorage.getItem(this.ADMIN_PERSIST_KEY || 'ATC_ADMIN_PERSIST_LOGIN') === '1' ||
+                     localStorage.getItem(this.ADMIN_SESSION_KEY) === '1' ||
+                     sessionStorage.getItem(this.ADMIN_SESSION_KEY) === '1';
+        } catch (e) {
+            active = false;
+        }
+        if (!active) return false;
+
         this.isInstructor = true;
         this.user = '管理員';
         this.employeeId = '';
         this.syncUI();
         this.switchAdmin(this.currentAdminTab || 'score');
+
+        // F5 重新載入後不重新登入，只重新確認 Google Sheets 同步狀態。
+        setTimeout(async () => {
+            Backend.setStatus('Google Sheets 同步狀態確認中...', 'var(--warning-color)');
+            await Backend.loadState();
+            if (Admin.refreshGsStatusForAdmin) Admin.refreshGsStatusForAdmin();
+            if (this.currentAdminTab === 'score' && Admin.applyScoreFilter) Admin.applyScoreFilter();
+            else if (this.currentAdminTab === 'rec' && Admin.renderUsers) Admin.renderUsers();
+            else if (this.currentAdminTab === 'edit' && Admin.renderEditor) Admin.renderEditor();
+        }, 0);
+
         return true;
     },
     init: async function() {
-        // 先用本機資料立即渲染登入科目，避免等 Google Sheets 造成登入頁空白太久。
+        // F5 後優先恢復管理員後台，不先切回登入畫面。
+        const shouldRestoreAdminFirst = (() => {
+            try {
+                return localStorage.getItem(this.ADMIN_PERSIST_KEY || 'ATC_ADMIN_PERSIST_LOGIN') === '1' ||
+                       localStorage.getItem(this.ADMIN_SESSION_KEY) === '1' ||
+                       sessionStorage.getItem(this.ADMIN_SESSION_KEY) === '1';
+            } catch (e) {
+                return false;
+            }
+        })();
+
         if (!this.state.courses) this.state.courses = [];
         if (!this.state.records) this.state.records = [];
         if (!this.state.users) this.state.users = {};
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
-        this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
         this.normalizeUsers();
+
+        if (shouldRestoreAdminFirst) {
+            this.restoreAdminSession();
+            return;
+        }
+
+        // 先用本機資料立即渲染登入科目，避免等 Google Sheets 造成登入頁空白太久。
+        this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 80; });
         this.renderSelects();
         this.updateLoginStatus();
         this.syncUI();
@@ -1730,14 +1912,13 @@ const App = {
             if (!this.state.courses) this.state.courses = [];
             if (!this.state.records) this.state.records = [];
             if (!this.state.users) this.state.users = {};
-            this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+            this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 80; });
             this.normalizeUsers();
         }
 
         this.recoverInterruptedQuiz();
 
         // 相容舊版資料：若已有成績紀錄但尚未建立鎖定資料，啟動時自動補上鎖定狀態。
-        // 僅在真的補鎖時才儲存，避免每次回登入頁都覆蓋雲端資料。
         let lockChanged = false;
         (this.state.records || []).forEach(r => {
             const course = this.state.courses.find(c => c.id === r.cid || c.title === r.c);
@@ -1785,17 +1966,74 @@ const App = {
         }
         return this.activeCourse;
     },
+    batchUnlockQuiz: async function(items) {
+        const cleanItems = (Array.isArray(items) ? items : []).map(item => ({
+            userCode: String(item.userCode || item.u || '').trim(),
+            courseId: item.courseId || item.cid || '',
+            courseTitle: String(item.courseTitle || item.c || '')
+        })).filter(item => item.userCode && item.courseId);
+
+        if (!cleanItems.length) return false;
+
+        const result = await Backend.batchUnlockQuiz(cleanItems);
+
+        // 只有雲端 API 成功，才更新本機解鎖狀態。
+        if (!(result && result.ok === true && result.data && result.data.ok === true)) {
+            return false;
+        }
+
+        if (!this.state.quizLocks) this.state.quizLocks = {};
+        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+
+        cleanItems.forEach(item => {
+            delete this.state.quizLocks[this.lockKey(item.userCode, item.courseId)];
+            this.state.quizUnlocks[this.unlockKey(item.userCode, item.courseId)] = {
+                u: item.userCode,
+                cid: item.courseId,
+                c: item.courseTitle,
+                d: DateUtil.format()
+            };
+        });
+
+        if (result.data && result.data.state) {
+            if (result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object') this.state.quizLocks = result.data.state.quizLocks;
+            if (result.data.state.quizUnlocks && typeof result.data.state.quizUnlocks === 'object') this.state.quizUnlocks = result.data.state.quizUnlocks;
+            if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
+        }
+
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        return true;
+    },
     unlockQuiz: async function(user, courseId) {
+        const course = this.state.courses.find(c => c.id === courseId);
+        const courseTitle = course ? course.title : '';
+        const result = await Backend.unlockQuiz(user, courseId, courseTitle);
+
+        // 只有雲端 API 寫入成功，才更新本機解鎖狀態；失敗時不改本機鎖定狀態。
+        if (!(result && result.ok === true && result.data && result.data.ok === true)) {
+            return false;
+        }
+
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
         delete this.state.quizLocks[this.lockKey(user, courseId)];
         this.state.quizUnlocks[this.unlockKey(user, courseId)] = {
             u: user,
             cid: courseId,
+            c: courseTitle,
             d: DateUtil.format()
         };
-        return await this.saveWithNotice('解鎖已同步完成', '解鎖已保存在本機，但雲端同步失敗');
+
+        if (result.data && result.data.state) {
+            if (result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object') this.state.quizLocks = result.data.state.quizLocks;
+            if (result.data.state.quizUnlocks && typeof result.data.state.quizUnlocks === 'object') this.state.quizUnlocks = result.data.state.quizUnlocks;
+            if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
+        }
+
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        return true;
     },
+    
     
     beginQuizSession: function() {
         if (this.isInstructor || !this.user || !this.activeCourse) return;
@@ -1960,13 +2198,31 @@ const App = {
     toAdmin: function() {
         if (this.isInstructor || prompt("管理密碼") === this.state.adminPw) {
             this.isInstructor = true;
-            sessionStorage.setItem(this.ADMIN_SESSION_KEY, '1');
+            try {
+                localStorage.setItem(this.ADMIN_PERSIST_KEY || 'ATC_ADMIN_PERSIST_LOGIN', '1');
+                localStorage.setItem(this.ADMIN_SESSION_KEY, '1');
+                sessionStorage.setItem(this.ADMIN_SESSION_KEY, '1');
+            } catch (e) {}
             this.switchAdmin('score');
+
+            setTimeout(() => {
+                if (Admin.refreshGsStatusForAdmin) Admin.refreshGsStatusForAdmin();
+            }, 0);
         } else {
             alert("拒絕");
         }
     },
-    logoutInstructor: function() { this.quizInProgress = false; this.clearQuizSession(); this.isInstructor = false; this.toHome(); },
+    logoutInstructor: function() {
+        this.quizInProgress = false;
+        this.clearQuizSession();
+        this.isInstructor = false;
+        try {
+            localStorage.removeItem(this.ADMIN_PERSIST_KEY || 'ATC_ADMIN_PERSIST_LOGIN');
+            localStorage.removeItem(this.ADMIN_SESSION_KEY);
+            sessionStorage.removeItem(this.ADMIN_SESSION_KEY);
+        } catch (e) {}
+        this.toHome();
+    },
     showSec: function(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -2011,6 +2267,8 @@ const App = {
                 if (content) content.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 80);
         }
+        setTimeout(() => Admin.refreshGsStatusForAdmin(), 0);
+
     },
     scrollSide: function(dir) {
         const target = document.getElementById('sec-quiz').classList.contains('active') ? document.getElementById('quizContainer') : document.getElementById('adminContent');
@@ -2169,7 +2427,7 @@ const Admin = {
                                 <button class="btn btn-outline btn-sm" onclick="document.getElementById('f-csv-${ci}').click()">📥 匯入 CSV</button>
                                 <input type="file" id="f-csv-${ci}" class="hidden" accept=".csv" onchange="Admin.impCSV(event, ${ci})">
                                 <button class="btn btn-primary btn-sm" onclick="Admin.addQ(${ci})">➕ 手動加題</button>
-                                <button class="btn btn-danger btn-sm" onclick="Admin.delAllQ(${ci}, this)">刪除所有題目</button>
+                                <button class="btn btn-danger btn-sm" onclick="Admin.delAllQ(${ci})">刪除所有題目</button>
                             </div>
                         </div>
                         <div class="ql-container" id="ql-${ci}">${c.questions.map((q, qi) => `
@@ -2256,22 +2514,21 @@ const Admin = {
         Admin.renderEditor();
     },
     delQ: function(ci, qi) { Admin.sync(); App.state.courses[ci].questions.splice(qi, 1); Admin.renderEditor(); },
-    delAllQ: async function(ci, btn) {
+    delAllQ: async function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
         if (!course) return;
         if (!course.questions || course.questions.length === 0) return alert("目前沒有題目可刪除。");
         if (!confirm(`確定刪除「${course.title}」的所有題目？此操作不會刪除教材連結與科目名稱。`)) return;
 
-        const ok = await Admin.withButtonSyncStatus(btn, async () => {
+        const ok = await Admin.withButtonStatus(async () => {
             course.questions = [];
             return await App.saveWithNotice('刪除題目已同步完成', '刪除題目已保存在本機，但雲端同步失敗');
-        });
+        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
 
         Admin.renderEditor();
         alert(ok ? "✅ 已刪除所有題目並同步完成" : "⚠️ 已刪除所有題目，但雲端同步失敗");
     },
-    
     
     courseDragStart: function(event, index) {
         Admin.sync();
@@ -2327,18 +2584,17 @@ const Admin = {
     },
     
     
-    delCourse: async function(ci, btn) {
+    delCourse: async function(ci) {
         if (!confirm("確定刪除？")) return;
 
-        const ok = await Admin.withButtonSyncStatus(btn, async () => {
+        const ok = await Admin.withButtonStatus(async () => {
             App.state.courses.splice(ci, 1);
             return await App.saveWithNotice('刪除科目已同步完成', '刪除科目已保存在本機，但雲端同步失敗');
-        });
+        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
 
         Admin.renderEditor();
         alert(ok ? '✅ 已刪除科目並同步完成' : '⚠️ 已刪除科目，但雲端同步失敗');
     },
-    
     
     impCSV: function(e, ci) {
         const f = e.target.files[0]; if(!f) return;
@@ -2403,23 +2659,62 @@ const Admin = {
             }
         });
     },
-    withButtonSyncStatus: async function(btn, actionFn, options = {}) {
+    showGsStatusForAdmin: function(text, color) {
+        let el = document.getElementById('adminGsStatus');
+        if (!el) {
+            const sec = document.getElementById('sec-admin');
+            if (sec) {
+                el = document.createElement('div');
+                el.id = 'adminGsStatus';
+                el.style.margin = '12px 0';
+                el.style.padding = '10px 12px';
+                el.style.borderRadius = '10px';
+                el.style.fontWeight = '700';
+                el.style.background = 'rgba(255,255,255,0.94)';
+                el.style.border = '1px solid rgba(0,0,0,0.08)';
+                const firstCard = sec.querySelector('.card');
+                if (firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(el, firstCard.nextSibling);
+                else sec.prepend(el);
+            }
+        }
+        if (!el) return;
+        el.style.display = 'block';
+        el.style.color = color || 'var(--warning-color)';
+        el.innerText = text || '';
+    },
+    refreshGsStatusForAdmin: function() {
+        // 重新整理後仍保留管理員登入，只更新同步狀態。
+        if (!App.isInstructor) return;
+        if (!Backend.enabled()) {
+            this.showGsStatusForAdmin('目前為本機模式：尚未設定 Google Sheets Web App URL', 'var(--warning-color)');
+            return;
+        }
+        if (App.cloudReady) {
+            this.showGsStatusForAdmin('Google Sheets 已同步，可以進行後台操作。', 'var(--success-color)');
+            Backend.setStatus('Google Sheets 已同步', 'var(--success-color)');
+        } else {
+            this.showGsStatusForAdmin('Google Sheets 尚未完成同步，請先重新整理或等待同步完成，避免覆蓋雲端資料。', 'var(--danger-color)');
+            Backend.setStatus('Google Sheets 尚未完成同步', 'var(--danger-color)');
+        }
+    },
+    withButtonStatus: async function(actionFn, options = {}) {
+        const btn = (document.activeElement && document.activeElement.tagName === 'BUTTON') ? document.activeElement : null;
         const oldText = btn ? btn.innerText : '';
         const syncingText = options.syncingText || '同步中...';
         const successText = options.successText || '✅ 已同步';
         const failText = options.failText || '⚠️ 同步失敗';
-        const restoreText = options.restoreText || oldText;
 
         if (btn) {
             btn.disabled = true;
             btn.innerText = syncingText;
         }
+        Backend.setStatus(syncingText, 'var(--warning-color)');
 
         let ok = false;
         try {
             ok = await actionFn();
         } catch (err) {
-            console.error('withButtonSyncStatus failed:', err);
+            console.error('withButtonStatus failed:', err);
             ok = false;
         }
 
@@ -2427,10 +2722,10 @@ const Admin = {
             btn.innerText = ok ? successText : failText;
             setTimeout(() => {
                 btn.disabled = false;
-                btn.innerText = restoreText || oldText;
-            }, ok ? 900 : 1500);
+                btn.innerText = oldText;
+            }, ok ? 1000 : 1500);
         }
-
+        Backend.setStatus(ok ? successText : failText, ok ? 'var(--success-color)' : 'var(--danger-color)');
         return ok;
     },
     saveAll: async function(evt) {
@@ -2495,7 +2790,7 @@ const Admin = {
                     <div class="account-meta">員工編號：${Admin.esc(employeeText)}｜成績紀錄：${recordCount} 筆</div>
                 </div>
                 <div class="account-actions">
-                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${safeU}', this)">刪除帳號</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${safeU}')">刪除帳號</button>
                 </div>
             </div>`;
         }).join('') : '<div style="background:#1c2128; border:1px dashed var(--border-color); padding:25px; border-radius:10px; text-align:center; color:#8b949e;">目前尚無帳號資料</div>';
@@ -2518,7 +2813,7 @@ const Admin = {
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e; white-space:nowrap;">
                         <input type="checkbox" class="row-check" id="selectVisibleAccounts" onchange="Admin.toggleVisibleUsers(this.checked)"> 選取目前顯示帳號
                     </label>
-                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteUsers(this)">批次刪除帳號</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteUsers()">批次刪除帳號</button>
                 </div>
             </div>
             <div id="accountListArea">${listHtml}</div>
@@ -2558,20 +2853,22 @@ const Admin = {
             }
         });
     },
-    batchDeleteUsers: async function(btn) {
+    batchDeleteUsers: async function() {
         const selected = Array.from(document.querySelectorAll('#accountListArea .account-select:checked')).map(cb => decodeURIComponent(cb.value));
         if (!selected.length) return alert('請先勾選要刪除的帳號。');
         if (!confirm(`確定批次刪除 ${selected.length} 個登入帳號？既有測驗紀錄將會保留。`)) return;
 
-        const ok = await Admin.withButtonSyncStatus(btn, async () => {
-            selected.forEach(u => { delete App.state.users[u]; });
-            return await App.saveWithNotice('批次刪除帳號已同步完成', '批次刪除帳號已保存在本機，但雲端同步失敗');
-        });
+        const ok = await Admin.withButtonStatus(async () => {
+            selected.forEach(u => {
+                delete App.state.users[u];
+                if (App.state.userNames) delete App.state.userNames[u];
+            });
+            return await App.syncUsersOnly('批次刪除帳號已同步完成', '批次刪除帳號已保存在本機，但雲端同步失敗');
+        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
 
         Admin.renderUsers();
         alert(ok ? '✅ 已批次刪除帳號並同步完成' : '⚠️ 已批次刪除帳號，但雲端同步失敗');
     },
-    
     
     
     resetUserPassword: function(encodedU) {
@@ -2591,100 +2888,142 @@ const Admin = {
     },
     changeUserPassword: function(encodedU) { this.resetUserPassword(encodedU); },
     
-    deleteUser: async function(encodedU, btn) {
+    deleteUser: async function(encodedU) {
         const u = decodeURIComponent(encodedU);
-        if (!confirm(`確定刪除「${u}」的登入帳號？既有測驗紀錄將會保留。`)) return;
+        if (confirm(`確定刪除「${u}」的登入帳號？既有測驗紀錄將會保留。`)) {
+            const ok = await Admin.withButtonStatus(async () => {
+                delete App.state.users[u];
+                if (App.state.userNames) delete App.state.userNames[u];
+                return await App.syncUsersOnly('刪除帳號已同步完成', '刪除帳號已保存在本機，但雲端同步失敗');
+            }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
 
-        const ok = await Admin.withButtonSyncStatus(btn, async () => {
-            delete App.state.users[u];
-            return await App.saveWithNotice('刪除帳號已同步完成', '刪除帳號已保存在本機，但雲端同步失敗');
-        });
-
-        Admin.renderUsers();
-        alert(ok ? '✅ 已刪除帳號並同步完成' : '⚠️ 已刪除帳號，但雲端同步失敗');
+            Admin.renderUsers();
+            alert(ok ? '✅ 已刪除帳號並同步完成' : '⚠️ 已刪除帳號，但雲端同步失敗');
+        }
     },
     
     
-    
-    unlockStudentQuiz: async function(u, courseId, btn) {
+    batchUnlockSelected: async function() {
+        const checked = Array.from(document.querySelectorAll('#scoreTableArea .score-select:checked'));
+        if (!checked.length) return alert('請先勾選要解鎖的測驗紀錄。');
+
+        const items = [];
+        const seen = {};
+        checked.forEach(cb => {
+            const idx = parseInt(cb.value, 10);
+            const r = App.state.records[idx];
+            if (!r) return;
+            const userCode = String(r.u || r.userCode || '').trim();
+            const courseId = r.cid || r.courseId || '';
+            const courseTitle = String(r.c || r.courseTitle || '');
+            if (!userCode || !courseId) return;
+            const key = userCode + '__' + courseId;
+            if (seen[key]) return;
+            seen[key] = true;
+            items.push({ userCode, courseId, courseTitle });
+        });
+
+        if (!items.length) return alert('所選紀錄缺少學員或科目資訊，無法批次解鎖。');
+        if (!confirm(`確定批次解鎖 ${items.length} 筆測驗？解鎖後學員可重新測驗。`)) return;
+
+        const ok = await Admin.withButtonStatus(async () => {
+            return await App.batchUnlockQuiz(items);
+        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
+
+        if (ok) {
+            Admin.applyScoreFilter();
+            App.updateLoginStatus();
+            alert('✅ 批次解鎖已同步完成');
+        } else {
+            Backend.setStatus('⚠️ 批次解鎖同步失敗，雲端未變更', 'var(--danger-color)');
+            alert('⚠️ 批次解鎖同步失敗，雲端資料未變更。請確認 Web App 已重新部署，並已執行 ?action=setup。');
+        }
+    },
+    unlockStudentQuiz: async function(u, courseId) {
         const course = App.state.courses.find(c => c.id === courseId);
         if (!course) return alert('找不到科目，無法解鎖。');
         if (!confirm(`確定解鎖「${u}」的「${course.title}」測驗？解鎖後即可再次測驗。`)) return;
 
-        const ok = await Admin.withButtonSyncStatus(btn, async () => {
+        const ok = await Admin.withButtonStatus(async () => {
             return await App.unlockQuiz(u, courseId);
-        });
+        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
 
-        Admin.applyScoreFilter();
-        App.updateLoginStatus();
-        alert(ok ? '✅ 解鎖已同步完成' : '⚠️ 已解鎖，但雲端同步失敗');
+        if (ok) {
+            Admin.applyScoreFilter();
+            App.updateLoginStatus();
+            alert('✅ 解鎖已同步完成');
+        } else {
+            Backend.setStatus('⚠️ 解鎖同步失敗，雲端未變更', 'var(--danger-color)');
+            alert('⚠️ 解鎖同步失敗，雲端資料未變更。請確認 Web App 已重新部署，並已執行 ?action=setup。');
+        }
     },
     
     
-    deleteScoreRecord: async function(recordIndex, btn) {
+    deleteScoreRecord: async function(recordIndex) {
         const r = App.state.records[recordIndex];
         if (!r) return alert('找不到此筆測驗紀錄。');
         if (!confirm(`確定刪除「${r.u}」的「${r.c}」測驗紀錄？`)) return;
+        const recordId = String(r.recordId || r.id || '');
+        if (!recordId) return alert('此筆紀錄缺少 recordId，無法安全同步刪除。');
 
-        const ok = await Admin.withButtonSyncStatus(btn, async () => {
-            const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
-            App.state.records.splice(recordIndex, 1);
-            if (course) {
-                const stillHasRecord = App.state.records.some(x => x.u === r.u && (x.cid === course.id || x.c === course.title));
-                if (!stillHasRecord) {
-                    if (!App.state.quizLocks) App.state.quizLocks = {};
-                    if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
-                    delete App.state.quizLocks[App.lockKey(r.u, course.id)];
-                    App.state.quizUnlocks[App.unlockKey(r.u, course.id)] = { u: r.u, cid: course.id, d: DateUtil.format() };
-                }
+        const ok = await Admin.withButtonStatus(async () => {
+            const result = await Backend.deleteScoreRecords([recordId]);
+            if (!(result && result.ok)) return false;
+
+            if (result.data && result.data.state) {
+                App.state.records = Array.isArray(result.data.state.records) ? result.data.state.records : App.state.records;
+                App.state.quizLocks = result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object' ? result.data.state.quizLocks : App.state.quizLocks;
+            } else {
+                App.state.records.splice(recordIndex, 1);
             }
-            return await App.saveWithNotice('刪除測驗紀錄已同步完成', '刪除測驗紀錄已保存在本機，但雲端同步失敗');
-        });
+            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            return true;
+        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
 
-        Admin.applyScoreFilter();
-        App.updateLoginStatus();
-        alert(ok ? '✅ 已刪除測驗紀錄並同步完成' : '⚠️ 已刪除測驗紀錄，但雲端同步失敗');
+        if (ok) {
+            Admin.applyScoreFilter();
+            App.updateLoginStatus();
+            alert('✅ 已刪除測驗紀錄並同步完成');
+        } else {
+            alert('⚠️ 刪除測驗紀錄同步失敗，雲端資料未刪除。');
+        }
     },
-    
     
     toggleVisibleScoreRecords: function(checked) {
         document.querySelectorAll('#scoreTableArea .score-select').forEach(cb => { cb.checked = checked; });
     },
-    batchDeleteScoreRecords: async function(btn) {
+    batchDeleteScoreRecords: async function() {
         const indices = Array.from(document.querySelectorAll('#scoreTableArea .score-select:checked'))
             .map(cb => parseInt(cb.value, 10))
             .filter(n => Number.isInteger(n));
         const uniqueIndices = Array.from(new Set(indices)).sort((a,b) => b - a);
         if (!uniqueIndices.length) return alert('請先勾選要刪除的測驗紀錄。');
         if (!confirm(`確定批次刪除 ${uniqueIndices.length} 筆測驗紀錄？`)) return;
+        const recordIds = uniqueIndices.map(idx => App.state.records[idx]).filter(Boolean).map(r => String(r.recordId || r.id || '')).filter(Boolean);
+        if (!recordIds.length) return alert('所選紀錄缺少 recordId，無法安全同步刪除。');
 
-        const ok = await Admin.withButtonSyncStatus(btn, async () => {
-            const affected = [];
-            uniqueIndices.forEach(idx => {
-                const r = App.state.records[idx];
-                if (r) {
-                    const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
-                    if (course) affected.push({ u: r.u, courseId: course.id, courseTitle: course.title });
-                    App.state.records.splice(idx, 1);
-                }
-            });
-            affected.forEach(item => {
-                const stillHasRecord = App.state.records.some(x => x.u === item.u && (x.cid === item.courseId || x.c === item.courseTitle));
-                if (!stillHasRecord) {
-                    if (!App.state.quizLocks) App.state.quizLocks = {};
-                    if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
-                    delete App.state.quizLocks[App.lockKey(item.u, item.courseId)];
-                    App.state.quizUnlocks[App.unlockKey(item.u, item.courseId)] = { u: item.u, cid: item.courseId, d: DateUtil.format() };
-                }
-            });
-            return await App.saveWithNotice('批次刪除測驗紀錄已同步完成', '批次刪除測驗紀錄已保存在本機，但雲端同步失敗');
-        });
+        const ok = await Admin.withButtonStatus(async () => {
+            const result = await Backend.deleteScoreRecords(recordIds);
+            if (!(result && result.ok)) return false;
 
-        Admin.applyScoreFilter();
-        App.updateLoginStatus();
-        alert(ok ? '✅ 已批次刪除測驗紀錄並同步完成' : '⚠️ 已批次刪除測驗紀錄，但雲端同步失敗');
+            if (result.data && result.data.state) {
+                App.state.records = Array.isArray(result.data.state.records) ? result.data.state.records : App.state.records;
+                App.state.quizLocks = result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object' ? result.data.state.quizLocks : App.state.quizLocks;
+            } else {
+                uniqueIndices.forEach(idx => App.state.records.splice(idx, 1));
+            }
+            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            return true;
+        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
+
+        if (ok) {
+            Admin.applyScoreFilter();
+            App.updateLoginStatus();
+            alert('✅ 已批次刪除測驗紀錄並同步完成');
+        } else {
+            alert('⚠️ 批次刪除測驗紀錄同步失敗，雲端資料未刪除。');
+        }
     },
-    
     
     getFilteredScoreItems: function() {
         const userInput = document.getElementById('searchUser');
@@ -2772,7 +3111,8 @@ const Admin = {
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e;">
                         <input type="checkbox" class="row-check" id="selectVisibleScores" onchange="Admin.toggleVisibleScoreRecords(this.checked)"> 選取目前顯示紀錄
                     </label>
-                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords(this)">批次刪除紀錄</button>
+                    <button class="btn btn-warning btn-sm" onclick="Admin.batchUnlockSelected()">🔓 批次解鎖</button>
+                <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords()">批次刪除紀錄</button>
                 </div>
             </div>
             <table>
@@ -2799,8 +3139,8 @@ const Admin = {
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockStudentQuiz('${safeUser}', ${course.id}, this)">解鎖再測驗</button>` : ''}
-                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteScoreRecord(${item.idx}, this)">刪除紀錄</button>
+                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockStudentQuiz('${safeUser}', ${course.id})">解鎖再測驗</button>` : ''}
+                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteScoreRecord(${item.idx})">刪除紀錄</button>
                                 </div>
                             </td>
                         </tr>`;
@@ -3044,7 +3384,7 @@ const Quiz = {
                 recordId: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                 u: App.user,
                 userCode: App.user,
-                employeeId: App.employeeId || App.getUserEmployeeId(App.user),
+                employeeId: App.getUserEmployeeId(App.user),
                 name: App.getUserName(App.user),
                 cid: course.id,
                 courseId: course.id,
