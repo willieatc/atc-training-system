@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-locks-priority-cache-shield';
+const APP_BUILD_VERSION = 'V124-locks-priority-courseid-fix';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -2072,16 +2072,40 @@ const App = {
         this.restoreAdminSession();
 
     },
-    lockKey: function(user, courseId) { return `${user}__${courseId}`; },
-    unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
-    isQuizExplicitlyUnlocked: function(user, courseId) {
-        // V124 locks 優先：若 locks 有資料，即使 unlocks 殘留，也不可視為已解鎖。
-        if (this.isQuizLocked(user, courseId)) return false;
-        return !!(this.state.quizUnlocks && this.state.quizUnlocks[this.unlockKey(user, courseId)]);
+    lockKey: function(user, courseId) { return `${String(user || '').trim()}__${String(courseId || '').trim()}`; },
+    unlockKey: function(user, courseId) { return `${String(user || '').trim()}__${String(courseId || '').trim()}`; },
+    getCourseTitleById: function(courseId) {
+        const cid = String(courseId || '').trim();
+        const course = (this.state.courses || []).find(c => String(c.id) === cid);
+        return course ? String(course.title || '') : '';
     },
-    isQuizLocked: function(user, courseId) {
-        // V124 locks 優先：只要 locks 有資料，一律視為已鎖定。
-        return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]);
+    lockMatchesCourse: function(lockObj, user, courseId, courseTitle = '') {
+        if (!lockObj) return false;
+        const targetUser = String(user || '').trim();
+        const targetCourseId = String(courseId || '').trim();
+        const targetTitle = String(courseTitle || this.getCourseTitleById(courseId) || '').trim();
+        const lockUser = String(lockObj.u || lockObj.userCode || '').trim();
+        const lockCourseId = String(lockObj.cid || lockObj.courseId || '').trim();
+        const lockTitle = String(lockObj.c || lockObj.courseTitle || '').trim();
+        if (lockUser !== targetUser) return false;
+        if (targetCourseId && lockCourseId && lockCourseId === targetCourseId) return true;
+        if (targetTitle && lockTitle && lockTitle === targetTitle) return true;
+        return false;
+    },
+    isQuizExplicitlyUnlocked: function(user, courseId, courseTitle = '') {
+        // V124 locks 優先：若同一 user+courseId 或 user+courseTitle 已鎖定，即使 unlocks 殘留，也不可視為已解鎖。
+        if (this.isQuizLocked(user, courseId, courseTitle)) return false;
+        const direct = this.state.quizUnlocks && this.state.quizUnlocks[this.unlockKey(user, courseId)];
+        if (direct) return true;
+        const values = Object.values(this.state.quizUnlocks || {});
+        return values.some(u => this.lockMatchesCourse(u, user, courseId, courseTitle));
+    },
+    isQuizLocked: function(user, courseId, courseTitle = '') {
+        // V124 locks 優先：只要同一 user+courseId 或 user+courseTitle 有 locks，一律視為已鎖定。
+        const direct = this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)];
+        if (direct) return true;
+        const values = Object.values(this.state.quizLocks || {});
+        return values.some(l => this.lockMatchesCourse(l, user, courseId, courseTitle));
     },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
@@ -3274,7 +3298,9 @@ const Admin = {
                         const r = item.r;
                         const employeeId = App.getRecordEmployeeId(r);
                         const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
-                        const locked = course ? App.isQuizLocked(r.u, course.id) : false;
+                        const lockCourseId = r.cid || r.courseId || (course ? course.id : '');
+                        const lockCourseTitle = r.c || r.courseTitle || (course ? course.title : '');
+                        const locked = App.isQuizLocked(r.u, lockCourseId, lockCourseTitle);
                         const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
                         const safeUser = String(r.u).replace(/'/g, "\'");
                         return `
@@ -3289,7 +3315,7 @@ const Admin = {
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockStudentQuiz('${safeUser}', ${course.id})">解鎖再測驗</button>` : ''}
+                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockStudentQuiz('${safeUser}', ${JSON.stringify(lockCourseId)})">解鎖再測驗</button>` : ''}
                                     <button class="btn btn-danger btn-sm" onclick="Admin.deleteScoreRecord(${item.idx})">刪除紀錄</button>
                                 </div>
                             </td>
@@ -3306,7 +3332,7 @@ const Quiz = {
     init: function() {
         const resultArea = document.getElementById('resultAnswerArea');
         if (resultArea) { resultArea.classList.add('hidden'); resultArea.innerHTML = ''; }
-        if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
+        if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id, App.activeCourse.title)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
         if(!App.activeCourse.questions.length) return alert("本科目尚無考題。");
         if (!App.isInstructor) {
             const currentEmployeeId = App.getUserEmployeeId(App.user);
