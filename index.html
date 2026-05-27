@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-score-submit-no-overwrite';
+const APP_BUILD_VERSION = 'V124-sync-integrity-no-relock';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1523,6 +1523,24 @@ const Backend = {
                 if (data.state.userNames && typeof data.state.userNames === 'object') App.state.userNames = data.state.userNames;
                 App.saveLocalOnly();
             }
+                        // 成績送出成功後，前端也強制移除該筆 unlock 並建立 lock，避免本機舊狀態殘留。
+            if (record) {
+                const submittedUser = String(record.u || record.userCode || '').trim();
+                const submittedCourse = record.cid || record.courseId || '';
+                const submittedTitle = String(record.c || record.courseTitle || '');
+                if (submittedUser && submittedCourse && App.lockKey && App.unlockKey) {
+                    if (!App.state.quizLocks) App.state.quizLocks = {};
+                    if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
+                    delete App.state.quizUnlocks[App.unlockKey(submittedUser, submittedCourse)];
+                    App.state.quizLocks[App.lockKey(submittedUser, submittedCourse)] = {
+                        u: submittedUser,
+                        cid: submittedCourse,
+                        c: submittedTitle,
+                        d: DateUtil.format()
+                    };
+                    App.saveLocalOnly();
+                }
+            }
             this.setStatus('成績已同步', 'var(--success-color)');
             return { ok: true, data: data };
         } catch (err) {
@@ -1565,7 +1583,7 @@ const Backend = {
             const data = await res.json();
 
             if (data && data.ok === false && data.code === 'STALE_WRITE') {
-                this.setStatus('⚠️ 雲端題庫已更新，已拒絕本機快取覆寫', 'var(--danger-color)');
+                this.setStatus('⚠️ 雲端資料已更新，已拒絕本機快取覆寫', 'var(--danger-color)');
                 await this.loadState();
                 return { ok: false, stale: true, code: 'STALE_WRITE', data: data };
             }
@@ -1859,7 +1877,7 @@ const App = {
         }
 
         if (!this.cloudReady) {
-            const msg = '雲端尚未完成同步，為避免本機快取覆蓋雲端題庫，請先重新整理或等待 Google Sheets 已同步後再儲存。';
+            const msg = '雲端尚未完成同步，為避免本機快取或遠端電腦舊資料覆蓋雲端，請先重新整理或等待 Google Sheets 已同步後再儲存。';
             Backend.setStatus('⚠️ ' + msg, 'var(--danger-color)');
             alert(msg);
             return false;
@@ -1876,7 +1894,7 @@ const App = {
         }
 
         if (result && result.stale) {
-            const msg = '雲端題庫／科目資料已被其他裝置或新版資料更新，為避免本機快取覆蓋雲端，本次儲存已取消。系統已重新載入最新雲端資料，請確認後再修改。';
+            const msg = '雲端資料已被其他裝置更新。為避免本機快取或遠端電腦舊資料覆蓋雲端，本次儲存已取消。系統已重新載入最新雲端資料，請確認後再修改。';
             Backend.setStatus('⚠️ 已拒絕快取覆寫', 'var(--danger-color)');
             alert(msg);
             return false;
@@ -3205,7 +3223,7 @@ const Admin = {
                         <input type="checkbox" class="row-check" id="selectVisibleScores" onchange="Admin.toggleVisibleScoreRecords(this.checked)"> 選取目前顯示紀錄
                     </label>
                     <button class="btn btn-warning btn-sm" onclick="Admin.batchUnlockSelected()">🔓 批次解鎖</button>
-                <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords()">批次刪除紀錄</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords()">批次刪除紀錄</button>
                 </div>
             </div>
             <table>
@@ -3217,9 +3235,16 @@ const Admin = {
                         const r = item.r;
                         const employeeId = App.getRecordEmployeeId(r);
                         const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
-                        const locked = course ? App.isQuizLocked(r.u, course.id) : false;
+                        const unlocked = course ? App.isQuizExplicitlyUnlocked(r.u, course.id) : false;
                         const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
-                        const safeUser = String(r.u).replace(/'/g, "\'");
+                        const userArg = JSON.stringify(String(r.u || ''));
+                        const courseArg = course ? JSON.stringify(course.id) : "''";
+                        const actionButtons = course
+                            ? `<button class="btn btn-warning btn-sm" onclick='Admin.unlockStudentQuiz(${userArg}, ${courseArg})'>🔓 解鎖再測驗</button>`
+                            : '';
+                        const statusText = unlocked
+                            ? '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗／已解鎖</span>'
+                            : '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>';
                         return `
                         <tr>
                             <td style="text-align:center;"><input type="checkbox" class="row-check score-select" value="${item.idx}" aria-label="選取測驗紀錄"></td>
@@ -3229,10 +3254,10 @@ const Admin = {
                             <td style="color:${Number(r.s) >= passScore ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
                             <td>${Number(r.s) >= passScore ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
                             <td>${DateUtil.format(r.d)}</td>
-                            <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
+                            <td>${statusText}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockStudentQuiz('${safeUser}', ${course.id})">解鎖再測驗</button>` : ''}
+                                    ${actionButtons}
                                     <button class="btn btn-danger btn-sm" onclick="Admin.deleteScoreRecord(${item.idx})">刪除紀錄</button>
                                 </div>
                             </td>
@@ -3242,8 +3267,7 @@ const Admin = {
                 </tbody>
             </table>
         `;
-    }
-};
+    },};
 
 const Quiz = {
     init: function() {
