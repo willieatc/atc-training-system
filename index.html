@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-relock-after-unlock';
+const APP_BUILD_VERSION = 'V124-score-submit-no-overwrite';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1382,50 +1382,6 @@ const Backend = {
         } catch (err) {
             console.error('batchUnlockQuiz failed:', err);
             this.setStatus('⚠️ 批次解鎖同步失敗', 'var(--danger-color)');
-            return { ok: false, error: String(err && err.message ? err.message : err) };
-        }
-    },
-    relockQuiz: async function(userCode, courseId, courseTitle) {
-        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
-            this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
-            return { ok: false, error: '尚未設定 Web App URL' };
-        }
-        try {
-            this.setStatus('重新鎖定同步中...', 'var(--warning-color)');
-            const res = await fetch(SHEETS_WEB_APP_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'relockQuiz', userCode: userCode, courseId: courseId, courseTitle: courseTitle || '' })
-            });
-            const data = await res.json();
-            if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'relockQuiz failed');
-            this.setStatus('重新鎖定已同步', 'var(--success-color)');
-            return { ok: true, data: data };
-        } catch (err) {
-            console.error('relockQuiz failed:', err);
-            this.setStatus('⚠️ 重新鎖定同步失敗', 'var(--danger-color)');
-            return { ok: false, error: String(err && err.message ? err.message : err) };
-        }
-    },
-    batchRelockQuiz: async function(items) {
-        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
-            this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
-            return { ok: false, error: '尚未設定 Web App URL' };
-        }
-        try {
-            this.setStatus('批次重新鎖定同步中...', 'var(--warning-color)');
-            const res = await fetch(SHEETS_WEB_APP_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'batchRelockQuiz', items: items || [] })
-            });
-            const data = await res.json();
-            if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'batchRelockQuiz failed');
-            this.setStatus('批次重新鎖定已同步', 'var(--success-color)');
-            return { ok: true, data: data };
-        } catch (err) {
-            console.error('batchRelockQuiz failed:', err);
-            this.setStatus('⚠️ 批次重新鎖定同步失敗', 'var(--danger-color)');
             return { ok: false, error: String(err && err.message ? err.message : err) };
         }
     },
@@ -2123,73 +2079,6 @@ const App = {
         cleanItems.forEach(item => {
             delete this.state.quizLocks[this.lockKey(item.userCode, item.courseId)];
             this.state.quizUnlocks[this.unlockKey(item.userCode, item.courseId)] = {
-                u: item.userCode,
-                cid: item.courseId,
-                c: item.courseTitle,
-                d: DateUtil.format()
-            };
-        });
-
-        if (result.data && result.data.state) {
-            if (result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object') this.state.quizLocks = result.data.state.quizLocks;
-            if (result.data.state.quizUnlocks && typeof result.data.state.quizUnlocks === 'object') this.state.quizUnlocks = result.data.state.quizUnlocks;
-            if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
-        }
-
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
-        return true;
-    },
-    relockQuiz: async function(user, courseId) {
-        const course = this.state.courses.find(c => c.id === courseId);
-        const courseTitle = course ? course.title : '';
-        const result = await Backend.relockQuiz(user, courseId, courseTitle);
-
-        // 只有雲端 API 成功，才更新本機鎖定狀態。
-        if (!(result && result.ok === true && result.data && result.data.ok === true)) {
-            return false;
-        }
-
-        if (!this.state.quizLocks) this.state.quizLocks = {};
-        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
-        delete this.state.quizUnlocks[this.unlockKey(user, courseId)];
-        this.state.quizLocks[this.lockKey(user, courseId)] = {
-            u: user,
-            cid: courseId,
-            c: courseTitle,
-            d: DateUtil.format()
-        };
-
-        if (result.data && result.data.state) {
-            if (result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object') this.state.quizLocks = result.data.state.quizLocks;
-            if (result.data.state.quizUnlocks && typeof result.data.state.quizUnlocks === 'object') this.state.quizUnlocks = result.data.state.quizUnlocks;
-            if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
-        }
-
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
-        return true;
-    },
-    batchRelockQuiz: async function(items) {
-        const cleanItems = (Array.isArray(items) ? items : []).map(item => ({
-            userCode: String(item.userCode || item.u || '').trim(),
-            courseId: item.courseId || item.cid || '',
-            courseTitle: String(item.courseTitle || item.c || '')
-        })).filter(item => item.userCode && item.courseId);
-
-        if (!cleanItems.length) return false;
-
-        const result = await Backend.batchRelockQuiz(cleanItems);
-
-        // 只有雲端 API 成功，才更新本機鎖定狀態。
-        if (!(result && result.ok === true && result.data && result.data.ok === true)) {
-            return false;
-        }
-
-        if (!this.state.quizLocks) this.state.quizLocks = {};
-        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
-
-        cleanItems.forEach(item => {
-            delete this.state.quizUnlocks[this.unlockKey(item.userCode, item.courseId)];
-            this.state.quizLocks[this.lockKey(item.userCode, item.courseId)] = {
                 u: item.userCode,
                 cid: item.courseId,
                 c: item.courseTitle,
@@ -3143,60 +3032,6 @@ const Admin = {
             alert('⚠️ 批次解鎖同步失敗，雲端資料未變更。請確認 Web App 已重新部署，並已執行 ?action=setup。');
         }
     },
-    relockStudentQuiz: async function(u, courseId) {
-        const course = App.state.courses.find(c => c.id === courseId);
-        if (!course) return alert('找不到科目，無法重新鎖定。');
-        if (!confirm(`確定將「${u}」的「${course.title}」測驗重新鎖定？`)) return;
-
-        const ok = await Admin.withButtonStatus(async () => {
-            return await App.relockQuiz(u, courseId);
-        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
-
-        if (ok) {
-            Admin.applyScoreFilter();
-            App.updateLoginStatus();
-            alert('✅ 已重新鎖定並同步完成');
-        } else {
-            Backend.setStatus('⚠️ 重新鎖定同步失敗，雲端未變更', 'var(--danger-color)');
-            alert('⚠️ 重新鎖定同步失敗，雲端資料未變更。');
-        }
-    },
-    batchRelockSelected: async function() {
-        const checked = Array.from(document.querySelectorAll('#scoreTableArea .score-select:checked'));
-        if (!checked.length) return alert('請先勾選要重新鎖定的測驗紀錄。');
-
-        const items = [];
-        const seen = {};
-        checked.forEach(cb => {
-            const idx = parseInt(cb.value, 10);
-            const r = App.state.records[idx];
-            if (!r) return;
-            const userCode = String(r.u || r.userCode || '').trim();
-            const courseId = r.cid || r.courseId || '';
-            const courseTitle = String(r.c || r.courseTitle || '');
-            if (!userCode || !courseId) return;
-            const key = userCode + '__' + courseId;
-            if (seen[key]) return;
-            seen[key] = true;
-            items.push({ userCode, courseId, courseTitle });
-        });
-
-        if (!items.length) return alert('所選紀錄缺少學員或科目資訊，無法批次重新鎖定。');
-        if (!confirm(`確定批次重新鎖定 ${items.length} 筆測驗？`)) return;
-
-        const ok = await Admin.withButtonStatus(async () => {
-            return await App.batchRelockQuiz(items);
-        }, { syncingText: '同步中...', successText: '✅ 已同步', failText: '⚠️ 同步失敗' });
-
-        if (ok) {
-            Admin.applyScoreFilter();
-            App.updateLoginStatus();
-            alert('✅ 批次重新鎖定已同步完成');
-        } else {
-            Backend.setStatus('⚠️ 批次重新鎖定同步失敗，雲端未變更', 'var(--danger-color)');
-            alert('⚠️ 批次重新鎖定同步失敗，雲端資料未變更。');
-        }
-    },
     unlockStudentQuiz: async function(u, courseId) {
         const course = App.state.courses.find(c => c.id === courseId);
         if (!course) return alert('找不到科目，無法解鎖。');
@@ -3369,7 +3204,7 @@ const Admin = {
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e;">
                         <input type="checkbox" class="row-check" id="selectVisibleScores" onchange="Admin.toggleVisibleScoreRecords(this.checked)"> 選取目前顯示紀錄
                     </label>
-                    <button class="btn btn-warning btn-sm" onclick="Admin.batchUnlockSelected()">🔓 批次解鎖</button>\n                <button class="btn btn-secondary btn-sm" onclick="Admin.batchRelockSelected()">🔒 批次鎖回</button>
+                    <button class="btn btn-warning btn-sm" onclick="Admin.batchUnlockSelected()">🔓 批次解鎖</button>
                 <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords()">批次刪除紀錄</button>
                 </div>
             </div>
