@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-locks-priority-courseid-fix';
+const APP_BUILD_VERSION = 'V124-stable-courseid';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1395,6 +1395,15 @@ const Backend = {
             });
             const data = await res.json();
             if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'batchUnlockQuiz failed');
+
+            if (data.state) {
+                if (data.state.quizLocks && typeof data.state.quizLocks === 'object') App.state.quizLocks = data.state.quizLocks;
+                if (data.state.quizUnlocks && typeof data.state.quizUnlocks === 'object') App.state.quizUnlocks = data.state.quizUnlocks;
+                App.locksRevision = String(data.state.locksRevision || data.savedAt || App.locksRevision || '');
+                App.unlocksRevision = String(data.state.unlocksRevision || data.savedAt || App.unlocksRevision || '');
+                App.saveLocalOnly();
+            }
+
             this.setStatus('批次解鎖已同步', 'var(--success-color)');
             return { ok: true, data: data };
         } catch (err) {
@@ -1413,10 +1422,24 @@ const Backend = {
             const res = await fetch(SHEETS_WEB_APP_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'unlockQuiz', userCode: userCode, courseId: courseId, courseTitle: courseTitle || '' })
+                body: JSON.stringify({
+                    action: 'unlockQuiz',
+                    userCode: userCode,
+                    courseId: courseId,
+                    courseTitle: courseTitle || ''
+                })
             });
             const data = await res.json();
             if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'unlockQuiz failed');
+
+            if (data.state) {
+                if (data.state.quizLocks && typeof data.state.quizLocks === 'object') App.state.quizLocks = data.state.quizLocks;
+                if (data.state.quizUnlocks && typeof data.state.quizUnlocks === 'object') App.state.quizUnlocks = data.state.quizUnlocks;
+                App.locksRevision = String(data.state.locksRevision || data.savedAt || App.locksRevision || '');
+                App.unlocksRevision = String(data.state.unlocksRevision || data.savedAt || App.unlocksRevision || '');
+                App.saveLocalOnly();
+            }
+
             this.setStatus('解鎖已同步', 'var(--success-color)');
             return { ok: true, data: data };
         } catch (err) {
@@ -2027,6 +2050,7 @@ const App = {
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
         this.normalizeUsers();
+        this.normalizeCourseIds();
 
         if (shouldRestoreAdminFirst) {
             this.restoreAdminSession();
@@ -2092,6 +2116,113 @@ const App = {
         if (targetTitle && lockTitle && lockTitle === targetTitle) return true;
         return false;
     },
+    stableCourseIdFromTitle: function(title) {
+        const raw = String(title || '').trim();
+        let slug = raw
+            .toLowerCase()
+            .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+        if (!slug) slug = 'course';
+        return 'course_' + slug;
+    },
+    ensureUniqueCourseId: function(baseId, currentCourse = null) {
+        let base = String(baseId || '').trim() || 'course';
+        base = base.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_\-\u4e00-\u9fff]/g, '_');
+        if (!base) base = 'course';
+        let id = base;
+        let n = 2;
+        while ((this.state.courses || []).some(c => c !== currentCourse && String(c.id) === String(id))) {
+            id = `${base}_${n++}`;
+        }
+        return id;
+    },
+    findExistingCourseIdByTitle: function(title, currentCourse = null) {
+        const target = String(title || '').trim();
+        if (!target) return '';
+        const found = (this.state.courses || []).find(c => c !== currentCourse && String(c.title || '').trim() === target && c.id !== undefined && c.id !== null && String(c.id).trim() !== '');
+        return found ? String(found.id) : '';
+    },
+    applyCourseIdChange: function(course, newId) {
+        if (!course) return false;
+        const oldId = String(course.id || '').trim();
+        const fixedId = this.ensureUniqueCourseId(newId, course);
+        if (!fixedId || fixedId === oldId) {
+            course.id = fixedId || oldId;
+            return false;
+        }
+        const oldTitle = String(course.title || '');
+        course.id = fixedId;
+
+        // 同步目前本機狀態中的 records / locks / unlocks，避免後台修正 courseId 後狀態對不起來。
+        (this.state.records || []).forEach(r => {
+            if (String(r.cid || r.courseId || '') === oldId || String(r.c || r.courseTitle || '') === oldTitle) {
+                r.cid = fixedId;
+                r.courseId = fixedId;
+            }
+        });
+
+        const rebuildMap = (mapObj) => {
+            const next = {};
+            Object.values(mapObj || {}).forEach(item => {
+                if (!item) return;
+                const itemUser = String(item.u || item.userCode || '').trim();
+                const itemCourseId = String(item.cid || item.courseId || '').trim();
+                const itemTitle = String(item.c || item.courseTitle || '').trim();
+                if (itemCourseId === oldId || itemTitle === oldTitle) {
+                    item.cid = fixedId;
+                    item.courseId = fixedId;
+                }
+                const key = this.lockKey(itemUser, item.cid || item.courseId || itemCourseId);
+                next[key] = item;
+            });
+            return next;
+        };
+        this.state.quizLocks = rebuildMap(this.state.quizLocks);
+        this.state.quizUnlocks = rebuildMap(this.state.quizUnlocks);
+        return true;
+    },
+    normalizeCourseIds: function() {
+        const seen = {};
+        (this.state.courses || []).forEach(course => {
+            let id = String(course.id || '').trim();
+            if (!id) {
+                id = this.findExistingCourseIdByTitle(course.title, course) || this.stableCourseIdFromTitle(course.title);
+            }
+            id = id.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_\-\u4e00-\u9fff]/g, '_');
+            let finalId = id || 'course';
+            let n = 2;
+            while (seen[finalId]) finalId = `${id}_${n++}`;
+            seen[finalId] = true;
+            course.id = finalId;
+        });
+    },
+    hasCompletedQuizRecord: function(user, courseId, courseTitle = '') {
+        const targetUser = String(user || '').trim();
+        const targetCourseId = String(courseId || '').trim();
+        const targetTitle = String(courseTitle || this.getCourseTitleById(courseId) || '').trim();
+        if (!targetUser) return false;
+        return (this.state.records || []).some(r => {
+            const recordUser = String(r.u || r.userCode || '').trim();
+            const recordCourseId = String(r.cid || r.courseId || '').trim();
+            const recordTitle = String(r.c || r.courseTitle || '').trim();
+            if (recordUser !== targetUser) return false;
+            if (targetCourseId && recordCourseId && recordCourseId === targetCourseId) return true;
+            if (targetTitle && recordTitle && recordTitle === targetTitle) return true;
+            return false;
+        });
+    },
+    isReviewOnlyMode: function(user, courseId, courseTitle = '') {
+        // 已有成績紀錄且未被明確解鎖時，只能進入複習模式。
+        if (this.isInstructor) return false;
+        if (!this.hasCompletedQuizRecord(user, courseId, courseTitle)) return false;
+        return !this.isQuizExplicitlyUnlocked(user, courseId, courseTitle);
+    },
+    canStartQuiz: function(user, courseId, courseTitle = '') {
+        // 可測驗條件：未鎖定，且不是已測驗未解鎖的複習模式。
+        if (this.isInstructor) return true;
+        if (this.isReviewOnlyMode(user, courseId, courseTitle)) return false;
+        return !this.isQuizLocked(user, courseId, courseTitle);
+    },
     isQuizExplicitlyUnlocked: function(user, courseId, courseTitle = '') {
         // V124 locks 優先：若同一 user+courseId 或 user+courseTitle 已鎖定，即使 unlocks 殘留，也不可視為已解鎖。
         if (this.isQuizLocked(user, courseId, courseTitle)) return false;
@@ -2140,57 +2271,41 @@ const App = {
 
         const result = await Backend.batchUnlockQuiz(cleanItems);
 
-        // 只有雲端 API 成功，才更新本機解鎖狀態。
         if (!(result && result.ok === true && result.data && result.data.ok === true)) {
             return false;
         }
 
-        if (!this.state.quizLocks) this.state.quizLocks = {};
-        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
-
-        cleanItems.forEach(item => {
-            delete this.state.quizLocks[this.lockKey(item.userCode, item.courseId)];
-            this.state.quizUnlocks[this.unlockKey(item.userCode, item.courseId)] = {
-                u: item.userCode,
-                cid: item.courseId,
-                c: item.courseTitle,
-                d: DateUtil.format()
-            };
-        });
-
-        if (result.data && result.data.state) {
+        if (result.data.state) {
             if (result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object') this.state.quizLocks = result.data.state.quizLocks;
             if (result.data.state.quizUnlocks && typeof result.data.state.quizUnlocks === 'object') this.state.quizUnlocks = result.data.state.quizUnlocks;
-            if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
         }
 
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
         return true;
     },
     unlockQuiz: async function(user, courseId) {
-        const course = this.state.courses.find(c => c.id === courseId);
+        const course = this.state.courses.find(c => String(c.id) === String(courseId));
         const courseTitle = course ? course.title : '';
         const result = await Backend.unlockQuiz(user, courseId, courseTitle);
 
-        // 只有雲端 API 寫入成功，才更新本機解鎖狀態；失敗時不改本機鎖定狀態。
         if (!(result && result.ok === true && result.data && result.data.ok === true)) {
             return false;
         }
 
-        if (!this.state.quizLocks) this.state.quizLocks = {};
-        if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
-        delete this.state.quizLocks[this.lockKey(user, courseId)];
-        this.state.quizUnlocks[this.unlockKey(user, courseId)] = {
-            u: user,
-            cid: courseId,
-            c: courseTitle,
-            d: DateUtil.format()
-        };
-
-        if (result.data && result.data.state) {
+        // 後端已移除 locks 並新增 unlocks；前端以後端回傳 state 為準。
+        if (result.data.state) {
             if (result.data.state.quizLocks && typeof result.data.state.quizLocks === 'object') this.state.quizLocks = result.data.state.quizLocks;
             if (result.data.state.quizUnlocks && typeof result.data.state.quizUnlocks === 'object') this.state.quizUnlocks = result.data.state.quizUnlocks;
-            if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
+        } else {
+            if (!this.state.quizLocks) this.state.quizLocks = {};
+            if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+            delete this.state.quizLocks[this.lockKey(user, courseId)];
+            this.state.quizUnlocks[this.unlockKey(user, courseId)] = {
+                u: user,
+                cid: courseId,
+                c: courseTitle,
+                d: DateUtil.format()
+            };
         }
 
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
@@ -2253,6 +2368,7 @@ const App = {
         }
     },
     renderSelects: function() {
+        this.normalizeCourseIds();
         document.getElementById('loginCourse').innerHTML = this.state.courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('') || '<option value="">無科目</option>';
     },
     updateLoginStatus: function() {
@@ -2268,9 +2384,12 @@ const App = {
             area.innerHTML = `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">登入系統</button>`;
             return;
         }
-        
-        const locked = !this.isInstructor && this.isQuizLocked(name, course.id);
-        area.innerHTML = locked
+
+        const reviewOnly = this.isReviewOnlyMode(name, course.id, course.title);
+        const locked = this.isQuizLocked(name, course.id, course.title);
+        const completed = this.hasCompletedQuizRecord(name, course.id, course.title);
+
+        area.innerHTML = (reviewOnly || (completed && locked))
             ? `<button class="btn btn-warning" style="width:100%" onclick="App.start(true)">已測驗，進入複習模式</button>`
             : `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">登入系統</button>`;
     },
@@ -2284,12 +2403,15 @@ const App = {
         this.normalizeUsers();
         if (!Object.prototype.hasOwnProperty.call(this.state.users, code)) {
             this.state.users[code] = { employeeId: '', name: '', pw: '' };
-            this.save();
+            this.saveLocalOnly();
         }
+
         this.user = code;
         this.employeeId = this.getUserEmployeeId(code);
         this.activeCourse = selectedCourse;
-        this.openView(isReview);
+
+        const reviewOnly = this.isReviewOnlyMode(code, selectedCourse.id, selectedCourse.title);
+        this.openView(Boolean(isReview || reviewOnly));
     },
     openView: function(isReview) {
         this.refreshActiveCourse();
@@ -2303,16 +2425,25 @@ const App = {
         if (adminBackBtn) adminBackBtn.classList.toggle('hidden', !this.isInstructor);
         const viewExitBtn = document.getElementById('viewExitBtn');
         if (viewExitBtn) viewExitBtn.classList.toggle('hidden', this.isInstructor);
-        
-        const locked = (!this.isInstructor && this.user && this.activeCourse) ? this.isQuizLocked(this.user, this.activeCourse.id) : false;
+
+        const reviewOnly = (!this.isInstructor && this.user && this.activeCourse)
+            ? this.isReviewOnlyMode(this.user, this.activeCourse.id, this.activeCourse.title)
+            : false;
+        const locked = (!this.isInstructor && this.user && this.activeCourse)
+            ? this.isQuizLocked(this.user, this.activeCourse.id, this.activeCourse.title)
+            : false;
+        const canStart = this.isInstructor || this.canStartQuiz(this.user, this.activeCourse.id, this.activeCourse.title);
+
         const actionHtml = this.isInstructor
             ? `<div style="display:flex; align-items:center; gap:10px; justify-content:flex-end;">
                     <span style="color:#8b949e; font-weight:bold;">管理員測試模式，不紀錄分數</span>
                     <button class="btn btn-success" onclick="Quiz.init()">開始考核 📝</button>
                </div>`
-            : (locked
-                ? `<div style="color:var(--warning-color); font-weight:bold;">🔒 已完成本科目測驗，請洽管理員解鎖複測。</div>`
-                : `<button class="btn btn-success" onclick="Quiz.init()">開始考核 📝</button>`);
+            : (reviewOnly || isReview
+                ? `<div style="color:var(--warning-color); font-weight:bold;">📖 已完成本科目測驗，目前僅能複習教材；需由管理員解鎖後才能再次測驗。</div>`
+                : (locked || !canStart
+                    ? `<div style="color:var(--warning-color); font-weight:bold;">🔒 已完成本科目測驗，請洽管理員解鎖複測。</div>`
+                    : `<button class="btn btn-success" onclick="Quiz.init()">開始考核 📝</button>`));
         const hintHtml = url ? `<div class="viewer-hint-below">💡 可使用［︙］功能表選擇全螢幕模式觀看。</div>` : `<span></span>`;
         document.getElementById('viewActionArea').innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; gap:15px; width:100%;">
@@ -2544,7 +2675,7 @@ const Admin = {
         
         document.getElementById('editorList').innerHTML = App.state.courses.length ? App.state.courses.map((c, ci) => `
             <div class="course-item ${App.lastOpenedCourseId == c.id ? 'open' : ''} course-sortable-item" data-id="${c.id}" draggable="true" ondragstart="Admin.courseDragStart(event, ${ci})" ondragover="Admin.courseDragOver(event, ${ci})" ondrop="Admin.courseDrop(event, ${ci})" ondragend="Admin.courseDragEnd(event)">
-                <div class="course-header course-drag-row" onclick="Admin.toggleCourse(${c.id}, this.parentElement)">
+                <div class="course-header course-drag-row" onclick="Admin.toggleCourse(${JSON.stringify(c.id)}, this.parentElement)">
                     <strong><span>${Admin.esc(c.title)}</span><span class="course-count-badge">${c.questions.length} 題｜及格 ${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 80} 分</span></strong>
                     <div class="course-order-actions">
                         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); Admin.delCourse(${ci})">刪除</button>
@@ -2559,6 +2690,11 @@ const Admin = {
                             </div>
                         </div>
                         <div class="course-setting-grid">
+                            <div>
+                                <label>固定 courseId（同一科目請勿任意更改）</label>
+                                <input type="text" class="input-field c-id" value="${Admin.esc(String(c.id || ''))}" placeholder="例如：tower_intro">
+                                <div class="editor-helper">用來對應成績／鎖定狀態；同一科目需維持一致。</div>
+                            </div>
                             <div>
                                 <label>科目名稱</label>
                                 <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="請輸入科目名稱">
@@ -2601,7 +2737,7 @@ const Admin = {
                                 </div>
                                 <input type="text" class="input-field q-t" value="${Admin.esc(q.q)}" placeholder="請輸入題目內容">
                                 <div class="q-options-grid">
-                                    ${q.o.map((opt, oi) => `<div class="option-row"><span class="option-index">${oi+1}</span><label class="answer-radio-wrap" title="設為答案"><input type="radio" name="r-${c.id}-${qi}" value="${oi}" ${q.a==oi?'checked':''}> 答案</label><input type="text" class="input-field q-o" value="${Admin.esc(opt)}"></div>`).join('')}
+                                    ${q.o.map((opt, oi) => `<div class="option-row"><span class="option-index">${oi+1}</span><label class="answer-radio-wrap" title="設為答案"><input type="radio" name="r-${Admin.esc(String(c.id))}-${qi}" value="${oi}" ${q.a==oi?'checked':''}> 答案</label><input type="text" class="input-field q-o" value="${Admin.esc(opt)}"></div>`).join('')}
                                 </div>
                             </div>`).join('')}
                         </div>
@@ -2634,26 +2770,43 @@ const Admin = {
  el.classList.toggle('open'); App.lastOpenedCourseId = el.classList.contains('open') ? id : null; },
     sync: function() {
         document.querySelectorAll('.course-item').forEach(item => {
-            const cid = parseInt(item.dataset.id);
-            const target = App.state.courses.find(c => c.id === cid);
+            const cid = String(item.dataset.id || '');
+            const target = App.state.courses.find(c => String(c.id) === cid);
             if (target) {
                 const oldTitle = target.title;
+                const oldId = String(target.id || '');
+                const idInput = item.querySelector('.c-id');
                 const titleInput = item.querySelector('.c-title');
                 const newTitle = titleInput ? titleInput.value.trim() : target.title;
+
+                if (idInput) {
+                    const desiredId = idInput.value.trim() || oldId || App.stableCourseIdFromTitle(newTitle || target.title);
+                    App.applyCourseIdChange(target, desiredId);
+                }
+
                 if (newTitle) {
                     target.title = newTitle;
                     if (oldTitle !== newTitle) {
                         App.state.records.forEach(r => {
-                            if (r.cid === target.id || r.c === oldTitle) r.c = newTitle;
+                            if (String(r.cid || r.courseId || '') === String(target.id) || r.c === oldTitle || r.courseTitle === oldTitle) {
+                                r.c = newTitle;
+                                r.courseTitle = newTitle;
+                            }
                         });
-                        if (App.state.quizLocks) {
-                            Object.keys(App.state.quizLocks).forEach(k => {
-                                const lock = App.state.quizLocks[k];
-                                if (lock && (lock.cid === target.id || lock.c === oldTitle)) lock.c = newTitle;
+                        const updateMapTitle = (mapObj) => {
+                            Object.keys(mapObj || {}).forEach(k => {
+                                const item = mapObj[k];
+                                if (item && (String(item.cid || item.courseId || '') === String(target.id) || item.c === oldTitle || item.courseTitle === oldTitle)) {
+                                    item.c = newTitle;
+                                    item.courseTitle = newTitle;
+                                }
                             });
-                        }
+                        };
+                        updateMapTitle(App.state.quizLocks);
+                        updateMapTitle(App.state.quizUnlocks);
                     }
                 }
+
                 target.embedUrl = item.querySelector('.c-url').value.trim();
                 const passInput = item.querySelector('.c-pass-score');
                 const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
@@ -2665,8 +2818,18 @@ const Admin = {
                 }));
             }
         });
+        App.normalizeCourseIds();
     },
-    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", passScore: 80, questions:[]}); App.save(); Admin.renderEditor(); }},
+    addCourse: function() {
+        const t = prompt("科目名稱");
+        if (t) {
+            const existingId = App.findExistingCourseIdByTitle(t);
+            const id = existingId || App.ensureUniqueCourseId(App.stableCourseIdFromTitle(t));
+            App.state.courses.push({id: id, title: t, embedUrl:"", passScore: 80, questions:[]});
+            App.saveLocalOnly();
+            Admin.renderEditor();
+        }
+    },
     addQ: function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
@@ -2810,8 +2973,8 @@ const Admin = {
     },
     refreshCourseHeaderBadges: function() {
         document.querySelectorAll('.course-item').forEach(item => {
-            const cid = parseInt(item.dataset.id);
-            const course = App.state.courses.find(c => c.id === cid);
+            const cid = String(item.dataset.id || '');
+            const course = App.state.courses.find(c => String(c.id) === cid);
             if (!course) return;
             const titleSpan = item.querySelector('.course-header strong span:first-child');
             const badge = item.querySelector('.course-count-badge');
@@ -2893,6 +3056,7 @@ const Admin = {
     },
     saveAll: async function(evt) {
         Admin.sync();
+        App.normalizeCourseIds();
 
         if (!App.cloudReady && Backend.enabled()) {
             alert('尚未成功讀取雲端資料。為避免本機舊資料覆蓋雲端，請重新整理並確認 Google Sheets 已同步後再儲存。');
@@ -3332,7 +3496,14 @@ const Quiz = {
     init: function() {
         const resultArea = document.getElementById('resultAnswerArea');
         if (resultArea) { resultArea.classList.add('hidden'); resultArea.innerHTML = ''; }
-        if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id, App.activeCourse.title)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
+        if (!App.isInstructor && App.isReviewOnlyMode(App.user, App.activeCourse.id, App.activeCourse.title)) {
+            App.openView(true);
+            return alert("本科目已完成測驗，目前僅能進入複習模式；需由管理員解鎖後才能再次測驗。");
+        }
+        if (!App.isInstructor && !App.canStartQuiz(App.user, App.activeCourse.id, App.activeCourse.title)) {
+            App.openView(true);
+            return alert("本科目目前不可重新測驗，請洽管理員解鎖。");
+        }
         if(!App.activeCourse.questions.length) return alert("本科目尚無考題。");
         if (!App.isInstructor) {
             const currentEmployeeId = App.getUserEmployeeId(App.user);
@@ -3388,7 +3559,7 @@ const Quiz = {
     },
     recordZeroForRefresh: function() {
         if (!App.quizInProgress || App.isInstructor || !App.user || !App.activeCourse) return;
-        if (App.isQuizLocked(App.user, App.activeCourse.id)) return;
+        if (!App.canStartQuiz(App.user, App.activeCourse.id, App.activeCourse.title)) return;
         App.state.records.push({
             u: App.user,
             employeeId: App.employeeId || App.getUserEmployeeId(App.user),
