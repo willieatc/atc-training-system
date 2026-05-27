@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-cache-shield-final';
+const APP_BUILD_VERSION = 'V124-locks-priority-cache-shield';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -2075,9 +2075,14 @@ const App = {
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
     unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
     isQuizExplicitlyUnlocked: function(user, courseId) {
+        // V124 locks 優先：若 locks 有資料，即使 unlocks 殘留，也不可視為已解鎖。
+        if (this.isQuizLocked(user, courseId)) return false;
         return !!(this.state.quizUnlocks && this.state.quizUnlocks[this.unlockKey(user, courseId)]);
     },
-    isQuizLocked: function(user, courseId) { return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]); },
+    isQuizLocked: function(user, courseId) {
+        // V124 locks 優先：只要 locks 有資料，一律視為已鎖定。
+        return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]);
+    },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
