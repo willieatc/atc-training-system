@@ -9,5 +9,5 @@
  */
 
 window.ATC_CONFIG = {
-    SHEETS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbzEbGJHhcOxr8B6HHQ9sMrsI3WZXBsedsVEN-P81D_9QCrrrt8pVEO5Qlf2J1OKGfeJTg/exec"
+    SHEETS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbzmpPHuE5tStQI88Gt2vD0M64dtjnmkY46hWD_yF2t3nR1GEZl2Ckx9snqrV7g6v5vOUQ/exec"
 };
