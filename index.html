@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-locks-priority-cache-shield';
+const APP_BUILD_VERSION = 'V124-edit-cache-overwrite-protect';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1340,24 +1340,6 @@ const Backend = {
             localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
             localStorage.setItem('ATC_LAST_CLOUD_LOAD_TS', String(Date.now()));
             App.cloudReady = true;
-            App.cloudRevision = String((data && (data.cloudRevision || data.stateRevision)) || (App.state && (App.state.cloudRevision || App.state.stateRevision)) || '');
-            App.usersRevision = String((data && data.usersRevision) || (App.state && App.state.usersRevision) || '');
-            App.recordsRevision = String((data && data.recordsRevision) || (App.state && App.state.recordsRevision) || '');
-            App.locksRevision = String((data && data.locksRevision) || (App.state && App.state.locksRevision) || '');
-            App.unlocksRevision = String((data && data.unlocksRevision) || (App.state && App.state.unlocksRevision) || '');
-            try {
-                localStorage.setItem('ATC_CLOUD_CACHE_V124', JSON.stringify({
-                    cachedAt: DateUtil.format(),
-                    cloudRevision: App.cloudRevision,
-                    usersRevision: App.usersRevision,
-                    recordsRevision: App.recordsRevision,
-                    locksRevision: App.locksRevision,
-                    unlocksRevision: App.unlocksRevision,
-                    state: App.state
-                }));
-            } catch (cacheErr) {
-                console.warn('cloud cache write failed', cacheErr);
-            }
             this.loaded = true;
             this._lastPendingNotice = '';
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
@@ -1470,7 +1452,7 @@ const Backend = {
             return { ok: false, error: String(err && err.message ? err.message : err) };
         }
     },
-    syncUsers: async function(users) {
+    syncUsers: async function(users, userNames) {
         if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
             this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
             return { ok: false, error: '尚未設定 Web App URL' };
@@ -1480,31 +1462,12 @@ const Backend = {
             const res = await fetch(SHEETS_WEB_APP_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'syncUsers',
-                    users: users || {},
-                    baseRevision: App.usersRevision || ''
-                })
+                body: JSON.stringify({ action: 'syncUsers', users: users, userNames: userNames || {} })
             });
             const data = await res.json();
-
-            if (data && data.ok === false && data.code === 'STALE_USERS_WRITE') {
-                this.setStatus('⚠️ 雲端帳號已更新，已拒絕舊快取覆寫', 'var(--danger-color)');
-                await this.loadState();
-                return { ok: false, stale: true, code: 'STALE_USERS_WRITE', data: data };
-            }
-
             if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'syncUsers failed');
-
-            App.usersRevision = String(data.usersRevision || data.savedAt || App.usersRevision || '');
-            if (data.state) {
-                if (data.state.users && typeof data.state.users === 'object') App.state.users = data.state.users;
-                if (data.state.userNames && typeof data.state.userNames === 'object') App.state.userNames = data.state.userNames;
-                App.saveLocalOnly();
-            }
-
             this.setStatus('帳號資料已同步', 'var(--success-color)');
-            return { ok: true, data: data };
+            return { ok: true, data };
         } catch (err) {
             console.error('syncUsers failed:', err);
             this.setStatus('⚠️ 帳號資料同步失敗', 'var(--danger-color)');
@@ -1551,24 +1514,6 @@ const Backend = {
             if (!data || data.ok !== true) {
                 throw new Error(data && data.error ? data.error : 'submitScore failed');
             }
-            // 成績送出成功後，前端也強制移除該筆 unlock 並建立 lock，避免本機舊狀態殘留。
-            if (record) {
-                const submittedUser = String(record.u || record.userCode || '').trim();
-                const submittedCourse = record.cid || record.courseId || '';
-                const submittedTitle = String(record.c || record.courseTitle || '');
-                if (submittedUser && submittedCourse && App.lockKey && App.unlockKey) {
-                    if (!App.state.quizLocks) App.state.quizLocks = {};
-                    if (!App.state.quizUnlocks) App.state.quizUnlocks = {};
-                    delete App.state.quizUnlocks[App.unlockKey(submittedUser, submittedCourse)];
-                    App.state.quizLocks[App.lockKey(submittedUser, submittedCourse)] = {
-                        u: submittedUser,
-                        cid: submittedCourse,
-                        c: submittedTitle,
-                        d: DateUtil.format()
-                    };
-                    App.saveLocalOnly();
-                }
-            }
             this.setStatus('成績已同步', 'var(--success-color)');
             return { ok: true, data: data };
         } catch (err) {
@@ -1592,47 +1537,51 @@ const Backend = {
         }
     },
     
-    saveState: async function(state, options = {}) {
-        if (!SHEETS_WEB_APP_URL || SHEETS_WEB_APP_URL.includes('請貼上')) {
-            this.setStatus('⚠️ 尚未設定 Web App URL', 'var(--warning-color)');
-            return { ok: false, error: '尚未設定 Web App URL' };
-        }
+    saveState: async function(state) {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(state));
+        if (!this.enabled()) return true;
+        this.saving = true;
+        this.setStatus('Google Sheets 儲存中...', 'var(--warning-color)');
         try {
-            this.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
+            const payload = {
+                action: 'saveState',
+                state: state,
+                baseRevision: App.cloudRevision || localStorage.getItem('ATC_CLOUD_REVISION') || ''
+            };
             const res = await fetch(SHEETS_WEB_APP_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'saveState',
-                    state: state,
-                    baseRevision: options.baseRevision || App.cloudRevision || ''
-                })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
-
-            if (data && data.ok === false && data.code === 'STALE_WRITE') {
-                this.setStatus('⚠️ 雲端資料已更新，已拒絕本機／外機快取覆寫', 'var(--danger-color)');
-                await this.loadState();
-                return { ok: false, stale: true, code: 'STALE_WRITE', data: data };
+            if (!data || !data.ok) {
+                if (data && data.code === 'STALE_WRITE') {
+                    const err = new Error(data.error || '雲端資料已更新，為避免快取覆蓋，本次儲存已取消');
+                    err.code = 'STALE_WRITE';
+                    err.cloudRevision = data.cloudRevision || '';
+                    throw err;
+                }
+                throw new Error(data && data.error ? data.error : '儲存失敗');
             }
-
-            if (!data || data.ok !== true) throw new Error(data && data.error ? data.error : 'saveState failed');
-
-            App.cloudRevision = String(data.stateRevision || data.cloudRevision || data.savedAt || App.cloudRevision || '');
-            if (data.state) {
-                if (Array.isArray(data.state.courses)) App.state.courses = data.state.courses;
-                if (data.state.adminPw) App.state.adminPw = data.state.adminPw;
-                App.saveLocalOnly();
+            if (data.cloudRevision) {
+                App.cloudRevision = String(data.cloudRevision);
+                localStorage.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
             }
-
+            localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
             this.setStatus('Google Sheets 已同步', 'var(--success-color)');
-            return { ok: true, data: data };
+            return true;
         } catch (err) {
-            console.error('saveState failed:', err);
-            this.setStatus('⚠️ Google Sheets 同步失敗', 'var(--danger-color)');
-            return { ok: false, error: String(err && err.message ? err.message : err) };
+            console.error('Google Sheets save failed:', err);
+            if (err && err.code === 'STALE_WRITE') {
+                this.setStatus('雲端資料已更新，已取消儲存避免快取覆蓋', 'var(--danger-color)');
+                throw err;
+            }
+            this.setStatus('雲端儲存失敗，請檢查 Web App URL', 'var(--danger-color)');
+            throw err;
+        } finally {
+            this.saving = false;
         }
-    },};
+    }};
 
 
 const DateUtil = {
@@ -1894,40 +1843,37 @@ const App = {
         alert(failureText);
         return false;
     },
-    saveWithNotice: async function(successText = '同步完成', failureText = '雲端同步失敗') {
-        if (!this.isInstructor) {
-            const msg = '非管理員不得儲存題庫／科目資料；學員成績只會透過 submitScore 專用 API 上傳。';
-            Backend.setStatus('⚠️ ' + msg, 'var(--danger-color)');
-            console.warn(msg);
+    saveWithNotice: async function(successText, failureText) {
+        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        if (Backend.enabled() && !this.cloudReady) {
+            Backend.setStatus('尚未成功讀取雲端，禁止儲存以避免覆蓋', 'var(--danger-color)');
+            alert('尚未成功讀取雲端資料。為避免本機舊資料覆蓋雲端，請重新整理並確認 Google Sheets 已同步後再操作。');
             return false;
         }
 
-        if (!this.cloudReady || !this.cloudRevision) {
-            const msg = '雲端尚未完成同步，為避免本機快取或外機舊快取覆蓋雲端，請先重新整理或等待 Google Sheets 已同步後再儲存。';
-            Backend.setStatus('⚠️ ' + msg, 'var(--danger-color)');
-            alert(msg);
-            return false;
+        Backend.setStatus('Google Sheets 同步中...', 'var(--warning-color)');
+        let ok = false;
+        try {
+            ok = await Backend.saveState(JSON.parse(JSON.stringify(this.state)));
+        } catch (err) {
+            console.error('saveWithNotice failed:', err);
+            if (err && err.code === 'STALE_WRITE') {
+                alert('雲端資料已被其他裝置或新版資料更新。為避免本機快取覆蓋雲端，本次儲存已取消；系統會重新載入最新雲端資料。');
+                await Backend.loadState();
+                if (App.renderSelects) App.renderSelects();
+                if (typeof Admin !== 'undefined' && Admin.renderEditor) Admin.renderEditor();
+                return false;
+            }
+            ok = false;
         }
 
-        this.saveLocalOnly();
-        const result = await Backend.saveState(JSON.parse(JSON.stringify(this.state)), {
-            baseRevision: this.cloudRevision || ''
-        });
-
-        if (result && result.ok) {
-            Backend.setStatus(successText, 'var(--success-color)');
+        if (ok) {
+            Backend.setStatus(successText || 'Google Sheets 已同步', 'var(--success-color)');
             return true;
         }
 
-        if (result && result.stale) {
-            const msg = '雲端資料已被其他裝置更新。為避免本機快取或外機舊快取覆蓋雲端，本次儲存已取消。系統已重新載入最新雲端資料，請確認後再修改。';
-            Backend.setStatus('⚠️ 已拒絕快取覆寫', 'var(--danger-color)');
-            alert(msg);
-            return false;
-        }
-
-        Backend.setStatus(failureText, 'var(--danger-color)');
-        alert(failureText);
+        Backend.setStatus(failureText || '雲端同步失敗，已保留本機資料', 'var(--danger-color)');
+        alert(failureText || '雲端同步失敗，資料已先保存在本機。請檢查 Web App URL／部署。');
         return false;
     },
     saveLocalOnly: function() {
@@ -2062,7 +2008,7 @@ const App = {
             }
         });
         if (lockChanged) {
-            this.saveLocalOnly(); // 初始化不回寫雲端，避免本機或外機舊快取覆蓋雲端
+            await this.save();
         } else {
             this.saveLocalOnly();
         }
@@ -2075,14 +2021,9 @@ const App = {
     lockKey: function(user, courseId) { return `${user}__${courseId}`; },
     unlockKey: function(user, courseId) { return `${user}__${courseId}`; },
     isQuizExplicitlyUnlocked: function(user, courseId) {
-        // V124 locks 優先：若 locks 有資料，即使 unlocks 殘留，也不可視為已解鎖。
-        if (this.isQuizLocked(user, courseId)) return false;
         return !!(this.state.quizUnlocks && this.state.quizUnlocks[this.unlockKey(user, courseId)]);
     },
-    isQuizLocked: function(user, courseId) {
-        // V124 locks 優先：只要 locks 有資料，一律視為已鎖定。
-        return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]);
-    },
+    isQuizLocked: function(user, courseId) { return !!(this.state.quizLocks && this.state.quizLocks[this.lockKey(user, courseId)]); },
     lockQuiz: function(user, courseId, courseTitle) {
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
