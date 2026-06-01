@@ -1287,7 +1287,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V124-edit-cache-overwrite-protect';
+const APP_BUILD_VERSION = 'V125-cache-safe-locks-users';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -1679,7 +1679,7 @@ const Backup = {
                 if (!state.quizLocks || typeof state.quizLocks !== "object") state.quizLocks = {};
                 if (!state.quizUnlocks || typeof state.quizUnlocks !== "object") state.quizUnlocks = {};
                 if (!state.adminPw) state.adminPw = "rctp3023";
-                state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 70; });
+                state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 80; });
 
                 if (!confirm("確定匯入本地備份？目前系統資料將被備份檔覆蓋。")) {
                     fileInput.value = "";
@@ -1687,13 +1687,12 @@ const Backup = {
                 }
 
                 App.state = state;
-                App.save();
-
-                if (window.Cloud && Cloud.enabled && typeof Cloud.saveState === "function") {
-                    await Cloud.saveState(App.state);
+                const ok = await App.saveWithNotice('本地備份已匯入並同步完成', '本地備份已匯入本機，但雲端同步失敗');
+                if (!ok && Backend.enabled()) {
+                    alert("⚠️ 本地備份已匯入本機，但雲端同步失敗，請確認後再操作。");
+                } else {
+                    alert("✅ 本地備份已匯入");
                 }
-
-                alert("✅ 本地備份已匯入");
                 App.init();
                 if (App.isInstructor) App.switchAdmin(App.currentAdminTab || "score");
             } catch (err) {
@@ -2008,7 +2007,9 @@ const App = {
             }
         });
         if (lockChanged) {
-            await this.save();
+            // V125：啟動時只在本機補齊顯示用鎖定，不呼叫 saveState。
+            // 後端會從 records 表推導鎖定，避免本機舊快取覆蓋題庫或 locks。
+            this.saveLocalOnly();
         } else {
             this.saveLocalOnly();
         }
@@ -2191,7 +2192,7 @@ const App = {
             ? `<button class="btn btn-warning" style="width:100%" onclick="App.start(true)">已測驗，進入複習模式</button>`
             : `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">登入系統</button>`;
     },
-    start: function(isReview) {
+    start: async function(isReview) {
         if (this.isInstructor) return alert("管理員請由後台「進入教材/測驗」按鈕進入測試。");
         let code = document.getElementById('loginUser').value.trim();
         const selectedCourse = this.state.courses.find(c => c.id == document.getElementById('loginCourse').value);
@@ -2201,7 +2202,8 @@ const App = {
         this.normalizeUsers();
         if (!Object.prototype.hasOwnProperty.call(this.state.users, code)) {
             this.state.users[code] = { employeeId: '', name: '', pw: '' };
-            this.save();
+            const ok = await this.syncUsersOnly('帳號已建立並同步完成', '帳號建立同步失敗，雲端資料未變更。請確認 Web App 已重新部署。');
+            if (!ok && Backend.enabled()) return;
         }
         this.user = code;
         this.employeeId = this.getUserEmployeeId(code);
@@ -2583,7 +2585,15 @@ const Admin = {
             }
         });
     },
-    addCourse: function() { const t = prompt("科目名稱"); if(t) { App.state.courses.push({id:Date.now(), title:t, embedUrl:"", passScore: 80, questions:[]}); App.save(); Admin.renderEditor(); }},
+    addCourse: function() {
+        const t = prompt("科目名稱");
+        if (t) {
+            App.state.courses.push({id:Date.now(), title:t, embedUrl:"", passScore: 80, questions:[]});
+            App.saveLocalOnly();
+            Admin.renderEditor();
+            Backend.setStatus('已新增科目，請按「儲存變更」同步到 Google Sheets', 'var(--warning-color)');
+        }
+    },
     addQ: function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
@@ -2963,7 +2973,7 @@ const Admin = {
     resetUserPassword: function(encodedU) {
         alert('目前登入不使用密碼，無需重設密碼。');
     },
-    changeAdminPassword: function() {
+    changeAdminPassword: async function() {
         const oldPw = prompt("請輸入目前管理員密碼：");
         if (oldPw === null) return;
         if (oldPw !== App.state.adminPw) return alert("目前管理員密碼錯誤。");
@@ -2972,8 +2982,8 @@ const Admin = {
         const confirmPw = prompt("請再次輸入新的管理員密碼：");
         if (newPw !== confirmPw) return alert("兩次輸入的密碼不一致，未變更。");
         App.state.adminPw = newPw;
-        App.save();
-        alert("✅ 管理員密碼已修改");
+        const ok = await App.saveWithNotice('管理員密碼已同步完成', '管理員密碼同步失敗，雲端資料未變更');
+        alert(ok ? "✅ 管理員密碼已修改並同步" : "⚠️ 管理員密碼未同步，請重新整理後再試");
     },
     changeUserPassword: function(encodedU) { this.resetUserPassword(encodedU); },
     
@@ -3244,7 +3254,7 @@ const Admin = {
 };
 
 const Quiz = {
-    init: function() {
+    init: async function() {
         const resultArea = document.getElementById('resultAnswerArea');
         if (resultArea) { resultArea.classList.add('hidden'); resultArea.innerHTML = ''; }
         if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
@@ -3258,7 +3268,8 @@ const Quiz = {
             account.employeeId = App.employeeId;
             account.pw = '';
             App.state.users[App.user] = account;
-            App.save();
+            const ok = await App.syncUsersOnly('員工編號已同步完成', '員工編號同步失敗，雲端資料未變更。請確認 Web App 已重新部署。');
+            if (!ok && Backend.enabled()) return;
         }
         this.ans = new Array(App.activeCourse.questions.length).fill(null);
         document.getElementById('quizContainer').innerHTML = App.activeCourse.questions.map((q, i) => `
@@ -3317,7 +3328,9 @@ const Quiz = {
         App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
         App.quizInProgress = false;
         App.clearQuizSession();
-        App.save();
+        const lastRecord = App.state.records[App.state.records.length - 1];
+        if (lastRecord) App.queuePendingScore(lastRecord);
+        App.saveLocalOnly();
     },
     exitAdminQuiz: function() {
         if (!App.isInstructor) return;
