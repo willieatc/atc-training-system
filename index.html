@@ -1333,7 +1333,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V125-cache-safe-locks-users';
+const APP_BUILD_VERSION = 'V125.3-sync-before-result-login-fix';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -3667,7 +3667,8 @@ const Quiz = {
             this.setSubmitUi(false, '成績尚未成功儲存，請確認網路後再按一次「提交考核答案」。');
             alert('送出答案時發生錯誤，成績尚未確認儲存，請勿關閉頁面。錯誤：' + (err && err.message ? err.message : err));
         }
-    },,};
+    },
+};
 
 
 // V122/V123 compatibility: if older code calls App.renderResultAnswers(), forward to Quiz.
