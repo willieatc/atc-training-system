@@ -1166,6 +1166,52 @@
     outline-offset: 3px;
 }
 
+
+
+/* v125.1：修正題庫編輯游標被拖曳狀態吃掉
+   - 科目排序只讓科目標題列呈現拖曳游標
+   - 題目拖曳只限 ☰ 把手
+   - 題目與選項輸入框強制保留文字游標，可點文字中間定位 */
+.course-sortable-item {
+    cursor: default !important;
+}
+.course-drag-row {
+    cursor: grab;
+}
+.course-drag-row:active {
+    cursor: grabbing;
+}
+.course-content,
+.course-content * {
+    cursor: auto;
+}
+.course-content input[type="text"],
+.course-content input[type="number"],
+.course-content textarea,
+.course-content .input-field.q-t,
+.course-content .input-field.q-o,
+.course-content .input-field.c-title,
+.course-content .input-field.c-url,
+.course-content .input-field.c-pass-score {
+    cursor: text !important;
+    user-select: text;
+    -webkit-user-select: text;
+}
+.q-row,
+.q-row * {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+.q-row .handle {
+    cursor: grab !important;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+.q-row .handle:active {
+    cursor: grabbing !important;
+}
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -2529,7 +2575,13 @@ const Admin = {
             </div>`).join('') : '<div class="editor-empty-state">目前尚無科目，請先點選右上方「新增科目」。</div>';
 
         App.state.courses.forEach((c, ci) => { 
-            new Sortable(document.getElementById(`ql-${ci}`), { handle: '.handle', animation: 150, onEnd: function() { Admin.reindexQuestions(ci); Admin.sync(); } }); 
+            new Sortable(document.getElementById(`ql-${ci}`), {
+                handle: '.handle',
+                filter: 'input, textarea, select, option, button, label, .input-field',
+                preventOnFilter: false,
+                animation: 150,
+                onEnd: function() { Admin.reindexQuestions(ci); Admin.sync(); }
+            }); 
         });
     
         // 新增題目定位：手動加題後自動捲動到新題目並聚焦
@@ -2621,6 +2673,13 @@ const Admin = {
     },
     
     courseDragStart: function(event, index) {
+        const dragTarget = event.target && event.target.closest
+            ? event.target.closest('input, textarea, select, option, button, label, .course-content')
+            : null;
+        if (dragTarget) {
+            event.preventDefault();
+            return false;
+        }
         Admin.sync();
         Admin.dragCourseIndex = index;
         Admin.justDraggedCourse = false;
