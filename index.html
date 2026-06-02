@@ -1319,8 +1319,8 @@
         <div id="answerReviewBody" class="review-modal-body"></div>
         <div class="review-modal-footer" style="justify-content:flex-end;">
             <div style="display:flex; gap:10px; flex-shrink:0;">
-                <button class="btn btn-outline" onclick="Quiz.closeReviewModal()">返回修改</button>
-                <button class="btn btn-primary" onclick="Quiz.confirmReviewedSubmit()">確認送出</button>
+                <button id="reviewBackBtn" class="btn btn-outline" onclick="Quiz.closeReviewModal()">返回修改</button>
+                <button id="reviewConfirmBtn" class="btn btn-primary" onclick="Quiz.confirmReviewedSubmit()">確認送出</button>
             </div>
         </div>
     </div>
@@ -3374,14 +3374,36 @@ const Quiz = {
     recordZeroForRefresh: function() {
         if (!App.quizInProgress || App.isInstructor || !App.user || !App.activeCourse) return;
         if (App.isQuizLocked(App.user, App.activeCourse.id)) return;
+
+        // V125.2：若使用者已按「確認送出」且正在等待雲端同步，
+        // 不再記 0 分；改保留本次實際成績為待同步，避免關閉頁面造成錯誤零分。
+        if (this.submitInProgress && this.pendingSubmitRecord) {
+            const record = this.pendingSubmitRecord;
+            if (!App.state.records.some(r => String(r.recordId || r.id || '') === String(record.recordId))) {
+                App.state.records.push(record);
+            }
+            App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
+            App.queuePendingScore(record);
+            App.quizInProgress = false;
+            App.clearQuizSession();
+            App.saveLocalOnly();
+            return;
+        }
+
         App.state.records.push({
+            recordId: `rec_${Date.now()}_zero_${Math.random().toString(36).slice(2, 8)}`,
             u: App.user,
+            userCode: App.user,
             employeeId: App.employeeId || App.getUserEmployeeId(App.user),
             name: App.getUserName(App.user),
             cid: App.activeCourse.id,
+            courseId: App.activeCourse.id,
             c: App.activeCourse.title,
+            courseTitle: App.activeCourse.title,
             s: 0,
+            score: 0,
             d: DateUtil.format(),
+            date: DateUtil.format(),
             note: '測驗中刷新或離開頁面，自動記錄零分'
         });
         App.lockQuiz(App.user, App.activeCourse.id, App.activeCourse.title);
@@ -3502,11 +3524,32 @@ const Quiz = {
         this.reviewDragReady = true;
     },
     confirmReviewedSubmit: function() {
+        if (this.submitInProgress) return;
         this.closeReviewModal();
         const self = this;
         requestAnimationFrame(function() {
             self.finishSubmit();
         });
+    },
+    setSubmitUi: function(isSubmitting, message) {
+        this.submitInProgress = !!isSubmitting;
+        const btn = document.getElementById('quizSubmitBtn');
+        const status = document.getElementById('quizCompletionStatus');
+        const reviewConfirmBtn = document.getElementById('reviewConfirmBtn');
+        const reviewBackBtn = document.getElementById('reviewBackBtn');
+        if (btn) {
+            btn.disabled = !!isSubmitting;
+            btn.innerText = isSubmitting ? '成績儲存中...' : '提交考核答案';
+        }
+        if (reviewConfirmBtn) {
+            reviewConfirmBtn.disabled = !!isSubmitting;
+            reviewConfirmBtn.innerText = isSubmitting ? '儲存中...' : '確認送出';
+        }
+        if (reviewBackBtn) reviewBackBtn.disabled = !!isSubmitting;
+        if (status && message) {
+            status.innerText = message;
+            status.style.color = isSubmitting ? 'var(--warning-color)' : 'var(--danger-color)';
+        }
     },
     renderResultAnswers: function() {
         const area = document.getElementById('resultAnswerArea');
@@ -3528,7 +3571,8 @@ const Quiz = {
             }).join('')}
         `;
     },
-    finishSubmit: function() {
+    finishSubmit: async function() {
+        if (this.submitInProgress) return;
         try {
             const course = App.activeCourse;
             const questions = course && Array.isArray(course.questions) ? course.questions : [];
@@ -3538,36 +3582,62 @@ const Quiz = {
                 alert('找不到本次測驗資料，請返回首頁後重新進入測驗。');
                 return;
             }
+
             const correctCount = answers.filter((a, i) => questions[i] && a === questions[i].a).length;
             const score = Math.round((correctCount / answers.length) * 100);
             const passScoreNow = App.getPassScore(course);
             const passedNow = score >= passScoreNow;
             const nowText = DateUtil.format();
-            const record = {
-                recordId: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                u: App.user,
-                userCode: App.user,
-                employeeId: App.getUserEmployeeId(App.user),
-                name: App.getUserName(App.user),
-                cid: course.id,
-                courseId: course.id,
-                c: course.title,
-                courseTitle: course.title,
-                s: Number(score),
-                score: Number(score),
-                passScore: Number(passScoreNow),
-                d: nowText,
-                date: nowText,
-                note: ''
-            };
+            const currentKey = `${App.user || ''}__${course.id || ''}__${answers.join(',')}`;
+
+            if (!this.pendingSubmitRecord || this.pendingSubmitKey !== currentKey) {
+                this.pendingSubmitKey = currentKey;
+                this.pendingSubmitRecord = {
+                    recordId: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                    u: App.user,
+                    userCode: App.user,
+                    employeeId: App.getUserEmployeeId(App.user),
+                    name: App.getUserName(App.user),
+                    cid: course.id,
+                    courseId: course.id,
+                    c: course.title,
+                    courseTitle: course.title,
+                    s: Number(score),
+                    score: Number(score),
+                    passScore: Number(passScoreNow),
+                    d: nowText,
+                    date: nowText,
+                    note: ''
+                };
+            }
+            const record = this.pendingSubmitRecord;
+
             if (!App.isInstructor) {
-                App.state.records.push(record);
+                this.setSubmitUi(true, '成績儲存中，請勿關閉視窗或重新整理頁面...');
+                const syncResult = await Backend.submitScore(record);
+                if (!(syncResult && syncResult.ok)) {
+                    const errText = syncResult && syncResult.error ? `\n${syncResult.error}` : '';
+                    this.setSubmitUi(false, '成績尚未成功儲存，請確認網路後再按一次「提交考核答案」。');
+                    alert('成績尚未成功儲存，請勿關閉頁面。請確認網路或 Web App 部署後，再重新送出。' + errText);
+                    return;
+                }
+
+                if (!App.state.records.some(r => String(r.recordId || r.id || '') === String(record.recordId))) {
+                    App.state.records.push(record);
+                }
                 App.lockQuiz(App.user, course.id, course.title);
-                App.queuePendingScore(record);
+                App.removePendingScore(record);
                 if (typeof App.saveLocalOnly === 'function') App.saveLocalOnly();
                 else localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
             }
+
             App.quizInProgress = false;
+            App.clearQuizSession();
+            sessionStorage.removeItem('ATC_QUIZ_ACTIVE');
+            this.submitInProgress = false;
+            this.pendingSubmitRecord = null;
+            this.pendingSubmitKey = '';
+
             App.showSec('sec-res');
             const finalScoreEl = document.getElementById('finalScore');
             if (finalScoreEl) {
@@ -3582,8 +3652,8 @@ const Quiz = {
                 } else {
                     const baseText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
                     resultPassNote.setAttribute('data-result-base', baseText);
-                    resultPassNote.innerText = `${baseText}｜成績同步中，請勿關閉網頁...`;
-                    resultPassNote.style.color = 'var(--warning-color)';
+                    resultPassNote.innerText = `${baseText}｜成績已同步，可以關閉頁面。`;
+                    resultPassNote.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
                 }
             }
             try {
@@ -3592,25 +3662,12 @@ const Quiz = {
             } catch (answerErr) {
                 console.error('renderResultAnswers failed:', answerErr);
             }
-            if (!App.isInstructor) {
-                setTimeout(function() { App.syncScoreInBackground(record, 15000); }, 300);
-            }
         } catch (err) {
             console.error('finishSubmit failed:', err);
-            try {
-                App.quizInProgress = false;
-                App.showSec('sec-res');
-                const note = document.getElementById('resultPassNote');
-                if (note) {
-                    note.innerText = '送出答案時發生錯誤，請通知管理員檢查題目或系統設定。';
-                    note.style.color = 'var(--danger-color)';
-                }
-            } catch (fallbackErr) {
-                console.error('fallback result view failed:', fallbackErr);
-            }
-            alert('送出答案時發生錯誤：' + (err && err.message ? err.message : err));
+            this.setSubmitUi(false, '成績尚未成功儲存，請確認網路後再按一次「提交考核答案」。');
+            alert('送出答案時發生錯誤，成績尚未確認儲存，請勿關閉頁面。錯誤：' + (err && err.message ? err.message : err));
         }
-    },};
+    },,};
 
 
 // V122/V123 compatibility: if older code calls App.renderResultAnswers(), forward to Quiz.
