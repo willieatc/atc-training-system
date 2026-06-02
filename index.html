@@ -1212,6 +1212,59 @@
     cursor: grabbing !important;
 }
 
+
+/* V125.4：成績同步中明顯遮罩提示 */
+.score-sync-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 7000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(5px);
+}
+.score-sync-overlay.active { display: flex; }
+.score-sync-card {
+    width: min(520px, 92vw);
+    background: #161b22;
+    border: 2px solid rgba(255, 157, 0, 0.78);
+    border-radius: 18px;
+    padding: 30px 26px;
+    text-align: center;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.72), 0 0 0 4px rgba(255,157,0,0.12);
+}
+.score-sync-spinner {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    border: 5px solid rgba(255,255,255,0.18);
+    border-top-color: var(--warning-color);
+    animation: scoreSyncSpin 0.9s linear infinite;
+}
+.score-sync-title {
+    color: var(--warning-color);
+    font-size: 24px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    letter-spacing: 0.03em;
+}
+.score-sync-message {
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1.8;
+    font-weight: 700;
+}
+.score-sync-note {
+    margin-top: 14px;
+    color: #8b949e;
+    font-size: 13px;
+    line-height: 1.6;
+}
+@keyframes scoreSyncSpin { to { transform: rotate(360deg); } }
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -1326,6 +1379,15 @@
     </div>
 </div>
 
+<div id="scoreSyncOverlay" class="score-sync-overlay" aria-hidden="true">
+    <div class="score-sync-card" role="alert" aria-live="assertive">
+        <div class="score-sync-spinner" aria-hidden="true"></div>
+        <div class="score-sync-title">成績儲存中</div>
+        <div id="scoreSyncOverlayMessage" class="score-sync-message">正在將成績寫入雲端，請勿關閉視窗或重新整理頁面。</div>
+        <div class="score-sync-note">看到考核結果畫面後，才代表成績已完成同步。</div>
+    </div>
+</div>
+
 <script>
 const PASS_SCORE = 80;
 
@@ -1333,7 +1395,7 @@ const PASS_SCORE = 80;
 // Web App URL 請設定在同層的 config.js。
 // GitHub Pages 目錄需同時放置 index.html 與 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V125.3-sync-before-result-login-fix';
+const APP_BUILD_VERSION = 'V125.4-employee-zero-sync-overlay';
 
 const SHEETS_WEB_APP_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SHEETS_WEB_APP_URL) ? window.ATC_CONFIG.SHEETS_WEB_APP_URL.trim() : "";
 
@@ -3314,6 +3376,7 @@ const Admin = {
 
 const Quiz = {
     init: async function() {
+        this.setScoreSyncOverlay(false);
         const resultArea = document.getElementById('resultAnswerArea');
         if (resultArea) { resultArea.classList.add('hidden'); resultArea.innerHTML = ''; }
         if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id)) return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。");
@@ -3321,10 +3384,11 @@ const Quiz = {
         if (!App.isInstructor) {
             const currentEmployeeId = App.getUserEmployeeId(App.user);
             const input = prompt("請輸入員工編號：", currentEmployeeId || "");
-            if (!input || !input.trim()) return alert("請輸入員工編號後再進入考核。");
-            App.employeeId = input.trim();
+            const employeeIdInput = String(input === null ? '' : input).trim();
+            if (!employeeIdInput) return alert("請輸入員工編號後再進入考核。");
+            App.employeeId = employeeIdInput; // 保留前導 0，不轉成數字。
             const account = App.getUserRecord(App.user) || { employeeId: '', name: '', pw: '' };
-            account.employeeId = App.employeeId;
+            account.employeeId = String(App.employeeId || '');
             account.pw = '';
             App.state.users[App.user] = account;
             const ok = await App.syncUsersOnly('員工編號已同步完成', '員工編號同步失敗，雲端資料未變更。請確認 Web App 已重新部署。');
@@ -3531,8 +3595,17 @@ const Quiz = {
             self.finishSubmit();
         });
     },
+    setScoreSyncOverlay: function(isSubmitting, message) {
+        const overlay = document.getElementById('scoreSyncOverlay');
+        const msg = document.getElementById('scoreSyncOverlayMessage');
+        if (!overlay) return;
+        if (msg && message) msg.innerText = message;
+        overlay.classList.toggle('active', !!isSubmitting);
+        overlay.setAttribute('aria-hidden', isSubmitting ? 'false' : 'true');
+    },
     setSubmitUi: function(isSubmitting, message) {
         this.submitInProgress = !!isSubmitting;
+        this.setScoreSyncOverlay(!!isSubmitting, message || '正在將成績寫入雲端，請勿關閉視窗或重新整理頁面。');
         const btn = document.getElementById('quizSubmitBtn');
         const status = document.getElementById('quizCompletionStatus');
         const reviewConfirmBtn = document.getElementById('reviewConfirmBtn');
@@ -3596,7 +3669,7 @@ const Quiz = {
                     recordId: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                     u: App.user,
                     userCode: App.user,
-                    employeeId: App.getUserEmployeeId(App.user),
+                    employeeId: String(App.employeeId || App.getUserEmployeeId(App.user) || ''),
                     name: App.getUserName(App.user),
                     cid: course.id,
                     courseId: course.id,
@@ -3635,6 +3708,7 @@ const Quiz = {
             App.clearQuizSession();
             sessionStorage.removeItem('ATC_QUIZ_ACTIVE');
             this.submitInProgress = false;
+            this.setScoreSyncOverlay(false);
             this.pendingSubmitRecord = null;
             this.pendingSubmitKey = '';
 
