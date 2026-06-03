@@ -4,6 +4,6 @@
 // 3. 到 Supabase Project Settings → API 複製 Project URL 與 anon public key
 
 window.ATC_CONFIG = {
-  SUPABASE_URL: "https://你的-project-ref.supabase.co",
-  SUPABASE_ANON_KEY: "請貼上 anon public key"
+  SUPABASE_URL: "https://zsfsxwbfqrywdentyllw.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_kAr9xCL1N3Oy-Nvlzbl3aQ_GQsZ2oJ9"
 };
