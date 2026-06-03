@@ -1746,6 +1746,20 @@ body.question-sort-active .editor-helper {
             font-weight: 700;
         }
 
+    
+        /* V001 patch：教材新增／移除按鈕尺寸與題庫匯出按鈕一致 */
+        .material-row {
+            grid-template-columns: 150px minmax(0, 1fr) auto auto !important;
+        }
+        .material-row .material-action-btn {
+            width: auto !important;
+            min-width: auto !important;
+            min-height: 32px !important;
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+            white-space: nowrap !important;
+        }
+
     </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -3301,8 +3315,8 @@ const Admin = {
             <div class="material-row ${mi === active ? '' : 'is-hidden'}" data-material-index="${mi}" data-material-id="${Admin.esc(m.id || `${course && course.id || 'course'}_mat_${mi + 1}`)}">
                 <select class="select-field material-editor-select" onchange="Admin.selectEditorMaterial(this)" aria-label="選擇要編輯的教材">${options}</select>
                 <input type="text" class="input-field m-url" value="${Admin.esc(m.url || '')}" placeholder="可貼簡報、YouTube、Google Drive、mp4 或 iframe 嵌入碼">
-                <button class="btn btn-danger btn-sm material-action-btn" onclick="Admin.delSelectedMaterial(${ci}, this)">移除教材</button>
                 <button class="btn btn-primary btn-sm material-action-btn" onclick="Admin.addMaterial(${ci})">新增教材</button>
+                <button class="btn btn-danger btn-sm material-action-btn" onclick="Admin.delSelectedMaterial(${ci}, this)">移除教材</button>
                 <input type="hidden" class="m-title" value="${Admin.esc(m.title || `教材 ${mi + 1}`)}">
             </div>`).join('');
         return `
