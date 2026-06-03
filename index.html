@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- ATC_V001_CONFIRMED_SCORE_STATUS_FIX_20260603 -->
 <html lang="zh-TW">
 <head>
     <!-- ATC 工作相關學習網 V001 / Supabase database edition -->
@@ -1760,6 +1761,88 @@ body.question-sort-active .editor-helper {
             white-space: nowrap !important;
         }
 
+    
+        /* V001 patch：逐題紀錄按鈕改為與匯出成績不同的綠色 */
+        .btn-answer-export-green {
+            background: #4f9f7a !important;
+            color: white !important;
+            border-color: rgba(79,159,122,0.42) !important;
+        }
+        .btn-answer-export-green:hover {
+            filter: brightness(1.07);
+        }
+
+    
+        /* V001 patch：Supabase 連線狀態提示底色更透明 */
+        #cloudStatus,
+        #supabaseStatus,
+        .cloud-status,
+        .supabase-status,
+        .backend-status,
+        [id*="Status"],
+        [class*="status"] {
+            background-color: rgba(13, 17, 23, 0.38) !important;
+        }
+        #cloudStatus,
+        #supabaseStatus,
+        .cloud-status,
+        .supabase-status,
+        .backend-status {
+            backdrop-filter: blur(2px);
+        }
+
+    
+        /* V001 patch fix：強制逐題紀錄按鈕為另一種綠色 */
+        .btn-answer-export-green {
+            background: #4f9f7a !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(79,159,122,0.46) !important;
+        }
+        .btn-answer-export-green:hover {
+            filter: brightness(1.07);
+        }
+
+    
+        /* V001 final visual fix：逐題紀錄按鈕與 Supabase 狀態提示 */
+        .btn-answer-export-green,
+        .header-actions button[onclick*="exportAnswerDetails"] {
+            background: #4f9f7a !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(79,159,122,0.46) !important;
+        }
+        #cloudStatus,
+        #adminGsStatus {
+            background: rgba(13,17,23,0.32) !important;
+            border: 1px solid rgba(139,148,158,0.18) !important;
+            border-radius: 999px !important;
+            padding: 4px 10px !important;
+            box-shadow: none !important;
+        }
+
+    
+        /* V001 direct fix：成績逐題紀錄按鈕與 Supabase 狀態提示 */
+        .btn-detail-export-green {
+            background: #4f9f7a !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(79,159,122,0.46) !important;
+        }
+        .btn-detail-export-green:hover {
+            filter: brightness(1.07);
+        }
+        #adminGsStatus {
+            background: rgba(13, 17, 23, 0.30) !important;
+            border: 1px solid rgba(139,148,158,0.18) !important;
+            box-shadow: none !important;
+            backdrop-filter: blur(2px);
+        }
+        #cloudStatus {
+            background: rgba(13, 17, 23, 0.30) !important;
+            border: 1px solid rgba(139,148,158,0.18) !important;
+            border-radius: 999px !important;
+            padding: 4px 10px !important;
+            box-shadow: none !important;
+        }
+
     </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -1771,7 +1854,7 @@ body.question-sort-active .editor-helper {
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h1 style="margin-bottom:6px;">ATC 訓練管理系統</h1>
                     <div style="color:#ffffff; font-size:16px; font-weight:900; letter-spacing:0.5px; margin-bottom:6px; text-shadow:0 2px 4px rgba(0,0,0,0.72), 0 0 18px rgba(0,0,0,0.55), 0 0 2px rgba(255,255,255,0.35);">RCTP 臺北機場管制臺</div>
-                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px;">本機測試模式：尚未連線 Supabase</div>
+                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px; background:rgba(13,17,23,0.30); border:1px solid rgba(139,148,158,0.18); border-radius:999px; padding:4px 10px;">本機測試模式：尚未連線 Supabase</div>
                     <span class="badge-instructor hidden">管理員模式</span>
                 </div>
                 <div style="background:#161b22; padding:30px; border-radius:12px; border:1px solid var(--border-color);">
@@ -3937,8 +4020,10 @@ const Admin = {
                 el.style.padding = '10px 12px';
                 el.style.borderRadius = '10px';
                 el.style.fontWeight = '700';
-                el.style.background = 'rgba(255,255,255,0.94)';
-                el.style.border = '1px solid rgba(0,0,0,0.08)';
+                el.style.background = 'rgba(13, 17, 23, 0.30)';
+                el.style.border = '1px solid rgba(139,148,158,0.18)';
+                el.style.backdropFilter = 'blur(2px)';
+                el.style.boxShadow = 'none';el.style.backdropFilter = 'blur(2px)';
                 const firstCard = sec.querySelector('.card');
                 if (firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(el, firstCard.nextSibling);
                 else sec.prepend(el);
@@ -4599,9 +4684,9 @@ const Admin = {
                 <h3>🔍 測驗成績查詢</h3>
                 <div class="header-actions">
                     <button class="btn btn-success btn-sm" onclick="Admin.exportScoreRecords()">📤 匯出成績</button>
+                    <button class="btn btn-detail-export-green btn-sm" onclick="Admin.exportAnswerDetails()">📤 匯出逐題紀錄</button>
                     <button class="btn btn-primary btn-sm" onclick="document.getElementById('legacyScoreImportFile').click()">📥 匯入舊成績</button>
                     <input type="file" id="legacyScoreImportFile" class="hidden" accept=".csv" onchange="Admin.importLegacyScores(event)">
-                    <button class="btn btn-answer-export btn-sm" onclick="Admin.exportAnswerDetails()">匯出逐題紀錄</button>
                 </div>
             </div>
             <div class="filter-group score-filter-compact">
@@ -5172,5 +5257,6 @@ if (App.recoveredInterruptedQuiz) {
     }, 200);
 }
 </script>
+
 </body>
 </html>
