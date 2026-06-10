@@ -1,5 +1,16 @@
 <!DOCTYPE html>
-<!-- ATC_V001_CONFIRMED_SCORE_STATUS_FIX_20260603 -->
+<!-- ATC_V001_HIDE_QUESTION_TYPE_HINTS -->
+<!-- ATC_V001_ACCOUNT_BATCH_DELETE_SCORE_TOOLBAR_SWAP -->
+<!-- ATC_V001_SCORE_TABLE_COMPACT -->
+<!-- ATC_V001_NUMBER_INPUT_NO_SPINNER -->
+<!-- ATC_V001_NUMBER_SPINNER_TRANSPARENT -->
+<!-- ATC_V001_SCORE_HEADER_NOWRAP -->
+<!-- ATC_V001_SCORE_ROW_ACTIONS_BATCH_ONLY -->
+<!-- ATC_V001_MANUAL_SCORE_SHORT_ONLY_EMPLOYEE_TEXT_EXPORT -->
+<!-- ATC_V001_MANUAL_SCORE_PER_SHORT_ANSWER_NO_SQL -->
+<!-- ATC_V001_FINAL_SCORE_EDIT_FUNCTION -->
+<!-- ATC_V001_QUIZ_POINTS_DISPLAY_MANUAL_SCORE_NOTE -->
+<!-- ATC_V001_POINTS_ALL_TYPES_AUTO_REMAINDER -->
 <html lang="zh-TW">
 <head>
     <!-- ATC 工作相關學習網 V001 / Supabase database edition -->
@@ -1762,85 +1773,400 @@ body.question-sort-active .editor-helper {
         }
 
     
-        /* V001 patch：逐題紀錄按鈕改為與匯出成績不同的綠色 */
-        .btn-answer-export-green {
-            background: #4f9f7a !important;
-            color: white !important;
-            border-color: rgba(79,159,122,0.42) !important;
+        /* V001 patch：簡答題與教材新增切換 */
+        .q-type-select {
+            min-width: 96px;
+            height: 30px;
+            margin: 0;
+            padding: 4px 8px;
+            background: #0d1117;
+            border: 1px solid rgba(88,166,255,0.35);
+            color: var(--text-color);
+            border-radius: 999px;
+            font-size: 12px;
         }
-        .btn-answer-export-green:hover {
-            filter: brightness(1.07);
+        .q-row.q-type-short .q-options-grid,
+        .q-row.q-type-short .q-toggle-options {
+            display: none !important;
+        }
+        .q-short-note {
+            margin-top: 8px;
+            color: #8b949e;
+            font-size: 12px;
+            display: none;
+        }
+        .q-row.q-type-short .q-short-note {
+            display: block;
+        }
+        .quiz-short-answer {
+            width: 100%;
+            min-height: 110px;
+            resize: vertical;
+            margin-top: 12px;
+            background: #0d1117;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .manual-score-badge {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(210,153,52,0.14);
+            border: 1px solid rgba(210,153,52,0.32);
+            color: var(--warning-color);
+            font-size: 12px;
+            font-weight: 700;
         }
 
     
-        /* V001 patch：Supabase 連線狀態提示底色更透明 */
-        #cloudStatus,
-        #supabaseStatus,
-        .cloud-status,
-        .supabase-status,
-        .backend-status,
-        [id*="Status"],
-        [class*="status"] {
-            background-color: rgba(13, 17, 23, 0.38) !important;
+        /* V001 patch：是非題 */
+        .q-row.q-type-truefalse .q-options-grid {
+            display: grid !important;
         }
-        #cloudStatus,
-        #supabaseStatus,
-        .cloud-status,
-        .supabase-status,
-        .backend-status {
-            backdrop-filter: blur(2px);
+        .q-row.q-type-truefalse .q-options-grid .option-row:nth-child(n+3) {
+            display: none !important;
         }
-
-    
-        /* V001 patch fix：強制逐題紀錄按鈕為另一種綠色 */
-        .btn-answer-export-green {
-            background: #4f9f7a !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(79,159,122,0.46) !important;
+        .q-row.q-type-truefalse .q-toggle-options {
+            display: none !important;
         }
-        .btn-answer-export-green:hover {
-            filter: brightness(1.07);
+        .q-truefalse-note {
+            margin-top: 8px;
+            color: #8b949e;
+            font-size: 12px;
+            display: none;
+        }
+        .q-row.q-type-truefalse .q-truefalse-note {
+            display: block;
         }
 
     
-        /* V001 final visual fix：逐題紀錄按鈕與 Supabase 狀態提示 */
-        .btn-answer-export-green,
-        .header-actions button[onclick*="exportAnswerDetails"] {
-            background: #4f9f7a !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(79,159,122,0.46) !important;
+        /* V001 patch：是非題顯示一致、簡答配分、手動加題移至下方 */
+        .tf-symbol {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1;
+            font-family: Arial, "Microsoft JhengHei", sans-serif;
+            vertical-align: middle;
         }
-        #cloudStatus,
-        #adminGsStatus {
-            background: rgba(13,17,23,0.32) !important;
-            border: 1px solid rgba(139,148,158,0.18) !important;
-            border-radius: 999px !important;
-            padding: 4px 10px !important;
+        .tf-text {
+            display: inline-flex;
+            align-items: center;
+            min-width: 24px;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .q-score-field {
+            width: 84px;
+            height: 30px;
+            padding: 4px 8px;
+            background: #0d1117;
+            border: 1px solid rgba(210,153,52,0.38);
+            color: var(--text-color);
+            border-radius: 999px;
+            font-size: 12px;
+        }
+        .q-score-field-wrap {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            color: #8b949e;
+            font-size: 12px;
+        }
+        .q-row .q-score-field-wrap {
+            display: inline-flex;
+        }
+        .question-bottom-actions {
+            display: flex;
+            justify-content: flex-start;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(139,148,158,0.24);
+        }
+
+    
+        /* V001 patch：測驗頁顯示配分、是非題格式一致、暫計分數提示 */
+        .quiz-points-badge {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(88,166,255,0.12);
+            border: 1px solid rgba(88,166,255,0.28);
+            color: var(--accent-color);
+            font-size: 12px;
+            font-weight: 800;
+            vertical-align: middle;
+        }
+        .quiz-option-btn .quiz-option-text {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .quiz-option-btn .tf-symbol {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 24px !important;
+            height: 24px !important;
+            min-width: 24px !important;
+            font-size: 18px !important;
+            font-weight: 900 !important;
+            line-height: 1 !important;
+            font-family: Arial, "Microsoft JhengHei", sans-serif !important;
+            vertical-align: middle;
+        }
+        .quiz-option-btn .tf-text {
+            display: inline-flex !important;
+            align-items: center;
+            min-width: 24px !important;
+            font-size: 15px !important;
+            font-weight: 800 !important;
+            line-height: 1.2 !important;
+            vertical-align: middle;
+        }
+
+    
+        /* V001 patch：成績列操作精簡與批次工具列水平排列 */
+        #scoreTableArea .batch-toolbar {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        #scoreTableArea .batch-actions {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        #scoreTableArea .batch-actions label {
+            display: inline-flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            white-space: nowrap;
+        }
+        .btn-pending-score-disabled {
+            opacity: 0.48;
+            cursor: not-allowed !important;
+            filter: grayscale(0.35);
+        }
+
+    
+        /* V001 patch：成績表格表頭不換行 */
+        #scoreTableArea table th {
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
+            min-width: max-content;
+        }
+        #scoreTableArea table td {
+            white-space: nowrap;
+        }
+        #scoreTableArea table {
+            table-layout: auto !important;
+            min-width: 0;
+        }
+        #scoreTableArea {
+            overflow-x: auto;
+        }
+
+    
+        /* V001 patch：配分與及格分數數字箭頭去背景 */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            background: transparent !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        input[type="number"] {
+            background-clip: padding-box;
+        }
+        .q-score-field::-webkit-inner-spin-button,
+        .q-score-field::-webkit-outer-spin-button,
+        .pass-score-input::-webkit-inner-spin-button,
+        .pass-score-input::-webkit-outer-spin-button {
+            background: transparent !important;
+            background-color: transparent !important;
             box-shadow: none !important;
         }
 
     
-        /* V001 direct fix：成績逐題紀錄按鈕與 Supabase 狀態提示 */
-        .btn-detail-export-green {
-            background: #4f9f7a !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(79,159,122,0.46) !important;
+        /* V001 patch：配分與及格分數改為無箭頭輸入框 */
+        .q-score-field,
+        .pass-score-input,
+        input.no-spinner {
+            appearance: textfield !important;
+            -moz-appearance: textfield !important;
         }
-        .btn-detail-export-green:hover {
-            filter: brightness(1.07);
-        }
-        #adminGsStatus {
-            background: rgba(13, 17, 23, 0.30) !important;
-            border: 1px solid rgba(139,148,158,0.18) !important;
+        .q-score-field::-webkit-inner-spin-button,
+        .q-score-field::-webkit-outer-spin-button,
+        .pass-score-input::-webkit-inner-spin-button,
+        .pass-score-input::-webkit-outer-spin-button,
+        input.no-spinner::-webkit-inner-spin-button,
+        input.no-spinner::-webkit-outer-spin-button {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            margin: 0 !important;
+            display: none !important;
+            opacity: 0 !important;
+            background: transparent !important;
+            background-color: transparent !important;
             box-shadow: none !important;
-            backdrop-filter: blur(2px);
         }
-        #cloudStatus {
-            background: rgba(13, 17, 23, 0.30) !important;
-            border: 1px solid rgba(139,148,158,0.18) !important;
-            border-radius: 999px !important;
-            padding: 4px 10px !important;
-            box-shadow: none !important;
+
+    
+        /* V001 patch：測驗成績查詢欄位緊密化 */
+        #scoreTableArea {
+            overflow-x: auto;
+        }
+        #scoreTableArea table {
+            table-layout: auto !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            font-size: 12.5px;
+        }
+        #scoreTableArea table th,
+        #scoreTableArea table td {
+            padding: 7px 8px !important;
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            line-height: 1.25;
+        }
+        #scoreTableArea table th:first-child,
+        #scoreTableArea table td:first-child {
+            width: 36px !important;
+            min-width: 36px !important;
+            max-width: 36px !important;
+            padding-left: 6px !important;
+            padding-right: 6px !important;
+            text-align: center !important;
+        }
+        #scoreTableArea table th:nth-child(2),
+        #scoreTableArea table td:nth-child(2) {
+            max-width: 72px;
+        }
+        #scoreTableArea table th:nth-child(3),
+        #scoreTableArea table td:nth-child(3) {
+            max-width: 92px;
+        }
+        #scoreTableArea table th:nth-child(4),
+        #scoreTableArea table td:nth-child(4) {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #scoreTableArea table th:nth-child(5),
+        #scoreTableArea table td:nth-child(5),
+        #scoreTableArea table th:nth-child(6),
+        #scoreTableArea table td:nth-child(6) {
+            max-width: 78px;
+            text-align: center;
+        }
+        #scoreTableArea table th:nth-child(7),
+        #scoreTableArea table td:nth-child(7) {
+            max-width: 130px;
+            font-size: 12px;
+        }
+        #scoreTableArea table th:nth-child(8),
+        #scoreTableArea table td:nth-child(8) {
+            max-width: 86px;
+            text-align: center;
+        }
+        #scoreTableArea table th:nth-child(9),
+        #scoreTableArea table td:nth-child(9) {
+            max-width: 76px;
+            text-align: center;
+        }
+        #scoreTableArea .btn-sm {
+            padding: 5px 8px !important;
+            font-size: 12px !important;
+            min-height: 28px;
+        }
+        #scoreTableArea .batch-toolbar {
+            gap: 8px !important;
+        }
+        #scoreTableArea .batch-actions {
+            gap: 6px !important;
+        }
+        #scoreTableArea .batch-toolbar > div:first-child {
+            font-size: 12.5px !important;
+            white-space: nowrap;
+        }
+        @media (max-width: 980px) {
+            #scoreTableArea table {
+                font-size: 12px;
+            }
+            #scoreTableArea table th,
+            #scoreTableArea table td {
+                padding: 6px 6px !important;
+            }
+            #scoreTableArea table th:nth-child(4),
+            #scoreTableArea table td:nth-child(4) {
+                max-width: 120px;
+            }
+            #scoreTableArea table th:nth-child(7),
+            #scoreTableArea table td:nth-child(7) {
+                max-width: 110px;
+            }
+        }
+
+    
+        /* V001 patch：帳號批次刪除與成績工具列左右互換 */
+        #accountListArea .account-card {
+            grid-template-columns: auto 1fr !important;
+        }
+        #accountListArea .account-actions {
+            display: none !important;
+        }
+        #scoreTableArea .score-toolbar-swapped {
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+        #scoreTableArea .score-toolbar-swapped .batch-actions {
+            order: 1;
+            margin-right: auto;
+        }
+        #scoreTableArea .score-toolbar-swapped .score-count-note {
+            order: 2;
+            margin-left: auto;
+            text-align: right;
+            white-space: nowrap;
+        }
+        @media (max-width: 900px) {
+            #scoreTableArea .score-toolbar-swapped .score-count-note {
+                text-align: left;
+                margin-left: 0;
+            }
+        }
+
+    
+        /* V001 patch：不顯示簡答題／是非題提示文字 */
+        .q-short-note,
+        .q-truefalse-note {
+            display: none !important;
+        }
+        .q-row.q-type-short .q-short-note,
+        .q-row.q-type-truefalse .q-truefalse-note {
+            display: none !important;
         }
 
     </style>
@@ -1854,7 +2180,7 @@ body.question-sort-active .editor-helper {
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h1 style="margin-bottom:6px;">ATC 訓練管理系統</h1>
                     <div style="color:#ffffff; font-size:16px; font-weight:900; letter-spacing:0.5px; margin-bottom:6px; text-shadow:0 2px 4px rgba(0,0,0,0.72), 0 0 18px rgba(0,0,0,0.55), 0 0 2px rgba(255,255,255,0.35);">RCTP 臺北機場管制臺</div>
-                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px; background:rgba(13,17,23,0.30); border:1px solid rgba(139,148,158,0.18); border-radius:999px; padding:4px 10px;">本機測試模式：尚未連線 Supabase</div>
+                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px;">本機測試模式：尚未連線 Supabase</div>
                     <span class="badge-instructor hidden">管理員模式</span>
                 </div>
                 <div style="background:#161b22; padding:30px; border-radius:12px; border:1px solid var(--border-color);">
@@ -2082,8 +2408,8 @@ const Backend = {
                 user_answer_index: Number.isFinite(Number(item.userAnswerIndex)) ? Number(item.userAnswerIndex) : null,
                 user_answer_text: String(item.userAnswerText || ''),
                 correct_answer_index: Number.isFinite(Number(item.correctAnswerIndex)) ? Number(item.correctAnswerIndex) : null,
-                correct_answer_text: String(item.correctAnswerText || ''),
-                is_correct: !!item.isCorrect,
+                correct_answer_text: item.needsManualScore || item.manualScore !== undefined ? `人工給分：${item.manualScore === undefined || item.manualScore === null || item.manualScore === '' ? '待評' : item.manualScore} / 配分 ${item.points === undefined || item.points === null || item.points === '' ? '' : item.points}` : String(item.correctAnswerText || ''),
+                is_correct: item.needsManualScore ? false : !!item.isCorrect,
                 submitted_at_text: String(r.d || r.date || '')
             };
         });
@@ -2286,6 +2612,34 @@ const Backend = {
         } catch (err) {
             console.error('submitScore failed:', err);
             this.setStatus('⚠️ 成績寫入 Supabase 失敗', 'var(--danger-color)');
+            return { ok: false, error: String(err && err.message ? err.message : err) };
+        }
+    },
+    updateScoreRecord: async function(record) {
+        if (!this.enabled()) {
+            this.setStatus('⚠️ 尚未設定 Supabase', 'var(--warning-color)');
+            return { ok: false, error: '尚未設定 Supabase' };
+        }
+        try {
+            this.setStatus('最終分數與逐題紀錄寫入 Supabase 中...', 'var(--warning-color)');
+            const client = this.client();
+            const row = this.dbRowFromRecord(record);
+            const { error } = await client.from('atc_quiz_records').upsert(row, { onConflict: 'id' });
+            if (error) throw error;
+
+            const answerRows = this.answerRowsFromRecord(Object.assign({}, record, { recordId: row.id }));
+            if (answerRows.length) {
+                const del = await client.from('atc_quiz_answers').delete().eq('record_id', row.id);
+                if (del.error) throw del.error;
+                const ans = await client.from('atc_quiz_answers').insert(answerRows);
+                if (ans.error) throw ans.error;
+            }
+
+            this.setStatus('最終分數與逐題紀錄已寫入 Supabase', 'var(--success-color)');
+            return { ok: true, data: { ok: true, answerCount: answerRows.length } };
+        } catch (err) {
+            console.error('updateScoreRecord failed:', err);
+            this.setStatus('⚠️ 最終分數寫入 Supabase 失敗', 'var(--danger-color)');
             return { ok: false, error: String(err && err.message ? err.message : err) };
         }
     },
@@ -3392,7 +3746,7 @@ const Admin = {
     },
     renderMaterialRows: function(course, ci) {
         const mats = this.getCourseMaterials(course, true);
-        const active = 0;
+        const active = Math.max(0, Math.min(Number(course && course._activeMaterialIndex) || 0, mats.length - 1));
         const options = mats.map((m, mi) => `<option value="${mi}" ${mi === active ? 'selected' : ''}>${Admin.esc(m.title || `教材 ${mi + 1}`)}</option>`).join('');
         const rows = mats.map((m, mi) => `
             <div class="material-row ${mi === active ? '' : 'is-hidden'}" data-material-index="${mi}" data-material-id="${Admin.esc(m.id || `${course && course.id || 'course'}_mat_${mi + 1}`)}">
@@ -3431,6 +3785,10 @@ const Admin = {
     csvCell: function(v) {
         const s = String(v ?? '');
         return `"${s.replace(/"/g, '""')}"`;
+    },
+    csvTextCell: function(v) {
+        const s = String(v ?? '');
+        return `="${s.replace(/"/g, '""')}"`;
     },
     parseCSV: function(text) {
         const rows = [];
@@ -3568,7 +3926,7 @@ const Admin = {
             ['題目 (Question)', '選項列表 (以半形逗號分隔)', '正確答案索引 (1-4)', '備註說明'],
             ['範例：請在此輸入題目內容', '選項一,選項二,選項三,選項四', '1', '此欄可留空']
         ];
-        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\n');
+        const csv = rows.map((row, rowIndex) => row.map((v, colIndex) => rowIndex > 0 && colIndex === 1 ? Admin.csvTextCell(v) : Admin.csvCell(v)).join(',')).join('\n');
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
         link.setAttribute("download", "題庫匯入範本.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -3596,7 +3954,7 @@ const Admin = {
             ]);
         });
 
-        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\n');
+        const csv = rows.map((row, rowIndex) => row.map((v, colIndex) => rowIndex > 0 && colIndex === 1 ? Admin.csvTextCell(v) : Admin.csvCell(v)).join(',')).join('\n');
         const safeTitle = String(course.title || '題庫')
             .replace(/[\\/:*?"<>|]/g, '_')
             .replace(/\s+/g, '_')
@@ -3649,7 +4007,7 @@ const Admin = {
                             </div>
                             <div>
                                 <label>及格分數</label>
-                                <input type="number" min="0" max="100" class="input-field c-pass-score" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 80}" placeholder="及格分數">
+                                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" min="0" max="100" class="input-field c-pass-score no-spinner" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 80}" placeholder="及格分數">
                             </div>
                             <div class="material-field">
                                 <label>教材清單／教材網址</label>
@@ -3666,15 +4024,20 @@ const Admin = {
                                 <button class="btn btn-question-export btn-sm" onclick="Admin.exportCourseQuestions(${ci})">📤 匯出題庫</button>
                                 <button class="btn btn-question-import btn-sm" onclick="document.getElementById('f-csv-${ci}').click()">📥 匯入題庫</button>
                                 <input type="file" id="f-csv-${ci}" class="hidden" accept=".csv" onchange="Admin.impCSV(event, ${ci})">
-                                <button class="btn btn-primary btn-sm" onclick="Admin.addQ(${ci})">手動加題</button>
                                 <button class="btn btn-danger btn-sm" onclick="Admin.delAllQ(${ci})">刪除所有題目</button>
                             </div>
                         </div>
                         <div class="ql-container" id="ql-${ci}">${c.questions.map((q, qi) => `
-                            <div class="q-row q-options-collapsed">
+                            <div class="q-row q-options-collapsed ${(q.type || 'choice') === 'short' ? 'q-type-short' : ((q.type || 'choice') === 'truefalse' ? 'q-type-truefalse' : 'q-type-choice')}">
                                 <div class="q-row-header">
                                     <span class="q-title-wrap"><button type="button" class="q-sort-handle handle" title="拖曳調整題目順序" aria-label="拖曳調整題目順序">☰</button> <strong class="handle-text">Q${qi+1}</strong></span>
                                     <div class="q-row-actions">
+                                        <select class="q-type q-type-select" title="題型" onchange="Admin.updateQuestionType(this)">
+                                            <option value="choice" ${(q.type || 'choice') === 'choice' || !q.type ? 'selected' : ''}>選擇題</option>
+                                            <option value="truefalse" ${(q.type || 'choice') === 'truefalse' ? 'selected' : ''}>是非題</option>
+                                            <option value="short" ${(q.type || 'choice') === 'short' ? 'selected' : ''}>簡答題</option>
+                                        </select>
+                                        <span class="q-score-field-wrap no-spinner">配分 <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" class="q-score-field q-score no-spinner" value="${q.points === null || q.points === undefined || q.points === '' ? '' : Number(q.points)}" placeholder="自動" title="可留空，由系統計算"></span>
                                         <button type="button" class="btn btn-sm q-toggle-options" title="展開或收合選項" aria-label="展開或收合選項" aria-expanded="false" onclick="Admin.toggleQOptions(this)">▸ 選項</button>
                                         <button type="button" class="btn btn-outline btn-sm q-move-btn" ${qi===0?'disabled':''} title="上移一題" aria-label="上移一題" onclick="Admin.moveQ(${ci}, ${qi}, -1)">▲</button>
                                         <button type="button" class="btn btn-outline btn-sm q-move-btn" ${qi===c.questions.length-1?'disabled':''} title="下移一題" aria-label="下移一題" onclick="Admin.moveQ(${ci}, ${qi}, 1)">▼</button>
@@ -3682,10 +4045,14 @@ const Admin = {
                                     </div>
                                 </div>
                                 <input type="text" class="input-field q-t" value="${Admin.esc(q.q)}" placeholder="請輸入題目內容">
-                                <div class="q-options-grid" hidden style="display:none !important;">
-                                    ${q.o.map((opt, oi) => `<div class="option-row"><span class="option-index">${oi+1}</span><label class="answer-radio-wrap" title="設為答案"><input type="radio" name="r-${c.id}-${qi}" value="${oi}" ${q.a==oi?'checked':''}> 答案</label><input type="text" class="input-field q-o" value="${Admin.esc(opt)}"></div>`).join('')}
+
+                                <div class="q-options-grid" hidden style="${(q.type || 'choice') === 'truefalse' ? '' : 'display:none !important;'}">
+                                    ${((q.type || 'choice') === 'truefalse' ? ['是', '非'] : (Array.isArray(q.o) ? q.o : ["","","",""])).map((opt, oi) => `<div class="option-row"><span class="option-index">${oi+1}</span><label class="answer-radio-wrap" title="設為答案"><input type="radio" name="r-${c.id}-${qi}" value="${oi}" ${q.a==oi?'checked':''}> 答案</label><input type="text" class="input-field q-o" value="${Admin.esc(opt)}" ${(q.type || 'choice') === 'truefalse' ? 'readonly' : ''}></div>`).join('')}
                                 </div>
                             </div>`).join('')}
+                        </div>
+                        <div class="question-bottom-actions">
+                            <button class="btn btn-primary btn-sm" onclick="Admin.addQ(${ci})">手動加題</button>
                         </div>
                     </div>
                 </div>
@@ -3790,11 +4157,23 @@ const Admin = {
                 const passInput = item.querySelector('.c-pass-score');
                 const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
                 target.passScore = Number.isFinite(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 80;
-                target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => ({
-                    q: row.querySelector('.q-t').value,
-                    o: Array.from(row.querySelectorAll('.q-o')).map(o => o.value),
-                    a: parseInt(row.querySelector(`input[type="radio"]:checked`)?.value || 0)
-                }));
+                target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => {
+                    const rawType = row.querySelector('.q-type') ? row.querySelector('.q-type').value : 'choice';
+                    const qType = rawType === 'short' ? 'short' : (rawType === 'truefalse' ? 'truefalse' : 'choice');
+                    const options = qType === 'truefalse' ? ['是', '非'] : Array.from(row.querySelectorAll('.q-o')).map(o => o.value);
+                    return {
+                        type: qType,
+                        q: row.querySelector('.q-t').value,
+                        o: options,
+                        a: qType === 'short' ? null : parseInt(row.querySelector(`input[type="radio"]:checked`)?.value || 0),
+                        points: (() => {
+                            const raw = row.querySelector('.q-score') ? String(row.querySelector('.q-score').value || '').trim() : '';
+                            if (!raw) return null;
+                            const n = parseFloat(raw);
+                            return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null;
+                        })()
+                    };
+                });
             }
         });
     },
@@ -3804,8 +4183,22 @@ const Admin = {
         if (!course) return;
         if (!Array.isArray(course.materials)) course.materials = Admin.getCourseMaterials(course, true);
         course.materials.push({ id: `${course.id || Date.now()}_mat_${Date.now()}`, title: `教材 ${course.materials.length + 1}`, url: '', type: 'auto' });
+        const newIndex = course.materials.length - 1;
+        course._activeMaterialIndex = newIndex;
         App.saveLocalOnly();
         Admin.renderEditor();
+        setTimeout(() => {
+            const editor = document.querySelector(`.material-list-editor[data-course-index="${ci}"]`);
+            if (!editor) return;
+            const sel = editor.querySelector('.material-editor-select');
+            if (sel) {
+                sel.value = String(newIndex);
+                Admin.selectEditorMaterial(sel);
+            }
+            const row = editor.querySelector(`.material-row[data-material-index="${newIndex}"]`);
+            const input = row ? row.querySelector('.m-url') : null;
+            if (input) input.focus();
+        }, 0);
         Backend.setStatus('已新增教材，請貼上網址後按「儲存變更」寫入 Supabase', 'var(--warning-color)');
     },
     delMaterial: function(ci, mi) {
@@ -3832,11 +4225,69 @@ const Admin = {
             Backend.setStatus('已新增科目，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
         }
     },
+    updateQuestionType: function(select) {
+        const row = select ? select.closest('.q-row') : null;
+        if (!row) return;
+        const type = select.value;
+        const isShort = type === 'short';
+        const isTrueFalse = type === 'truefalse';
+        row.classList.toggle('q-type-short', isShort);
+        row.classList.toggle('q-type-truefalse', isTrueFalse);
+        row.classList.toggle('q-type-choice', !isShort && !isTrueFalse);
+        const grid = row.querySelector('.q-options-grid');
+        const toggle = row.querySelector('.q-toggle-options');
+        if (isShort) {
+            row.classList.add('q-options-collapsed');
+            if (grid) {
+                grid.hidden = true;
+                grid.setAttribute('style', 'display:none !important;');
+            }
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.innerText = '▸ 選項';
+            }
+        } else if (isTrueFalse) {
+            row.classList.remove('q-options-collapsed');
+            if (grid) {
+                grid.hidden = false;
+                grid.setAttribute('style', '');
+                const optionInputs = grid.querySelectorAll('.q-o');
+                if (optionInputs[0]) { optionInputs[0].value = '是'; optionInputs[0].readOnly = true; }
+                if (optionInputs[1]) { optionInputs[1].value = '非'; optionInputs[1].readOnly = true; }
+                optionInputs.forEach((input, idx) => {
+                    const optionRow = input.closest('.option-row');
+                    if (optionRow) optionRow.style.display = idx < 2 ? '' : 'none';
+                });
+                const radios = grid.querySelectorAll('input[type="radio"]');
+                if (![...radios].some(r => r.checked) && radios[0]) radios[0].checked = true;
+            }
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.innerText = '▾ 選項';
+            }
+        } else {
+            if (grid) {
+                grid.hidden = true;
+                grid.setAttribute('style', 'display:none !important;');
+                grid.querySelectorAll('.q-o').forEach((input, idx) => {
+                    input.readOnly = false;
+                    const optionRow = input.closest('.option-row');
+                    if (optionRow) optionRow.style.display = '';
+                    if ((input.value === '是' || input.value === '非') && idx < 2) input.value = '';
+                });
+            }
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.innerText = '▸ 選項';
+            }
+        }
+        Backend.setStatus('題型已更新，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
+    },
     addQ: function(ci) {
         Admin.sync();
         const course = App.state.courses[ci];
         if (!course) return;
-        course.questions.push({q:"", o:["","","",""], a:0});
+        course.questions.push({type:"choice", q:"", o:["","","",""], a:0});
         App.lastOpenedCourseId = course.id;
         App.pendingScrollQuestion = { courseIndex: ci, questionIndex: course.questions.length - 1 };
         Admin.renderEditor();
@@ -4020,10 +4471,8 @@ const Admin = {
                 el.style.padding = '10px 12px';
                 el.style.borderRadius = '10px';
                 el.style.fontWeight = '700';
-                el.style.background = 'rgba(13, 17, 23, 0.30)';
-                el.style.border = '1px solid rgba(139,148,158,0.18)';
-                el.style.backdropFilter = 'blur(2px)';
-                el.style.boxShadow = 'none';el.style.backdropFilter = 'blur(2px)';
+                el.style.background = 'rgba(255,255,255,0.94)';
+                el.style.border = '1px solid rgba(0,0,0,0.08)';
                 const firstCard = sec.querySelector('.card');
                 if (firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(el, firstCard.nextSibling);
                 else sec.prepend(el);
@@ -4151,9 +4600,7 @@ const Admin = {
                     <span class="account-meta-inline account-employee">員工編號：${Admin.esc(employeeText)}</span>
                     <span class="account-meta-inline">成績紀錄：${recordCount} 筆</span>
                 </div>
-                <div class="account-actions">
-                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${safeU}')">刪除帳號</button>
-                </div>
+
             </div>`;
         }).join('') : '<div style="background:#1c2128; border:1px dashed var(--border-color); padding:25px; border-radius:10px; text-align:center; color:#8b949e;">目前尚無帳號資料</div>';
 
@@ -4171,7 +4618,7 @@ const Admin = {
                     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e; white-space:nowrap;">
                         <input type="checkbox" class="row-check" id="selectVisibleAccounts" onchange="Admin.toggleVisibleUsers(this.checked)"> 選取目前顯示帳號
                     </label>
-                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteUsers()">批次刪除帳號</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteUsers()">刪除帳號</button>
                 </div>
             </div>
             <div id="accountListArea">${listHtml}</div>
@@ -4265,7 +4712,7 @@ const Admin = {
     
     batchUnlockSelected: async function() {
         const checked = Array.from(document.querySelectorAll('#scoreTableArea .score-select:checked'));
-        if (!checked.length) return alert('請先勾選要解鎖的測驗紀錄。');
+        if (!checked.length) return alert('請先勾選要解鎖測驗的紀錄。');
 
         const items = [];
         const seen = {};
@@ -4284,7 +4731,7 @@ const Admin = {
         });
 
         if (!items.length) return alert('所選紀錄缺少學員或科目資訊，無法批次解鎖。');
-        if (!confirm(`確定批次解鎖 ${items.length} 筆測驗？解鎖後學員可重新測驗。`)) return;
+        if (!confirm(`確定解鎖 ${items.length} 筆測驗？解鎖後學員可重新測驗。`)) return;
 
         const ok = await Admin.withButtonStatus(async () => {
             return await App.batchUnlockQuiz(items);
@@ -4513,6 +4960,81 @@ const Admin = {
     },
     
     
+    getManualScoreInfo: function(record) {
+        const details = Array.isArray(record && record.answerDetails) ? record.answerDetails : [];
+        const shortItems = details.filter(ans => ans && (ans.questionType === 'short' || ans.needsManualScore));
+        const existingManualSum = shortItems.reduce((sum, ans) => {
+            const n = Number(ans.manualScore);
+            return sum + (Number.isFinite(n) ? n : 0);
+        }, 0);
+        let autoScore = Number(record && record.autoScore);
+        if (!Number.isFinite(autoScore)) {
+            const currentScore = Number(record && (record.s ?? record.score ?? 0));
+            autoScore = record && record.manualScoreFinalized ? Math.max(0, currentScore - existingManualSum) : (Number.isFinite(currentScore) ? currentScore : 0);
+        }
+        return { details, shortItems, autoScore };
+    },
+    editFinalScore: async function(recordIndex) {
+        const r = App.state.records[recordIndex];
+        if (!r) return alert('找不到此筆測驗紀錄。');
+
+        const info = Admin.getManualScoreInfo(r);
+        const shortItems = info.shortItems;
+        const nowText = DateUtil.format();
+
+        if (shortItems.length) {
+            let manualSum = 0;
+            for (const ans of shortItems) {
+                const maxPointRaw = Number(ans.points);
+                const maxPoint = Number.isFinite(maxPointRaw) ? maxPointRaw : 0;
+                const oldManual = ans.manualScore === undefined || ans.manualScore === null || ans.manualScore === '' ? '' : String(ans.manualScore);
+                const qNo = ans.questionNo || '';
+                const qText = String(ans.questionText || '').slice(0, 80);
+                const userText = String(ans.userAnswerText || '').slice(0, 120);
+                const input = prompt(`Q${qNo} 簡答題給分（配分 ${maxPoint} 分）\n題目：${qText}\n作答：${userText}`, oldManual);
+                if (input === null) return;
+                const manualScore = Number(String(input).trim());
+                if (!Number.isFinite(manualScore) || manualScore < 0 || manualScore > maxPoint) {
+                    return alert(`Q${qNo} 請輸入 0 到 ${maxPoint} 之間的分數。`);
+                }
+                const rounded = Math.round(manualScore * 10) / 10;
+                ans.manualScore = rounded;
+                ans.needsManualScore = false;
+                ans.manualScoredAt = nowText;
+                ans.correctAnswerText = `人工給分：${rounded} / 配分 ${maxPoint}`;
+                ans.isCorrect = rounded >= maxPoint;
+                manualSum += rounded;
+            }
+
+            const finalScore = Math.max(0, Math.min(100, Math.round((info.autoScore + manualSum) * 10) / 10));
+            r.autoScore = Math.round(info.autoScore * 10) / 10;
+            r.manualScoreTotal = Math.round(manualSum * 10) / 10;
+            r.s = finalScore;
+            r.score = finalScore;
+            const noteParts = String(r.note || '').split('；').filter(Boolean).filter(part => !part.includes('人工計分後修正') && !part.includes('簡答題已給分'));
+            noteParts.push(`簡答題已給分 ${r.manualScoreTotal} 分，最終分數 ${finalScore} 分（${nowText}）`);
+            r.note = noteParts.join('；');
+            r.manualReviewRequired = false;
+            r.manualScoreFinalized = true;
+        } else {
+            return alert('此筆紀錄沒有簡答題，不需要修改分數。');
+        }
+
+        const ok = await Admin.withButtonStatus(async () => {
+            const result = await Backend.updateScoreRecord(r);
+            if (!(result && result.ok)) return false;
+            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            return true;
+        }, { syncingText: '寫入中...', successText: '✅ 已寫入', failText: '⚠️ 寫入失敗' });
+
+        if (ok) {
+            Admin.applyScoreFilter();
+            App.updateLoginStatus();
+            alert('已更新最終分數與逐題紀錄。');
+        } else {
+            alert('最終分數／逐題紀錄寫入 Supabase 失敗，請確認連線後再試一次。');
+        }
+    },
     deleteScoreRecord: async function(recordIndex) {
         const r = App.state.records[recordIndex];
         if (!r) return alert('找不到此筆測驗紀錄。');
@@ -4634,7 +5156,7 @@ const Admin = {
         if (!items.length) return alert('目前篩選條件下沒有可匯出的測驗成績。');
         const rows = [[
             '代字', '員工編號', '姓名', '測驗科目', '總分', '及格分數', '考核日期',
-            '題號', '題目', '選項', '作答序號', '作答內容', '正解序號', '正解內容', '是否正確'
+            '題號', '題型', '題目', '題目配分', '選項', '作答序號', '作答內容', '正解序號', '正解內容', '是否正確', '人工給分', '人工計分狀態'
         ]];
         let answerCount = 0;
         items.forEach(item => {
@@ -4653,13 +5175,17 @@ const Admin = {
                     String(passScore),
                     DateUtil.format(r.d),
                     String(ans.questionNo || ''),
+                    ans.questionType === 'short' ? '簡答題' : (ans.questionType === 'truefalse' ? '是非題' : '選擇題'),
                     ans.questionText || '',
+                    ans.points === undefined || ans.points === null || ans.points === '' ? '' : String(ans.points),
                     Array.isArray(ans.options) ? ans.options.map((o, i) => `(${i + 1}) ${o}`).join(' / ') : '',
                     Number.isFinite(Number(ans.userAnswerIndex)) ? String(Number(ans.userAnswerIndex) + 1) : '',
                     ans.userAnswerText || '',
                     Number.isFinite(Number(ans.correctAnswerIndex)) ? String(Number(ans.correctAnswerIndex) + 1) : '',
                     ans.correctAnswerText || '',
-                    ans.isCorrect ? '正確' : '錯誤'
+                    ans.needsManualScore ? '人工計分' : (ans.isCorrect ? '正確' : '錯誤'),
+                    ans.manualScore === undefined || ans.manualScore === null || ans.manualScore === '' ? '' : String(ans.manualScore),
+                    ans.needsManualScore ? '待人工計分' : (ans.manualScore !== undefined && ans.manualScore !== null && ans.manualScore !== '' ? '已人工計分' : '')
                 ]);
             });
         });
@@ -4684,9 +5210,9 @@ const Admin = {
                 <h3>🔍 測驗成績查詢</h3>
                 <div class="header-actions">
                     <button class="btn btn-success btn-sm" onclick="Admin.exportScoreRecords()">📤 匯出成績</button>
-                    <button class="btn btn-detail-export-green btn-sm" onclick="Admin.exportAnswerDetails()">📤 匯出逐題紀錄</button>
                     <button class="btn btn-primary btn-sm" onclick="document.getElementById('legacyScoreImportFile').click()">📥 匯入舊成績</button>
                     <input type="file" id="legacyScoreImportFile" class="hidden" accept=".csv" onchange="Admin.importLegacyScores(event)">
+                    <button class="btn btn-answer-export btn-sm" onclick="Admin.exportAnswerDetails()">匯出逐題紀錄</button>
                 </div>
             </div>
             <div class="filter-group score-filter-compact">
@@ -4708,20 +5234,19 @@ const Admin = {
         const filtered = this.getFilteredScoreItems();
 
         document.getElementById('scoreTableArea').innerHTML = `
-            <div class="batch-toolbar">
-                <div style="font-size:13px; color:#8b949e;">目前顯示 ${filtered.length} 筆測驗紀錄｜匯出將依目前篩選結果產生檔案</div>
+            <div class="batch-toolbar score-toolbar-swapped">
                 <div class="batch-actions">
-                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e;">
+                    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b949e; white-space:nowrap;">
                         <input type="checkbox" class="row-check" id="selectVisibleScores" onchange="Admin.toggleVisibleScoreRecords(this.checked)"> 選取目前顯示紀錄
                     </label>
-                    <button class="btn btn-warning btn-sm" onclick="Admin.batchUnlockSelected()">批次解鎖</button>
-                    <button class="btn btn-success btn-sm" onclick="Admin.batchRelockSelected()">重新鎖回</button>
-                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords()">批次刪除紀錄</button>
+                    <button class="btn btn-warning btn-sm" onclick="Admin.batchUnlockSelected()">解鎖測驗</button>
+                    <button class="btn btn-danger btn-sm" onclick="Admin.batchDeleteScoreRecords()">刪除紀錄</button>
                 </div>
+                <div class="score-count-note" style="font-size:13px; color:#8b949e;">目前顯示 ${filtered.length} 筆測驗紀錄｜匯出將依目前篩選結果產生檔案</div>
             </div>
             <table>
                 <thead>
-                    <tr><th style="width:42px; text-align:center;">選取</th><th>代字</th><th>員工編號</th><th>測驗科目</th><th>分數</th><th>及格狀態</th><th>考核日期</th><th>測驗狀態</th><th>操作</th></tr>
+                    <tr><th style="width:42px; text-align:center; white-space:nowrap;">選取</th><th style="white-space:nowrap;">代字</th><th style="white-space:nowrap;">員工編號</th><th style="white-space:nowrap;">測驗科目</th><th style="white-space:nowrap;">分數</th><th style="white-space:nowrap;">及格狀態</th><th style="white-space:nowrap;">考核日期</th><th style="white-space:nowrap;">測驗狀態</th><th style="white-space:nowrap;">操作</th></tr>
                 </thead>
                 <tbody>
                     ${filtered.map(item => {
@@ -4730,6 +5255,7 @@ const Admin = {
                         const course = App.state.courses.find(c => c.id === r.cid || c.title === r.c);
                         const locked = course ? App.isQuizLocked(r.u, course.id) : false;
                         const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
+                        const hasShortAnswer = Array.isArray(r.answerDetails) && r.answerDetails.some(ans => ans && (ans.questionType === 'short' || ans.needsManualScore || ans.manualScore !== undefined));
                         const safeUser = String(r.u).replace(/'/g, "\'");
                         return `
                         <tr>
@@ -4740,12 +5266,10 @@ const Admin = {
                             <td style="color:${Number(r.s) >= passScore ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight:bold;">${r.s} 分</td>
                             <td>${Number(r.s) >= passScore ? '<span style="color:var(--success-color); font-weight:bold;">及格</span>' : '<span style="color:var(--danger-color); font-weight:bold;">未及格</span>'}</td>
                             <td>${DateUtil.format(r.d)}</td>
-                            <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">🔒 已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">✅ 可測驗</span>'}</td>
+                            <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    ${course && locked ? `<button class="btn btn-warning btn-sm" onclick="Admin.unlockScoreByIndex(${item.idx})">解鎖再測驗</button>` : ''}
-                                    ${course && !locked ? `<button class="btn btn-success btn-sm" onclick="Admin.relockStudentQuiz(${item.idx})">重新鎖回</button>` : ''}
-                                    <button class="btn btn-danger btn-sm" onclick="Admin.deleteScoreRecord(${item.idx})">刪除紀錄</button>
+                                    ${hasShortAnswer ? `<button class="btn btn-primary btn-sm" onclick="Admin.editFinalScore(${item.idx})">待計分</button>` : `<button class="btn btn-outline btn-sm btn-pending-score-disabled" disabled title="此筆沒有簡答題，不需人工計分">待計分</button>`}
                                 </div>
                             </td>
                         </tr>`;
@@ -4792,13 +5316,18 @@ const Quiz = {
             this.setScoreSyncOverlay(true, '正在載入測驗題目，完成後會自動進入測驗。', '測驗準備中', '請稍候，不要重複點擊開始考核。');
         }
         this.ans = new Array(App.activeCourse.questions.length).fill(null);
-        document.getElementById('quizContainer').innerHTML = App.activeCourse.questions.map((q, i) => `
+        document.getElementById('quizContainer').innerHTML = App.activeCourse.questions.map((q, i) => {
+            const qType = (q.type || 'choice') === 'short' ? 'short' : ((q.type || 'choice') === 'truefalse' ? 'truefalse' : 'choice');
+            return `
             <div class="quiz-question-card" style="background:#1c2128; padding:20px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);" id="q-card-${i}">
-                <p class="quiz-question-text"><strong>Q${i+1}：</strong> ${q.q}<span class="unanswered-note hidden">未作答</span></p>
-                <div class="quiz-options-list">
-                    ${q.o.map((opt, oi) => `<button class="btn btn-outline quiz-option-btn" onclick="Quiz.select(${i},${oi},this)"><span class="quiz-option-no">(${oi+1})</span><span class="quiz-option-text">${opt}</span></button>`).join('')}
-                </div>
-            </div>`).join('');
+                <p class="quiz-question-text"><strong>Q${i+1}：</strong> ${q.q}${qType === 'short' ? '<span class="manual-score-badge">簡答題｜人工計分</span>' : (qType === 'truefalse' ? '<span class="manual-score-badge">是非題</span>' : '')}${q.points === null || q.points === undefined || q.points === '' ? '' : `<span class="quiz-points-badge">配分 ${Number(q.points)} 分</span>`}<span class="unanswered-note hidden">未作答</span></p>
+                ${qType === 'short'
+                    ? `<textarea class="quiz-short-answer" placeholder="請輸入簡答內容..." oninput="Quiz.inputShort(${i}, this)"></textarea>`
+                    : `<div class="quiz-options-list">
+                        ${(Array.isArray(q.o) ? q.o : []).map((opt, oi) => `<button class="btn btn-outline quiz-option-btn" onclick="Quiz.select(${i},${oi},this)"><span class="quiz-option-no">(${oi+1})</span><span class="quiz-option-text">${Quiz.formatOptionText(opt)}</span></button>`).join('')}
+                    </div>`}
+            </div>`;
+        }).join('');
         this.updateSubmitState();
         const adminBackBtn = document.getElementById('adminQuizBackBtn');
         if (adminBackBtn) adminBackBtn.classList.toggle('hidden', !App.isInstructor);
@@ -4810,6 +5339,23 @@ const Quiz = {
         App.showSec('sec-quiz');
         this.setScoreSyncOverlay(false);
         resetStartButton();
+    },
+    formatOptionText: function(text) {
+        const raw = String(text || '').trim();
+        if (raw === '是' || raw === '○ 是') return '<span class="tf-symbol">○</span><span class="tf-text">是</span>';
+        if (raw === '非' || raw === '否' || raw === '╳ 否' || raw === '× 否' || raw === '× 非') return '<span class="tf-symbol">×</span><span class="tf-text">非</span>';
+        return Admin.esc(raw);
+    },
+    inputShort: function(qi, textarea) {
+        const value = textarea ? String(textarea.value || '').trim() : '';
+        this.ans[qi] = value ? value : null;
+        const card = textarea ? textarea.closest('.quiz-question-card') : null;
+        if (card) {
+            card.classList.remove('q-card-unanswered');
+            const note = card.querySelector('.unanswered-note');
+            if (note) note.classList.add('hidden');
+        }
+        this.updateSubmitState();
     },
     select: function(qi, oi, btn) {
         this.ans[qi] = oi;
@@ -4915,11 +5461,18 @@ const Quiz = {
         body.innerHTML = `
             <div style="margin-bottom:14px; color:#8b949e; line-height:1.6;">請檢查本次作答內容。確認無誤後，再按「確認送出」完成計分。</div>
             ${App.activeCourse.questions.map((q, i) => {
+                const qType = (q.type || 'choice') === 'short' ? 'short' : ((q.type || 'choice') === 'truefalse' ? 'truefalse' : 'choice');
                 const selectedIndex = this.ans[i];
+                if (qType === 'short') {
+                    return `<div class="review-answer-card">
+                        <div class="review-q-title">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
+                        <div class="review-selected">簡答內容：${Admin.esc(String(selectedIndex || ''))}</div>
+                    </div>`;
+                }
                 const selectedText = q.o[selectedIndex] || '';
                 return `<div class="review-answer-card">
                     <div class="review-q-title">Q${i + 1}：${Admin.esc(q.q)}</div>
-                    <div class="review-selected">答案：<strong>(${selectedIndex + 1})</strong> ${Admin.esc(selectedText)}</div>
+                    <div class="review-selected">答案：<strong>(${Number(selectedIndex) + 1})</strong> ${Quiz.formatOptionText(selectedText)}</div>
                 </div>`;
             }).join('')}
         `;
@@ -5034,15 +5587,22 @@ const Quiz = {
         area.innerHTML = `
             <div class="result-answer-title">正確答案</div>
             ${App.activeCourse.questions.map((q, i) => {
+                const qType = (q.type || 'choice') === 'short' ? 'short' : ((q.type || 'choice') === 'truefalse' ? 'truefalse' : 'choice');
                 const userIndex = this.ans[i];
+                if (qType === 'short') {
+                    return `<div class="result-answer-card">
+                        <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
+                        <div class="result-answer-row">你的作答：<span class="result-answer-user">${Admin.esc(String(userIndex || ''))}</span></div>
+                    </div>`;
+                }
                 const correctIndex = q.a;
                 const userText = q.o[userIndex] || '';
                 const correctText = q.o[correctIndex] || '';
                 const isCorrect = userIndex === correctIndex;
                 return `<div class="result-answer-card ${isCorrect ? 'correct' : 'wrong'}">
                     <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)}</div>
-                    <div class="result-answer-row">答案：<span class="result-answer-correct">(${correctIndex + 1}) ${Admin.esc(correctText)}</span></div>
-                    <div class="result-answer-row">你的作答：<span class="result-answer-user ${isCorrect ? '' : 'wrong'}">(${userIndex + 1}) ${Admin.esc(userText)}</span> ${isCorrect ? '✅' : '❌'}</div>
+                    <div class="result-answer-row">答案：<span class="result-answer-correct">(${correctIndex + 1}) ${Quiz.formatOptionText(correctText)}</span></div>
+                    <div class="result-answer-row">你的作答：<span class="result-answer-user ${isCorrect ? '' : 'wrong'}">(${Number(userIndex) + 1}) ${Quiz.formatOptionText(userText)}</span> ${isCorrect ? '✅' : '❌'}</div>
                 </div>`;
             }).join('')}
         `;
@@ -5059,26 +5619,59 @@ const Quiz = {
                 return;
             }
 
-            const correctCount = answers.filter((a, i) => questions[i] && a === questions[i].a).length;
-            const score = Math.round((correctCount / answers.length) * 100);
+            const shortIndexes = questions.map((q, i) => ((q.type || 'choice') === 'short' ? i : -1)).filter(i => i >= 0);
+            const autoGradableIndexes = questions.map((q, i) => ((q.type || 'choice') === 'short' ? -1 : i)).filter(i => i >= 0);
+            const manualRequired = shortIndexes.length > 0;
+            const fixedPoints = questions.map(q => {
+                const raw = q.points;
+                const n = raw === null || raw === undefined || raw === '' ? NaN : Number(raw);
+                return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null;
+            });
+            const fixedPointsTotal = Math.min(100, fixedPoints.reduce((sum, p) => sum + (p === null ? 0 : p), 0));
+            const unassignedIndexes = questions.map((q, i) => fixedPoints[i] === null ? i : -1).filter(i => i >= 0);
+            const remainingPoints = Math.max(0, 100 - fixedPointsTotal);
+            const perUnassignedQuestion = unassignedIndexes.length ? remainingPoints / unassignedIndexes.length : 0;
+            const questionPoints = questions.map((q, i) => fixedPoints[i] === null ? perUnassignedQuestion : fixedPoints[i]);
+            const shortPointsTotal = shortIndexes.reduce((sum, i) => sum + Number(questionPoints[i] || 0), 0);
+            const correctCount = autoGradableIndexes.filter(i => questions[i] && answers[i] === questions[i].a).length;
+            const score = Math.round(autoGradableIndexes.reduce((sum, i) => sum + (questions[i] && answers[i] === questions[i].a ? questionPoints[i] : 0), 0));
             const passScoreNow = App.getPassScore(course);
-            const passedNow = score >= passScoreNow;
+            const passedNow = !manualRequired && score >= passScoreNow;
             const nowText = DateUtil.format();
-            const currentKey = `${App.user || ''}__${course.id || ''}__${answers.join(',')}`;
+            const currentKey = `${App.user || ''}__${course.id || ''}__${answers.map(a => String(a ?? '')).join('|')}`;
             const answerDetails = questions.map((q, i) => {
+                const qType = (q.type || 'choice') === 'short' ? 'short' : 'choice';
+                const opts = Array.isArray(q.o) ? q.o.map(o => String(o || '')) : [];
+                if (qType === 'short') {
+                    return {
+                        questionNo: i + 1,
+                        questionId: String(q.id || `q${i + 1}`),
+                        questionType: 'short',
+                        questionText: String(q.q || ''),
+                        options: [],
+                        userAnswerIndex: null,
+                        userAnswerText: String(answers[i] || ''),
+                        correctAnswerIndex: null,
+                        correctAnswerText: '',
+                        isCorrect: false,
+                        needsManualScore: true,
+                        points: questionPoints[i]
+                    };
+                }
                 const userIndex = Number(answers[i]);
                 const correctIndex = Number(q.a);
-                const opts = Array.isArray(q.o) ? q.o.map(o => String(o || '')) : [];
                 return {
                     questionNo: i + 1,
                     questionId: String(q.id || `q${i + 1}`),
+                    questionType: qType,
                     questionText: String(q.q || ''),
                     options: opts,
                     userAnswerIndex: Number.isFinite(userIndex) ? userIndex : null,
                     userAnswerText: Number.isFinite(userIndex) ? String(opts[userIndex] || '') : '',
                     correctAnswerIndex: Number.isFinite(correctIndex) ? correctIndex : null,
                     correctAnswerText: Number.isFinite(correctIndex) ? String(opts[correctIndex] || '') : '',
-                    isCorrect: Number.isFinite(userIndex) && Number.isFinite(correctIndex) && userIndex === correctIndex
+                    isCorrect: Number.isFinite(userIndex) && Number.isFinite(correctIndex) && userIndex === correctIndex,
+                    points: questionPoints[i]
                 };
             });
 
@@ -5096,17 +5689,21 @@ const Quiz = {
                     courseTitle: course.title,
                     s: Number(score),
                     score: Number(score),
+                    autoScore: Number(score),
                     passScore: Number(passScoreNow),
                     d: nowText,
                     date: nowText,
-                    note: '',
+                    note: manualRequired ? `簡答題（配分 ${Math.round(shortPointsTotal * 10) / 10} 分）待人工計分，暫計 ${score} 分` : '',
+                    manualReviewRequired: manualRequired,
                     answerDetails: answerDetails,
                     questionSnapshot: questions.map((q, i) => ({
                         questionNo: i + 1,
                         questionId: String(q.id || `q${i + 1}`),
+                        questionType: (q.type || 'choice') === 'short' ? 'short' : 'choice',
                         questionText: String(q.q || ''),
                         options: Array.isArray(q.o) ? q.o.map(o => String(o || '')) : [],
-                        correctAnswerIndex: Number(q.a)
+                        correctAnswerIndex: (q.type || 'choice') === 'short' ? null : Number(q.a),
+                        points: questionPoints[i]
                     }))
                 };
             }
@@ -5150,8 +5747,8 @@ const Quiz = {
             App.showSec('sec-res');
             const finalScoreEl = document.getElementById('finalScore');
             if (finalScoreEl) {
-                finalScoreEl.innerText = score;
-                finalScoreEl.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+                finalScoreEl.innerText = manualRequired ? `暫計 ${score} 分` : score;
+                finalScoreEl.style.color = manualRequired ? 'var(--warning-color)' : (passedNow ? 'var(--success-color)' : 'var(--danger-color)');
             }
             const resultPassNote = document.getElementById('resultPassNote');
             if (resultPassNote) {
@@ -5159,10 +5756,10 @@ const Quiz = {
                     resultPassNote.innerText = `管理員測試模式，本次分數不列入測驗紀錄。及格標準：${passScoreNow} 分。`;
                     resultPassNote.style.color = 'var(--warning-color)';
                 } else {
-                    const baseText = `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
+                    const baseText = manualRequired ? `簡答題（配分 ${Math.round(shortPointsTotal * 10) / 10} 分）待人工計分，暫計 ${score} 分。` : `${passedNow ? '及格' : '未及格'}（及格標準：${passScoreNow} 分）`;
                     resultPassNote.setAttribute('data-result-base', baseText);
-                    resultPassNote.innerText = `${baseText}｜成績已寫入 Supabase，可以關閉頁面。`;
-                    resultPassNote.style.color = passedNow ? 'var(--success-color)' : 'var(--danger-color)';
+                    resultPassNote.innerText = manualRequired ? `${baseText}｜作答已寫入 Supabase。` : `${baseText}｜成績與作答已寫入 Supabase，可以關閉頁面。`;
+                    resultPassNote.style.color = manualRequired ? 'var(--warning-color)' : (passedNow ? 'var(--success-color)' : 'var(--danger-color)');
                 }
             }
             try {
@@ -5257,6 +5854,5 @@ if (App.recoveredInterruptedQuiz) {
     }, 200);
 }
 </script>
-
 </body>
 </html>
