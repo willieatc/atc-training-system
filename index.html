@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!-- ATC_V001_SUPABASE_STATUS_NO_BACKGROUND_FORCE -->
+<!-- ATC_V003_ADMIN_STATUS_TEXT_BACKGROUND_ONLY -->
+<!-- ATC_V002_QUESTION_IMAGE_CLICK_ZOOM -->
+<!-- ATC_V001_QUESTION_REFERENCE_IMAGE_SUPABASE_STATUS_TEXT -->
 <!-- ATC_V001_HIDE_QUESTION_TYPE_HINTS -->
 <!-- ATC_V001_ACCOUNT_BATCH_DELETE_SCORE_TOOLBAR_SWAP -->
 <!-- ATC_V001_SCORE_TABLE_COMPACT -->
@@ -1798,6 +1802,34 @@ body.question-sort-active .editor-helper {
         .q-row.q-type-short .q-short-note {
             display: block;
         }
+
+        .q-reference-answer-wrap {
+            display: none;
+            margin-top: 10px;
+        }
+        .q-row.q-type-short .q-reference-answer-wrap {
+            display: block;
+        }
+        .q-reference-answer-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #8b949e;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .q-reference-answer {
+            width: 100%;
+            min-height: 74px;
+            resize: vertical;
+            margin: 0;
+            background: #0d1117;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            line-height: 1.6;
+            font-family: inherit;
+        }
         .quiz-short-answer {
             width: 100%;
             min-height: 110px;
@@ -2169,7 +2201,247 @@ body.question-sort-active .editor-helper {
             display: none !important;
         }
 
-    </style>
+    
+        /* V001 patch：Supabase 同步提示純文字、題目參考圖片 */
+        #cloudStatus {
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+        .q-image-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 8px 0 10px;
+        }
+        .q-image-preview {
+            display: none;
+            margin: 8px 0 10px;
+            padding: 8px;
+            border: 1px solid rgba(88,166,255,0.22);
+            border-radius: 10px;
+            background: rgba(13,17,23,0.45);
+            max-width: 360px;
+        }
+        .q-image-preview.has-image {
+            display: block;
+        }
+        .q-image-preview img {
+            display: block;
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        .quiz-question-image {
+            margin: 8px 0 12px 18px;
+            max-width: min(520px, calc(100% - 18px));
+            border-radius: 10px;
+            border: 1px solid rgba(88,166,255,0.28);
+            background: #0d1117;
+            padding: 8px;
+        }
+        .quiz-question-image img {
+            display: block;
+            max-width: 100%;
+            max-height: 360px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin: 0 auto;
+        }
+        .review-question-image,
+        .result-question-image {
+            margin: 8px 0;
+            max-width: 360px;
+            border-radius: 8px;
+            border: 1px solid rgba(88,166,255,0.22);
+            padding: 6px;
+            background: rgba(13,17,23,0.35);
+        }
+        .review-question-image img,
+        .result-question-image img {
+            display: block;
+            max-width: 100%;
+            max-height: 220px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+    
+        /* V001 patch：Supabase/同步提示徹底去背景 */
+        #cloudStatus,
+        #cloudStatus * {
+            background: none !important;
+            background-color: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            outline: none !important;
+            text-shadow: none !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+        }
+        #cloudStatus {
+            display: inline-block;
+            margin: 0 0 10px 0 !important;
+            line-height: 1.4;
+        }
+        .score-sync-card,
+        .score-sync-card * {
+            background: none !important;
+            background-color: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        .score-sync-card {
+            border: 0 !important;
+            padding: 0 !important;
+        }
+        .score-sync-overlay {
+            background: rgba(0,0,0,0.36) !important;
+            backdrop-filter: none !important;
+        }
+
+
+        /* V003：後台 Supabase 狀態提示保留原樣式，只去除背景色 */
+        #adminGsStatus,
+        #adminGsStatus * {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
+        /* V002：測驗題參考圖片可點擊放大 */
+        .q-image-preview img,
+        .quiz-question-image img,
+        .review-question-image img,
+        .result-question-image img {
+            cursor: zoom-in;
+        }
+        .image-lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.78);
+            padding: 24px;
+        }
+        .image-lightbox-overlay.active {
+            display: flex;
+        }
+        .image-lightbox-box {
+            position: relative;
+            width: min(96vw, 1100px);
+            max-height: 92vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-lightbox-box img {
+            display: block;
+            max-width: 100%;
+            max-height: 88vh;
+            object-fit: contain;
+            border-radius: 10px;
+            background: #0d1117;
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+            cursor: zoom-out;
+        }
+        .image-lightbox-close {
+            position: absolute;
+            top: -14px;
+            right: -14px;
+            width: 38px;
+            height: 38px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: #21262d;
+            color: #ffffff;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+        }
+        @media (max-width: 640px) {
+            .image-lightbox-overlay { padding: 12px; }
+            .image-lightbox-close { top: 8px; right: 8px; }
+        }
+
+    
+
+        /* v141：管理後台左側功能區可捲動，避免測驗成績模組內容較多時底部「返回首頁」看不到 */
+        #sec-admin .admin-sidebar {
+            min-height: 0;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(88,166,255,0.65) transparent;
+        }
+        #sec-admin .admin-sidebar::-webkit-scrollbar { width: 6px; }
+        #sec-admin .admin-sidebar::-webkit-scrollbar-track { background: transparent; }
+        #sec-admin .admin-sidebar::-webkit-scrollbar-thumb { background: rgba(88,166,255,0.55); border-radius: 999px; }
+        #sec-admin .admin-sidebar > button:last-of-type {
+            flex: 0 0 auto;
+            margin-bottom: 4px;
+        }
+
+        /* v142：後台左側固定底部操作區，返回首頁永遠可見 */
+        #sec-admin.active .admin-layout {
+            min-height: 0;
+        }
+        #sec-admin.active .admin-sidebar {
+            height: 100%;
+            max-height: 100%;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #sec-admin.active .admin-sidebar > div[style*="flex-grow"] {
+            flex: 1 1 auto !important;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 2px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(88,166,255,0.65) transparent;
+        }
+        #sec-admin.active .admin-sidebar > div[style*="flex-grow"]::-webkit-scrollbar { width: 6px; }
+        #sec-admin.active .admin-sidebar > div[style*="flex-grow"]::-webkit-scrollbar-track { background: transparent; }
+        #sec-admin.active .admin-sidebar > div[style*="flex-grow"]::-webkit-scrollbar-thumb { background: rgba(88,166,255,0.55); border-radius: 999px; }
+        #sec-admin.active #t-rec { margin-top: 0 !important; }
+        #sec-admin.active .admin-sidebar > button,
+        #sec-admin.active .admin-sidebar > .backup-inline-tools,
+        #sec-admin.active .admin-sidebar > input {
+            flex: 0 0 auto;
+        }
+        .result-short-answer-box,
+        .review-short-answer-box {
+            margin-top: 8px;
+            padding: 10px 12px;
+            min-height: 44px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #0d1117;
+            color: var(--text-color);
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .result-short-answer-label,
+        .review-short-answer-label {
+            margin-top: 8px;
+            color: #8b949e;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+</style>
 </head>
 <body oncontextmenu="return false;"> 
 
@@ -2180,8 +2452,7 @@ body.question-sort-active .editor-helper {
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h1 style="margin-bottom:6px;">ATC 訓練管理系統</h1>
                     <div style="color:#ffffff; font-size:16px; font-weight:900; letter-spacing:0.5px; margin-bottom:6px; text-shadow:0 2px 4px rgba(0,0,0,0.72), 0 0 18px rgba(0,0,0,0.55), 0 0 2px rgba(255,255,255,0.35);">RCTP 臺北機場管制臺</div>
-                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px;">本機測試模式：尚未連線 Supabase</div>
-                    <span class="badge-instructor hidden">管理員模式</span>
+                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px; background:transparent; background-color:transparent; border:0; box-shadow:none; padding:0; border-radius:0;">本機測試模式：尚未連線 Supabase</div>                
                 </div>
                 <div style="background:#161b22; padding:30px; border-radius:12px; border:1px solid var(--border-color);">
                     <label>使用者名稱</label>
@@ -2338,6 +2609,18 @@ const Backend = {
         }
         return this._client;
     },
+    applyPlainStatusStyle: function(el) {
+        if (!el) return;
+        el.removeAttribute('class');
+        el.style.background = 'transparent';
+        el.style.backgroundColor = 'transparent';
+        el.style.border = '0';
+        el.style.boxShadow = 'none';
+        el.style.outline = 'none';
+        el.style.padding = '0';
+        el.style.borderRadius = '0';
+        el.style.textShadow = 'none';
+    },
     setStatus: function(text, color) {
         const el = document.getElementById('cloudStatus');
         if (el) {
@@ -2345,7 +2628,8 @@ const Backend = {
             this._lastStatusText = text;
             el.innerText = text;
             el.style.color = color || '#8b949e';
-            el.style.display = (typeof App !== 'undefined' && App.isInstructor) ? 'block' : 'none';
+            this.applyPlainStatusStyle(el);
+            el.style.display = (typeof App !== 'undefined' && App.isInstructor) ? 'inline-block' : 'none';
         }
     },
     recordId: function(record) {
@@ -3364,7 +3648,10 @@ const App = {
     syncUI: function() {
         const adminBtn = document.getElementById('adminEntryBtn');
         const cloudStatus = document.getElementById('cloudStatus');
-        if (cloudStatus) cloudStatus.style.display = this.isInstructor ? 'block' : 'none';
+        if (cloudStatus) {
+            if (typeof Backend !== 'undefined' && Backend.applyPlainStatusStyle) Backend.applyPlainStatusStyle(cloudStatus);
+            cloudStatus.style.display = this.isInstructor ? 'inline-block' : 'none';
+        }
         if(this.isInstructor) {
             adminBtn.innerText = "⚙️ 管理員登入 (已授權)";
             adminBtn.classList.replace('btn-outline', 'btn-warning');
@@ -3384,7 +3671,7 @@ const App = {
         const area = document.getElementById('loginBtnArea');
         const course = this.state.courses.find(c => c.id == cid);
         if (this.isInstructor) {
-            area.innerHTML = `<button class="btn btn-warning" style="width:100%" onclick="App.toAdmin()">請由後台進入教材/測驗</button>`;
+            area.innerHTML = `<button class="btn btn-warning" style="width:100%" onclick="App.toAdmin()">管理員模式</button>`;
             return;
         }
         if (!name || !course) {
@@ -3787,8 +4074,9 @@ const Admin = {
         return `"${s.replace(/"/g, '""')}"`;
     },
     csvTextCell: function(v) {
-        const s = String(v ?? '');
-        return `="${s.replace(/"/g, '""')}"`;
+        // 選項列表內含半形逗號，必須以標準 CSV 引號包住，
+        // 避免下載範本於 Excel / 試算表開啟時被拆成多欄，導致標題列與範例列錯位。
+        return Admin.csvCell(v);
     },
     parseCSV: function(text) {
         const rows = [];
@@ -4045,6 +4333,17 @@ const Admin = {
                                     </div>
                                 </div>
                                 <input type="text" class="input-field q-t" value="${Admin.esc(q.q)}" placeholder="請輸入題目內容">
+                                <input type="hidden" class="q-img-data" value="${Admin.esc(q.imageData || '')}">
+                                <div class="q-image-tools">
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="this.parentElement.querySelector('.q-img-file').click()">上傳參考圖片</button>
+                                    <input type="file" class="q-img-file hidden" accept="image/*" onchange="Admin.uploadQuestionImage(this)">
+                                    <button type="button" class="btn btn-danger btn-sm ${q.imageData ? '' : 'hidden'} q-img-remove" onclick="Admin.removeQuestionImage(this)">移除圖片</button>
+                                </div>
+                                <div class="q-image-preview ${q.imageData ? 'has-image' : ''}">${q.imageData ? `<img src="${Admin.esc(q.imageData)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)">` : ''}</div>
+                                <div class="q-reference-answer-wrap">
+                                    <label class="q-reference-answer-label">簡答題參考答案</label>
+                                    <textarea class="q-reference-answer" placeholder="可輸入批改用參考答案，學生作答時不會顯示">${Admin.esc(q.referenceAnswer || q.correctAnswerText || '')}</textarea>
+                                </div>
 
                                 <div class="q-options-grid" hidden style="${(q.type || 'choice') === 'truefalse' ? '' : 'display:none !important;'}">
                                     ${((q.type || 'choice') === 'truefalse' ? ['是', '非'] : (Array.isArray(q.o) ? q.o : ["","","",""])).map((opt, oi) => `<div class="option-row"><span class="option-index">${oi+1}</span><label class="answer-radio-wrap" title="設為答案"><input type="radio" name="r-${c.id}-${qi}" value="${oi}" ${q.a==oi?'checked':''}> 答案</label><input type="text" class="input-field q-o" value="${Admin.esc(opt)}" ${(q.type || 'choice') === 'truefalse' ? 'readonly' : ''}></div>`).join('')}
@@ -4062,7 +4361,7 @@ const Admin = {
             new Sortable(document.getElementById(`ql-${ci}`), {
                 draggable: '.q-row',
                 handle: '.q-sort-handle',
-                filter: 'input, textarea, select, option, button:not(.q-sort-handle), label, .input-field',
+                filter: 'input, textarea, select, option, button:not(.q-sort-handle), label, .input-field, .q-image-tools, .q-image-preview',
                 preventOnFilter: false,
                 animation: 180,
                 direction: 'vertical',
@@ -4171,7 +4470,9 @@ const Admin = {
                             if (!raw) return null;
                             const n = parseFloat(raw);
                             return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null;
-                        })()
+                        })(),
+                        imageData: row.querySelector('.q-img-data') ? String(row.querySelector('.q-img-data').value || '') : '',
+                        referenceAnswer: row.querySelector('.q-reference-answer') ? String(row.querySelector('.q-reference-answer').value || '').trim() : ''
                     };
                 });
             }
@@ -4224,6 +4525,76 @@ const Admin = {
             Admin.renderEditor();
             Backend.setStatus('已新增科目，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
         }
+    },
+    readFileAsDataURL: function(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(reader.error || new Error('讀取圖片失敗'));
+            reader.readAsDataURL(file);
+        });
+    },
+    compressImageDataUrl: function(dataUrl, maxSize = 900, quality = 0.78) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const scale = Math.min(1, maxSize / Math.max(img.width || 1, img.height || 1));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round((img.width || 1) * scale));
+                    canvas.height = Math.max(1, Math.round((img.height || 1) * scale));
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                } catch (err) {
+                    console.warn('compressImageDataUrl failed, using original image', err);
+                    resolve(dataUrl);
+                }
+            };
+            img.onerror = () => resolve(dataUrl);
+            img.src = dataUrl;
+        });
+    },
+    uploadQuestionImage: async function(input) {
+        const file = input && input.files && input.files[0] ? input.files[0] : null;
+        if (!file) return;
+        if (!/^image\//.test(file.type || '')) {
+            input.value = '';
+            return alert('請上傳圖片檔。');
+        }
+        try {
+            const rawDataUrl = await Admin.readFileAsDataURL(file);
+            const dataUrl = await Admin.compressImageDataUrl(rawDataUrl, 900, 0.78);
+            const row = input.closest('.q-row');
+            if (!row) return;
+            const hidden = row.querySelector('.q-img-data');
+            const preview = row.querySelector('.q-image-preview');
+            const removeBtn = row.querySelector('.q-img-remove');
+            if (hidden) hidden.value = dataUrl;
+            if (preview) {
+                preview.classList.add('has-image');
+                preview.innerHTML = `<img src="${dataUrl}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)">`;
+            }
+            if (removeBtn) removeBtn.classList.remove('hidden');
+            input.value = '';
+            Backend.setStatus('已加入題目參考圖片，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
+        } catch (err) {
+            console.error('uploadQuestionImage failed:', err);
+            alert('圖片讀取失敗，請改用其他圖片檔。');
+        }
+    },
+    removeQuestionImage: function(btn) {
+        const row = btn ? btn.closest('.q-row') : null;
+        if (!row) return;
+        const hidden = row.querySelector('.q-img-data');
+        const preview = row.querySelector('.q-image-preview');
+        if (hidden) hidden.value = '';
+        if (preview) {
+            preview.classList.remove('has-image');
+            preview.innerHTML = '';
+        }
+        btn.classList.add('hidden');
+        Backend.setStatus('已移除題目參考圖片，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
     },
     updateQuestionType: function(select) {
         const row = select ? select.closest('.q-row') : null;
@@ -4287,7 +4658,7 @@ const Admin = {
         Admin.sync();
         const course = App.state.courses[ci];
         if (!course) return;
-        course.questions.push({type:"choice", q:"", o:["","","",""], a:0});
+        course.questions.push({type:"choice", q:"", o:["","","",""], a:0, imageData:"", referenceAnswer:""});
         App.lastOpenedCourseId = course.id;
         App.pendingScrollQuestion = { courseIndex: ci, questionIndex: course.questions.length - 1 };
         Admin.renderEditor();
@@ -4471,7 +4842,8 @@ const Admin = {
                 el.style.padding = '10px 12px';
                 el.style.borderRadius = '10px';
                 el.style.fontWeight = '700';
-                el.style.background = 'rgba(255,255,255,0.94)';
+                el.style.background = 'transparent';
+                el.style.backgroundColor = 'transparent';
                 el.style.border = '1px solid rgba(0,0,0,0.08)';
                 const firstCard = sec.querySelector('.card');
                 if (firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(el, firstCard.nextSibling);
@@ -4481,6 +4853,8 @@ const Admin = {
         if (!el) return;
         el.style.display = 'block';
         el.style.color = color || 'var(--warning-color)';
+        el.style.background = 'transparent';
+        el.style.backgroundColor = 'transparent';
         el.innerText = text || '';
     },
     refreshSupabaseStatusForAdmin: function() {
@@ -4576,7 +4950,8 @@ const Admin = {
 
         const cloudStatus = document.getElementById('cloudStatus');
         if (cloudStatus && App.isInstructor) {
-            cloudStatus.style.display = 'block';
+            if (typeof Backend !== 'undefined' && Backend.applyPlainStatusStyle) Backend.applyPlainStatusStyle(cloudStatus);
+            cloudStatus.style.display = 'inline-block';
             cloudStatus.innerText = ok ? 'Supabase 連線正常' : 'Supabase 寫入失敗，已保留本機資料';
             cloudStatus.style.color = ok ? 'var(--success-color)' : 'var(--danger-color)';
         }
@@ -4962,6 +5337,18 @@ const Admin = {
     
     getManualScoreInfo: function(record) {
         const details = Array.isArray(record && record.answerDetails) ? record.answerDetails : [];
+        const course = App.state.courses.find(c => String(c.id || '') === String(record && (record.cid || record.courseId || '')) || String(c.title || '') === String(record && (record.c || record.courseTitle || '')));
+        const courseQuestions = course && Array.isArray(course.questions) ? course.questions : [];
+        details.forEach(ans => {
+            if (!ans || !(ans.questionType === 'short' || ans.needsManualScore)) return;
+            const qIndex = Number(ans.questionNo) - 1;
+            const q = courseQuestions[qIndex] || courseQuestions.find(item => String(item.id || '') === String(ans.questionId || ''));
+            const ref = String(ans.referenceAnswer || ans.correctAnswerText || (q && (q.referenceAnswer || q.correctAnswerText)) || '').trim();
+            if (ref) {
+                ans.referenceAnswer = ref;
+                if (!ans.correctAnswerText) ans.correctAnswerText = ref;
+            }
+        });
         const shortItems = details.filter(ans => ans && (ans.questionType === 'short' || ans.needsManualScore));
         const existingManualSum = shortItems.reduce((sum, ans) => {
             const n = Number(ans.manualScore);
@@ -4977,6 +5364,10 @@ const Admin = {
     editFinalScore: async function(recordIndex) {
         const r = App.state.records[recordIndex];
         if (!r) return alert('找不到此筆測驗紀錄。');
+        if (r.manualScoreFinalized) {
+            const okToEdit = confirm('此筆成績已完成人工計分，是否要修改計分？');
+            if (!okToEdit) return;
+        }
 
         const info = Admin.getManualScoreInfo(r);
         const shortItems = info.shortItems;
@@ -4991,7 +5382,9 @@ const Admin = {
                 const qNo = ans.questionNo || '';
                 const qText = String(ans.questionText || '').slice(0, 80);
                 const userText = String(ans.userAnswerText || '').slice(0, 120);
-                const input = prompt(`Q${qNo} 簡答題給分（配分 ${maxPoint} 分）\n題目：${qText}\n作答：${userText}`, oldManual);
+                const refText = String(ans.referenceAnswer || ans.correctAnswerText || '').trim();
+                const refLine = refText ? `\n\n【參考答案】\n${refText.slice(0, 500)}` : '\n\n【參考答案】\n（未設定）';
+                const input = prompt(`Q${qNo} 簡答題給分（配分 ${maxPoint} 分）\n題目：${qText}\n作答：${userText}${refLine}`, oldManual);
                 if (input === null) return;
                 const manualScore = Number(String(input).trim());
                 if (!Number.isFinite(manualScore) || manualScore < 0 || manualScore > maxPoint) {
@@ -5256,6 +5649,9 @@ const Admin = {
                         const locked = course ? App.isQuizLocked(r.u, course.id) : false;
                         const passScore = Number(r.passScore || (course ? App.getPassScore(course) : 70));
                         const hasShortAnswer = Array.isArray(r.answerDetails) && r.answerDetails.some(ans => ans && (ans.questionType === 'short' || ans.needsManualScore || ans.manualScore !== undefined));
+                        const manualFinalized = !!r.manualScoreFinalized;
+                        const manualScoreBtnText = manualFinalized ? '已計分' : '待計分';
+                        const manualScoreBtnTitle = manualFinalized ? '此筆已完成人工計分，點擊後可確認是否修改' : '為簡答題進行人工計分';
                         const safeUser = String(r.u).replace(/'/g, "\'");
                         return `
                         <tr>
@@ -5269,7 +5665,7 @@ const Admin = {
                             <td>${locked ? '<span style="color:var(--warning-color); font-weight:bold;">已鎖定</span>' : '<span style="color:var(--success-color); font-weight:bold;">可測驗</span>'}</td>
                             <td>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    ${hasShortAnswer ? `<button class="btn btn-primary btn-sm" onclick="Admin.editFinalScore(${item.idx})">待計分</button>` : `<button class="btn btn-outline btn-sm btn-pending-score-disabled" disabled title="此筆沒有簡答題，不需人工計分">待計分</button>`}
+                                    ${hasShortAnswer ? `<button class="btn ${manualFinalized ? 'btn-success' : 'btn-primary'} btn-sm" title="${manualScoreBtnTitle}" onclick="Admin.editFinalScore(${item.idx})">${manualScoreBtnText}</button>` : `<button class="btn btn-outline btn-sm btn-pending-score-disabled" disabled title="此筆沒有簡答題，不需人工計分">待計分</button>`}
                                 </div>
                             </td>
                         </tr>`;
@@ -5321,6 +5717,7 @@ const Quiz = {
             return `
             <div class="quiz-question-card" style="background:#1c2128; padding:20px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);" id="q-card-${i}">
                 <p class="quiz-question-text"><strong>Q${i+1}：</strong> ${q.q}${qType === 'short' ? '<span class="manual-score-badge">簡答題｜人工計分</span>' : (qType === 'truefalse' ? '<span class="manual-score-badge">是非題</span>' : '')}${q.points === null || q.points === undefined || q.points === '' ? '' : `<span class="quiz-points-badge">配分 ${Number(q.points)} 分</span>`}<span class="unanswered-note hidden">未作答</span></p>
+                ${q.imageData ? `<div class="quiz-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                 ${qType === 'short'
                     ? `<textarea class="quiz-short-answer" placeholder="請輸入簡答內容..." oninput="Quiz.inputShort(${i}, this)"></textarea>`
                     : `<div class="quiz-options-list">
@@ -5466,12 +5863,15 @@ const Quiz = {
                 if (qType === 'short') {
                     return `<div class="review-answer-card">
                         <div class="review-q-title">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
-                        <div class="review-selected">簡答內容：${Admin.esc(String(selectedIndex || ''))}</div>
+                        ${q.imageData ? `<div class="review-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
+                        <div class="review-short-answer-label">簡答內容</div><div class="review-short-answer-box">${Admin.esc(String(selectedIndex || '（未填寫）'))}</div>
+                        <div class="review-short-answer-label">參考答案</div><div class="review-short-answer-box">${Admin.esc(String(q.referenceAnswer || q.correctAnswerText || '（未設定）'))}</div>
                     </div>`;
                 }
                 const selectedText = q.o[selectedIndex] || '';
                 return `<div class="review-answer-card">
                     <div class="review-q-title">Q${i + 1}：${Admin.esc(q.q)}</div>
+                    ${q.imageData ? `<div class="review-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                     <div class="review-selected">答案：<strong>(${Number(selectedIndex) + 1})</strong> ${Quiz.formatOptionText(selectedText)}</div>
                 </div>`;
             }).join('')}
@@ -5592,7 +5992,9 @@ const Quiz = {
                 if (qType === 'short') {
                     return `<div class="result-answer-card">
                         <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
-                        <div class="result-answer-row">你的作答：<span class="result-answer-user">${Admin.esc(String(userIndex || ''))}</span></div>
+                        ${q.imageData ? `<div class="result-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
+                        <div class="result-short-answer-label">你的答案</div><div class="result-short-answer-box">${Admin.esc(String(userIndex || '（未填寫）'))}</div>
+                        <div class="result-short-answer-label">參考答案</div><div class="result-short-answer-box">${Admin.esc(String(q.referenceAnswer || q.correctAnswerText || '（未設定）'))}</div>
                     </div>`;
                 }
                 const correctIndex = q.a;
@@ -5601,6 +6003,7 @@ const Quiz = {
                 const isCorrect = userIndex === correctIndex;
                 return `<div class="result-answer-card ${isCorrect ? 'correct' : 'wrong'}">
                     <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)}</div>
+                    ${q.imageData ? `<div class="result-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                     <div class="result-answer-row">答案：<span class="result-answer-correct">(${correctIndex + 1}) ${Quiz.formatOptionText(correctText)}</span></div>
                     <div class="result-answer-row">你的作答：<span class="result-answer-user ${isCorrect ? '' : 'wrong'}">(${Number(userIndex) + 1}) ${Quiz.formatOptionText(userText)}</span> ${isCorrect ? '✅' : '❌'}</div>
                 </div>`;
@@ -5648,11 +6051,13 @@ const Quiz = {
                         questionId: String(q.id || `q${i + 1}`),
                         questionType: 'short',
                         questionText: String(q.q || ''),
+                        imageData: String(q.imageData || ''),
                         options: [],
                         userAnswerIndex: null,
                         userAnswerText: String(answers[i] || ''),
                         correctAnswerIndex: null,
-                        correctAnswerText: '',
+                        correctAnswerText: String(q.referenceAnswer || q.correctAnswerText || ''),
+                        referenceAnswer: String(q.referenceAnswer || q.correctAnswerText || ''),
                         isCorrect: false,
                         needsManualScore: true,
                         points: questionPoints[i]
@@ -5665,6 +6070,7 @@ const Quiz = {
                     questionId: String(q.id || `q${i + 1}`),
                     questionType: qType,
                     questionText: String(q.q || ''),
+                    imageData: String(q.imageData || ''),
                     options: opts,
                     userAnswerIndex: Number.isFinite(userIndex) ? userIndex : null,
                     userAnswerText: Number.isFinite(userIndex) ? String(opts[userIndex] || '') : '',
@@ -5699,10 +6105,13 @@ const Quiz = {
                     questionSnapshot: questions.map((q, i) => ({
                         questionNo: i + 1,
                         questionId: String(q.id || `q${i + 1}`),
-                        questionType: (q.type || 'choice') === 'short' ? 'short' : 'choice',
+                        questionType: (q.type || 'choice') === 'short' ? 'short' : ((q.type || 'choice') === 'truefalse' ? 'truefalse' : 'choice'),
                         questionText: String(q.q || ''),
+                        imageData: String(q.imageData || ''),
                         options: Array.isArray(q.o) ? q.o.map(o => String(o || '')) : [],
                         correctAnswerIndex: (q.type || 'choice') === 'short' ? null : Number(q.a),
+                        correctAnswerText: (q.type || 'choice') === 'short' ? String(q.referenceAnswer || q.correctAnswerText || '') : '',
+                        referenceAnswer: (q.type || 'choice') === 'short' ? String(q.referenceAnswer || q.correctAnswerText || '') : '',
                         points: questionPoints[i]
                     }))
                 };
@@ -5713,8 +6122,11 @@ const Quiz = {
                 questionNo: i + 1,
                 questionId: String(q.id || `q${i + 1}`),
                 questionText: String(q.q || ''),
+                imageData: String(q.imageData || ''),
                 options: Array.isArray(q.o) ? q.o.map(o => String(o || '')) : [],
-                correctAnswerIndex: Number(q.a)
+                correctAnswerIndex: (q.type || 'choice') === 'short' ? null : Number(q.a),
+                correctAnswerText: (q.type || 'choice') === 'short' ? String(q.referenceAnswer || q.correctAnswerText || '') : '',
+                referenceAnswer: (q.type || 'choice') === 'short' ? String(q.referenceAnswer || q.correctAnswerText || '') : ''
             }));
 
             if (!App.isInstructor) {
@@ -5788,6 +6200,46 @@ try {
     console.warn('renderResultAnswers compatibility alias failed', e);
 }
 
+
+
+// V002：題目參考圖片點擊放大檢視
+const ImageLightbox = {
+    ensure: function() {
+        let overlay = document.getElementById('imageLightboxOverlay');
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.id = 'imageLightboxOverlay';
+        overlay.className = 'image-lightbox-overlay';
+        overlay.innerHTML = `
+            <div class="image-lightbox-box" onclick="event.stopPropagation()">
+                <button type="button" class="image-lightbox-close" aria-label="關閉圖片" onclick="ImageLightbox.close()">×</button>
+                <img id="imageLightboxImg" alt="放大檢視圖片" onclick="ImageLightbox.close()">
+            </div>`;
+        overlay.addEventListener('click', function() { ImageLightbox.close(); });
+        document.body.appendChild(overlay);
+        return overlay;
+    },
+    open: function(src) {
+        if (!src) return;
+        const overlay = this.ensure();
+        const img = overlay.querySelector('#imageLightboxImg');
+        if (img) img.src = src;
+        overlay.classList.add('active');
+    },
+    close: function() {
+        const overlay = document.getElementById('imageLightboxOverlay');
+        if (!overlay) return;
+        overlay.classList.remove('active');
+        const img = overlay.querySelector('#imageLightboxImg');
+        if (img) img.removeAttribute('src');
+    },
+    init: function() {
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') ImageLightbox.close();
+        });
+    }
+};
+ImageLightbox.init();
 
 const RefreshGuard = {
     isActive: function() {
