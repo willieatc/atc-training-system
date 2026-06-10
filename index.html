@@ -4342,7 +4342,7 @@ const Admin = {
                                 <div class="q-image-preview ${q.imageData ? 'has-image' : ''}">${q.imageData ? `<img src="${Admin.esc(q.imageData)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)">` : ''}</div>
                                 <div class="q-reference-answer-wrap">
                                     <label class="q-reference-answer-label">簡答題參考答案</label>
-                                    <textarea class="q-reference-answer" placeholder="可輸入批改用參考答案，學生作答時不會顯示">${Admin.esc(q.referenceAnswer || q.correctAnswerText || '')}</textarea>
+                                    <textarea class="q-reference-answer" placeholder="請輸入參考答案">${Admin.esc(q.referenceAnswer || q.correctAnswerText || '')}</textarea>
                                 </div>
 
                                 <div class="q-options-grid" hidden style="${(q.type || 'choice') === 'truefalse' ? '' : 'display:none !important;'}">
