@@ -2723,6 +2723,89 @@ body.question-sort-active .editor-helper {
             body[data-login-position="right"] #sec-login .login-panel { margin-left: auto !important; margin-right: auto !important; }
         }
 
+
+        /* vNEXT：多裝置結果頁與後台頁首頁尾按鈕可見性 */
+        #sec-res.active {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding-bottom: 96px;
+        }
+        #sec-res #finalScore {
+            font-size: 60px !important;
+            line-height: 1.1 !important;
+        }
+        #resultHomeBtn {
+            position: sticky;
+            bottom: 16px;
+            z-index: 3000;
+            margin-top: 14px;
+            min-width: 128px;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.38);
+        }
+        #sec-res .result-answer-area {
+            max-height: min(42vh, 420px);
+        }
+        .admin-mobile-jump-tools {
+            position: fixed;
+            right: 14px;
+            bottom: 14px;
+            z-index: 4500;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #sec-admin.active .admin-mobile-jump-tools {
+            display: flex;
+        }
+        .admin-mobile-jump-tools .btn {
+            width: 48px;
+            height: 42px;
+            padding: 0;
+            border-radius: 999px;
+            font-size: 15px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+        }
+        @media (max-width: 1024px) {
+            #sec-res.active {
+                min-height: calc(100vh - 20px);
+            }
+            @supports (height: 100dvh) {
+                #sec-res.active { min-height: calc(100dvh - 20px); }
+            }
+            #sec-res > div {
+                margin-top: 0 !important;
+                padding-bottom: 72px;
+            }
+            #sec-res #finalScore {
+                font-size: 60px !important;
+            }
+            #resultHomeBtn {
+                bottom: 12px;
+            }
+        }
+        @media (max-width: 760px) {
+            #sec-res.active {
+                padding: 18px 14px 98px;
+            }
+            #sec-res h1 {
+                font-size: 24px;
+                margin-bottom: 8px;
+            }
+            #sec-res #finalScore {
+                font-size: 60px !important;
+            }
+            #sec-res .result-answer-area {
+                max-height: 48vh;
+                margin-bottom: 18px;
+            }
+            #resultHomeBtn {
+                width: min(260px, 92vw);
+                bottom: 12px;
+            }
+        }
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -2735,7 +2818,7 @@ body.question-sort-active .editor-helper {
                     <h1 id="appTitleText" style="margin-bottom:6px;">ATC 訓練管理系統</h1>
                     <div id="appSubtitleText" style="color:#ffffff; font-size:16px; font-weight:900; letter-spacing:0.5px; margin-bottom:6px; text-shadow:0 2px 4px rgba(0,0,0,0.72), 0 0 18px rgba(0,0,0,0.55), 0 0 2px rgba(255,255,255,0.35);">RCTP 臺北機場管制臺</div>
                     <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px; background:transparent; background-color:transparent; border:0; box-shadow:none; padding:0; border-radius:0;">本機測試模式：尚未連線 Supabase</div>
-                
+                    <span class="badge-instructor hidden">管理員模式</span>
                 </div>
                 <div style="background:#161b22; padding:30px; border-radius:12px; border:1px solid var(--border-color);">
                     <label>使用者名稱</label>
@@ -2779,7 +2862,7 @@ body.question-sort-active .editor-helper {
         <div id="sec-res" class="section">
             <div style="margin:auto; text-align:center; width:min(960px, 100%);">
                 <h1>考核結果</h1>
-                <div id="finalScore" style="font-size:60px; color:var(--success-color); font-weight:bold;">0</div>
+                <div id="finalScore" style="font-size:60px; color:var(--success-color); font-weight:bold; line-height:1.1;">0</div>
                 <div id="resultPassNote" style="margin:0 0 12px 0; font-size:18px; font-weight:bold;"></div>
                 <div id="resultAnswerArea" class="result-answer-area hidden"></div>
                 <button id="resultHomeBtn" class="btn btn-primary" onclick="App.toHome()">回到首頁</button>
@@ -2871,7 +2954,7 @@ const PASS_SCORE = 80;
 // ================= Supabase 後端設定 =================
 // Supabase URL 與 anon key 請設定在同層的 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V001';
+const APP_BUILD_VERSION = 'V001-review-no-ref-v2';
 
 const SUPABASE_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_URL) ? window.ATC_CONFIG.SUPABASE_URL.trim() : "";
 const SUPABASE_ANON_KEY = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_ANON_KEY) ? window.ATC_CONFIG.SUPABASE_ANON_KEY.trim() : "";
@@ -3045,7 +3128,12 @@ const Backend = {
             if (recRes.error) throw recRes.error;
             const records = (recRes.data || []).map(row => this.recordFromRow(row));
             const courses = Array.isArray(settings.courses) ? settings.courses : [];
-            const quizUnlocks = settings.quiz_unlocks && typeof settings.quiz_unlocks === 'object' ? settings.quiz_unlocks : {};
+            const quizUnlocksRaw = settings.quiz_unlocks && typeof settings.quiz_unlocks === 'object' ? settings.quiz_unlocks : {};
+            const systemSettingsFromColumn = settings.system_settings && typeof settings.system_settings === 'object' ? settings.system_settings : {};
+            const systemSettingsFromFallback = quizUnlocksRaw.__system_settings && typeof quizUnlocksRaw.__system_settings === 'object' ? quizUnlocksRaw.__system_settings : {};
+            const systemSettings = Object.keys(systemSettingsFromColumn || {}).length ? systemSettingsFromColumn : systemSettingsFromFallback;
+            const quizUnlocks = Object.assign({}, quizUnlocksRaw);
+            delete quizUnlocks.__system_settings;
             App.cloudRevision = String(settings.revision || 1);
             localStorage.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
             App.state = {
@@ -3056,7 +3144,7 @@ const Backend = {
                 quizLocks: this.buildLocks(records, quizUnlocks, courses),
                 quizUnlocks: quizUnlocks,
                 adminPw: settings.admin_pw || 'rctp3023',
-                systemSettings: settings.system_settings && typeof settings.system_settings === 'object' ? settings.system_settings : {}
+                systemSettings: systemSettings || {}
             };
             App.state.courses.forEach(c => {
                 const n = Number(c.passScore);
@@ -3089,12 +3177,18 @@ const Backend = {
             const client = this.client();
             const settings = await this.getSettings();
             const nextRevision = Number(settings.revision || 1) + 1;
+            const systemSettingsPayload = (state && state.systemSettings && typeof state.systemSettings === 'object') ? state.systemSettings : (settings.system_settings || {});
+            const quizUnlocksPayload = Object.assign(
+                {},
+                (state && state.quizUnlocks && typeof state.quizUnlocks === 'object') ? state.quizUnlocks : (settings.quiz_unlocks || {})
+            );
+            quizUnlocksPayload.__system_settings = systemSettingsPayload;
             const payload = {
                 id: true,
                 courses: Array.isArray(state && state.courses) ? state.courses : [],
                 admin_pw: (state && state.adminPw) ? String(state.adminPw) : (settings.admin_pw || 'rctp3023'),
-                quiz_unlocks: (state && state.quizUnlocks && typeof state.quizUnlocks === 'object') ? state.quizUnlocks : (settings.quiz_unlocks || {}),
-                system_settings: (state && state.systemSettings && typeof state.systemSettings === 'object') ? state.systemSettings : (settings.system_settings || {}),
+                quiz_unlocks: quizUnlocksPayload,
+                system_settings: systemSettingsPayload,
                 revision: nextRevision
             };
             let upsertRes = await client.from('atc_app_settings').upsert(payload, { onConflict: 'id' });
@@ -4519,7 +4613,7 @@ const App = {
         ['rec', 'score', 'edit', 'settings'].forEach(p => { const panel = document.getElementById(`panel-${p}`); const tabEl = document.getElementById(`t-${p}`); if (panel) panel.classList.add('hidden'); if (tabEl) tabEl.classList.remove('active'); });
         document.getElementById(`panel-${tab}`).classList.remove('hidden'); document.getElementById(`t-${tab}`).classList.add('active');
 
-        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', rec: '人員帳號管理', settings: '系統設定'};
+        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', settings: '系統設定', rec: '人員帳號管理' };
         const currentLabel = document.getElementById('adminMobileCurrent');
         if (currentLabel) currentLabel.innerText = `目前展開：${labelMap[tab] || ''}`;
 
@@ -5227,10 +5321,12 @@ const Admin = {
     },
     downloadTemplate: function() {
         const rows = [
-            ['題目 (Question)', '選項列表 (以半形逗號分隔)', '正確答案索引 (1-4)', '備註說明'],
-            ['範例：請在此輸入題目內容', '選項一,選項二,選項三,選項四', '1', '此欄可留空']
+            ['題型 (choice/truefalse/short)', '題目 (Question)', '選項列表 (選擇題用半形逗號分隔；是非題/簡答可留空)', '正確答案索引 (選擇題1-4；是非題1=是/2=非；簡答可留空)', '簡答題參考答案', '配分(可留空)', '備註說明'],
+            ['choice', '範例：選擇題題目', '選項一,選項二,選項三,選項四', '1', '', '', '選擇題範例'],
+            ['truefalse', '範例：是非題題目', '', '1', '', '', '1=是，2=非'],
+            ['short', '範例：簡答題題目', '', '', '此欄可填批改用參考答案', '', '簡答題範例']
         ];
-        const csv = rows.map((row, rowIndex) => row.map((v, colIndex) => rowIndex > 0 && colIndex === 1 ? Admin.csvTextCell(v) : Admin.csvCell(v)).join(',')).join('\n');
+        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\n');
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
         link.setAttribute("download", "題庫匯入範本.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -5245,25 +5341,30 @@ const Admin = {
         if (!questions.length) return alert("本科目目前沒有題目可匯出。");
 
         const rows = [
-            ['題目 (Question)', '選項列表 (以半形逗號分隔)', '正確答案索引 (1-4)', '備註說明']
+            ['題型 (choice/truefalse/short)', '題目 (Question)', '選項列表 (選擇題用半形逗號分隔；是非題/簡答可留空)', '正確答案索引 (選擇題1-4；是非題1=是/2=非；簡答可留空)', '簡答題參考答案', '配分(可留空)', '備註說明']
         ];
 
         questions.forEach((q, index) => {
-            const opts = Array.isArray(q.o) ? q.o : [];
+            const type = (q.type || 'choice') === 'short' ? 'short' : ((q.type || 'choice') === 'truefalse' ? 'truefalse' : 'choice');
+            let opts = Array.isArray(q.o) ? q.o : [];
+            if (type === 'truefalse' || type === 'short') opts = [];
             rows.push([
+                type,
                 q.q || '',
                 opts.join(','),
-                Number.isInteger(parseInt(q.a, 10)) ? String(parseInt(q.a, 10) + 1) : '1',
+                type === 'short' ? '' : (Number.isInteger(parseInt(q.a, 10)) ? String(parseInt(q.a, 10) + 1) : '1'),
+                q.referenceAnswer || q.correctAnswerText || '',
+                q.points === null || q.points === undefined || q.points === '' ? '' : String(q.points),
                 `Q${index + 1}`
             ]);
         });
 
-        const csv = rows.map((row, rowIndex) => row.map((v, colIndex) => rowIndex > 0 && colIndex === 1 ? Admin.csvTextCell(v) : Admin.csvCell(v)).join(',')).join('\n');
+        const csv = rows.map(row => row.map(v => Admin.csvCell(v)).join(',')).join('\n');
         const safeTitle = String(course.title || '題庫')
             .replace(/[\\/:*?"<>|]/g, '_')
             .replace(/\s+/g, '_')
             .slice(0, 40);
-        const stamp = DateUtil.format().replace(/[\/:\s]/g, '');
+        const stamp = DateUtil.format().replace(/[\/\:\s]/g, '');
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
@@ -5909,39 +6010,83 @@ const Admin = {
             dataRows.forEach((c) => {
                 if(!c || c.every(v => String(v || '').trim() === '')) return;
 
+                let type = 'choice';
                 let q = '';
                 let opts = [];
                 let answerNo = NaN;
+                let referenceAnswer = '';
+                let points = '';
 
-                // 新版範本格式：題目、選項列表（半形逗號分隔）、正確答案索引、備註。
-                if(c.length >= 3 && String(c[1] || '').includes(',')) {
+                const first = String(c[0] || '').trim().toLowerCase();
+                const hasTypeColumn = ['choice', 'select', '選擇題', 'truefalse', 'true/false', '是非題', 'tf', 'short', 'shortanswer', '簡答題'].includes(first);
+
+                if (hasTypeColumn) {
+                    if (['truefalse', 'true/false', '是非題', 'tf'].includes(first)) type = 'truefalse';
+                    else if (['short', 'shortanswer', '簡答題'].includes(first)) type = 'short';
+                    else type = 'choice';
+
+                    q = String(c[1] || '').trim();
+                    const optionCell = String(c[2] || '').trim();
+                    answerNo = parseInt(c[3], 10);
+                    referenceAnswer = String(c[4] || '').trim();
+                    points = String(c[5] || '').trim();
+
+                    if (type === 'choice') {
+                        opts = optionCell ? optionCell.split(',').map(s => s.trim()).filter(Boolean) : [];
+                    } else if (type === 'truefalse') {
+                        opts = ['是', '非'];
+                    } else {
+                        opts = [];
+                    }
+                }
+                else if(c.length >= 3 && String(c[1] || '').includes(',')) {
+                    type = 'choice';
                     q = String(c[0] || '').trim();
                     opts = String(c[1] || '').split(',').map(s => s.trim()).filter(Boolean);
                     answerNo = parseInt(c[2], 10);
                 }
-                // 舊版格式相容：題目、選項1、選項2、選項3、選項4、正確答案序號。
                 else if(c.length >= 6) {
+                    type = 'choice';
                     q = String(c[0] || '').trim();
                     opts = [c[1], c[2], c[3], c[4]].map(s => String(s || '').trim());
                     answerNo = parseInt(c[5], 10);
                 }
 
-                if(!q || opts.length !== 4 || opts.some(o => !o) || !Number.isInteger(answerNo) || answerNo < 1 || answerNo > 4) {
+                if (!q) {
                     skipped++;
                     return;
                 }
 
-                App.state.courses[ci].questions.push({
-                    q: q,
-                    o: opts,
-                    a: answerNo - 1
-                });
-                imported++;
+                let item = null;
+                if (type === 'choice') {
+                    if(opts.length !== 4 || opts.some(o => !o) || !Number.isInteger(answerNo) || answerNo < 1 || answerNo > 4) {
+                        skipped++;
+                        return;
+                    }
+                    item = { type: 'choice', q: q, o: opts, a: answerNo - 1 };
+                } else if (type === 'truefalse') {
+                    if(!Number.isInteger(answerNo) || answerNo < 1 || answerNo > 2) {
+                        skipped++;
+                        return;
+                    }
+                    item = { type: 'truefalse', q: q, o: ['是', '非'], a: answerNo - 1 };
+                } else if (type === 'short') {
+                    item = { type: 'short', q: q, o: [], a: 0, referenceAnswer: referenceAnswer };
+                }
+
+                if (item) {
+                    const pointNo = Number(points);
+                    if (points !== '' && Number.isFinite(pointNo) && pointNo >= 0) item.points = pointNo;
+                    App.state.courses[ci].questions.push(item);
+                    imported++;
+                } else {
+                    skipped++;
+                }
             });
             Admin.renderEditor();
             e.target.value = '';
             if(skipped > 0) {
-                alert(`匯入完成：成功 ${imported} 題，略過 ${skipped} 題。\n新版格式請使用：題目、選項列表（以半形逗號分隔）、正確答案索引 1～4。`);
+                alert(`匯入完成：成功 ${imported} 題，略過 ${skipped} 題。\n新版格式可使用：題型、題目、選項列表、正確答案索引、簡答題參考答案、配分、備註。`);
             } else {
                 alert(`匯入成功：共 ${imported} 題。`);
             }
@@ -7009,7 +7154,6 @@ const Quiz = {
                         <div class="review-q-title">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
                         ${getQuestionDisplayImage(q, App.activeCourse) ? `<div class="review-question-image"><img src="${getQuestionDisplayImage(q, App.activeCourse)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                         <div class="review-short-answer-label">簡答內容</div><div class="review-short-answer-box">${Admin.esc(String(selectedIndex || '（未填寫）'))}</div>
-                        <div class="review-short-answer-label">參考答案</div><div class="review-short-answer-box">${Admin.esc(String(q.referenceAnswer || q.correctAnswerText || '（未設定）'))}</div>
                     </div>`;
                 }
                 const selectedText = q.o[selectedIndex] || '';
@@ -7020,6 +7164,14 @@ const Quiz = {
                 </div>`;
             }).join('')}
         `;
+        // 安全保險：作答內容檢查只給學生確認自己的作答，不能顯示簡答題參考答案。
+        body.querySelectorAll('.review-short-answer-label').forEach(label => {
+            if (String(label.textContent || '').includes('參考答案')) {
+                const valueBox = label.nextElementSibling;
+                if (valueBox) valueBox.remove();
+                label.remove();
+            }
+        });
         overlay.classList.add('active');
         overlay.setAttribute('aria-hidden', 'false');
         this.resetReviewModal();
@@ -7139,7 +7291,7 @@ const Quiz = {
                         <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
                         ${getQuestionDisplayImage(q, App.activeCourse) ? `<div class="result-question-image"><img src="${getQuestionDisplayImage(q, App.activeCourse)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                         <div class="result-short-answer-label">你的簡答作答</div><div class="result-short-answer-box">${Admin.esc(String(userIndex || '（未填寫）'))}</div>
-                        <div class="result-short-answer-label">參考答案</div><div class="result-short-answer-box">${Admin.esc(String(q.referenceAnswer || q.correctAnswerText || '（未設定）'))}</div>
+                        <div class="result-short-answer-label" style="color:var(--success-color);">參考答案</div><div class="result-short-answer-box" style="color:var(--success-color); font-weight:700;">${Admin.esc(String(q.referenceAnswer || q.correctAnswerText || '（未設定）'))}</div>
                     </div>`;
                 }
                 const correctIndex = q.a;
