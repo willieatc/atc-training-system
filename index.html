@@ -20,7 +20,7 @@
     <!-- ATC 工作相關學習網 V001 / Supabase database edition -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATC 訓練管理系統</title>
+    <title>ATC 專業訓練管理系統</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2202,6 +2202,81 @@ body.question-sort-active .editor-helper {
         }
 
     
+
+
+        /* V003：題組共用參考圖片，避免同圖重複上傳 */
+        .question-group-manager {
+            margin: 0 0 14px;
+            padding: 12px;
+            border: 1px solid rgba(88,166,255,0.24);
+            border-radius: 12px;
+            background: rgba(13,17,23,0.36);
+        }
+        .question-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .question-group-title {
+            color: var(--accent-color);
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .question-group-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .question-group-row {
+            display: grid;
+            grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) auto auto;
+            gap: 8px;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: #0d1117;
+        }
+        .question-group-row .input-field { margin: 0; }
+        .question-group-preview {
+            display: none;
+            max-width: 220px;
+            padding: 6px;
+            border: 1px solid rgba(88,166,255,0.22);
+            border-radius: 10px;
+            background: rgba(13,17,23,0.45);
+        }
+        .question-group-preview.has-image { display: block; }
+        .question-group-preview img {
+            display: block;
+            max-width: 100%;
+            max-height: 120px;
+            border-radius: 8px;
+            object-fit: contain;
+            cursor: zoom-in;
+        }
+        .q-group-tools {
+            display: grid;
+            grid-template-columns: minmax(160px, 260px) 1fr;
+            gap: 8px;
+            align-items: center;
+            margin: 8px 0 4px;
+        }
+        .q-group-tools .select-field { margin: 0; }
+        .q-group-note {
+            color: #8b949e;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        @media (max-width: 900px) {
+            .question-group-row,
+            .q-group-tools { grid-template-columns: 1fr; }
+            .question-group-preview { max-width: 100%; }
+        }
+
         /* V001 patch：Supabase 同步提示純文字、題目參考圖片 */
         #cloudStatus {
             background: transparent !important;
@@ -2216,6 +2291,15 @@ body.question-sort-active .editor-helper {
             gap: 8px;
             flex-wrap: wrap;
             margin: 8px 0 10px;
+        }
+        .q-image-source-tools .q-group-picker {
+            flex: 1 1 240px;
+            max-width: 320px;
+            min-width: 180px;
+            margin: 0;
+        }
+        .q-image-source-tools .q-group-picker.hidden {
+            display: none !important;
         }
         .q-image-preview {
             display: none;
@@ -2441,6 +2525,204 @@ body.question-sort-active .editor-helper {
             font-weight: 700;
         }
 
+
+        /* V004：系統設定後台 */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+        .settings-card {
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .settings-card h4 {
+            color: var(--accent-color);
+            margin: 0 0 12px 0;
+            letter-spacing: 0.02em;
+        }
+        .settings-row {
+            display: grid;
+            grid-template-columns: 180px minmax(0, 1fr);
+            gap: 12px;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+        .settings-row label {
+            color: #8b949e;
+            font-size: 13px;
+            padding-top: 14px;
+        }
+        .settings-row textarea.input-field {
+            min-height: 76px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+        .settings-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .settings-help {
+            font-size: 12px;
+            color: #8b949e;
+            line-height: 1.6;
+            margin-top: 6px;
+        }
+        .settings-switch-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-color);
+            font-size: 14px;
+        }
+        @media (max-width: 760px) {
+            .settings-row { grid-template-columns: 1fr; gap: 6px; }
+            .settings-row label { padding-top: 0; }
+            .settings-actions { justify-content: stretch; }
+            .settings-actions .btn { flex: 1 1 140px; }
+        }
+
+
+
+        /* V006：系統設定分區快捷入口 */
+        .settings-section-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 10px;
+            margin: 0 0 14px 0;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+        .settings-section-nav .btn {
+            min-height: 32px;
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        .settings-section-title-note {
+            font-size: 12px;
+            color: #8b949e;
+            margin-left: auto;
+        }
+        .settings-card.settings-card-highlight {
+            border-color: rgba(88,166,255,0.45);
+            box-shadow: 0 0 0 2px rgba(88,166,255,0.08);
+        }
+        @media (max-width: 760px) {
+            .settings-section-title-note { width: 100%; margin-left: 0; }
+            .settings-section-nav .btn { flex: 1 1 120px; }
+        }
+
+        /* V005：進階系統設定－外觀與題庫編輯版面 */
+        .settings-preview-box {
+            min-height: 78px;
+            border: 1px dashed var(--border-color);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .settings-preview-box.has-image { border-style: solid; }
+        .settings-preview-box img {
+            max-width: 100%;
+            max-height: 160px;
+            display: block;
+            cursor: zoom-in;
+        }
+        .setting-inline-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .settings-color-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .settings-color-row input[type="color"] {
+            width: 54px;
+            height: 38px;
+            padding: 2px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #0d1117;
+        }
+        body[data-density="compact"] .section { padding: 22px; }
+        body[data-density="compact"] .editor-card,
+        body[data-density="compact"] .settings-card,
+        body[data-density="compact"] .q-row { padding: 12px; }
+        body[data-density="compact"] .input-field,
+        body[data-density="compact"] .select-field { padding: 8px; margin: 5px 0; }
+        body[data-density="compact"] .q-row-header { margin-bottom: 8px; }
+        body[data-density="compact"] .course-item { margin-bottom: 10px; }
+        body[data-density="wide"] .main-container { height: 94vh; }
+        body[data-panel-width="wide"] .app-wrapper { width: min(100vw, 1560px); }
+        body[data-panel-width="wide"] .main-container { width: min(1520px, calc(100vw - 24px)); }
+        body[data-panel-width="narrow"] .app-wrapper { width: min(100vw, 1120px); }
+        body[data-panel-width="narrow"] .main-container { width: min(1080px, calc(100vw - 24px)); }
+        body[data-login-bg-mode="none"] #sec-login::before,
+        body[data-login-bg-mode="none"] #sec-login::after { display: none !important; }
+        body[data-login-bg-mode="gradient"] #sec-login::before {
+            background-image: linear-gradient(135deg, rgba(13,17,23,0.96), rgba(31,111,235,0.30), rgba(63,185,80,0.14)) !important;
+            filter: none !important;
+            transform: none !important;
+        }
+        body[data-login-bg-mode="custom"] #sec-login::before {
+            background-image: var(--login-bg-image) !important;
+            background-size: var(--login-bg-size, cover) !important;
+            background-position: center !important;
+            background-repeat: var(--login-bg-repeat, no-repeat) !important;
+        }
+        body[data-login-position="left"] #sec-login.active { justify-content: flex-start !important; }
+        body[data-login-position="right"] #sec-login.active { justify-content: flex-end !important; }
+        body[data-login-position="left"] #sec-login .login-card-wrap,
+        body[data-login-position="left"] #sec-login .login-panel { margin-left: min(7vw, 90px) !important; margin-right: auto !important; }
+        body[data-login-position="right"] #sec-login .login-card-wrap,
+        body[data-login-position="right"] #sec-login .login-panel { margin-left: auto !important; margin-right: min(7vw, 90px) !important; }
+        body[data-login-position="center"] #sec-login .login-card-wrap,
+        body[data-login-position="center"] #sec-login .login-panel { margin-left: auto !important; margin-right: auto !important; }
+        body[data-question-layout="compact"] .q-row-header { align-items: center; }
+        body[data-question-layout="compact"] .q-row-actions { gap: 6px; }
+        body[data-question-layout="compact"] .q-score-field-wrap { white-space: nowrap; }
+        body[data-question-layout="card"] .q-row { border-color: rgba(88,166,255,0.35); box-shadow: 0 8px 22px rgba(0,0,0,0.18); }
+        body[data-q-input-position="top"] .q-row { display: flex; flex-direction: column; }
+        body[data-q-input-position="top"] .q-row .q-t { order: 1; }
+        body[data-q-input-position="top"] .q-row .q-row-header { order: 2; }
+        body[data-q-input-position="top"] .q-row .q-image-tools { order: 3; }
+        body[data-q-input-position="top"] .q-row .q-image-preview { order: 4; }
+        body[data-q-input-position="top"] .q-row .q-reference-answer-wrap { order: 5; }
+        body[data-q-input-position="top"] .q-row .q-options-grid { order: 6; }
+        body[data-q-input-position="bottom"] .q-row { display: flex; flex-direction: column; }
+        body[data-q-input-position="bottom"] .q-row .q-row-header { order: 1; }
+        body[data-q-input-position="bottom"] .q-row .q-image-tools { order: 2; }
+        body[data-q-input-position="bottom"] .q-row .q-image-preview { order: 3; }
+        body[data-q-input-position="bottom"] .q-row .q-reference-answer-wrap { order: 4; }
+        body[data-q-input-position="bottom"] .q-row .q-options-grid { order: 5; }
+        body[data-q-input-position="bottom"] .q-row .q-t { order: 6; }
+        body[data-image-tools-layout="stack"] .q-image-tools { flex-direction: column; align-items: stretch; }
+        body[data-image-tools-layout="stack"] .q-image-tools .btn,
+        body[data-image-tools-layout="stack"] .q-image-tools .select-field { width: 100%; }
+        body[data-image-tools-layout="inline"] .q-image-tools { flex-direction: row; align-items: center; }
+        body[data-admin-header="compact"] .sticky-header { padding-top: 10px; padding-bottom: 10px; margin-bottom: 12px; }
+        body[data-admin-header="compact"] .header-actions { padding: 5px; gap: 6px; }
+        @media (max-width: 760px) {
+            body[data-login-position="left"] #sec-login .login-card-wrap,
+            body[data-login-position="right"] #sec-login .login-card-wrap,
+            body[data-login-position="left"] #sec-login .login-panel,
+            body[data-login-position="right"] #sec-login .login-panel { margin-left: auto !important; margin-right: auto !important; }
+        }
+
 </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -2450,9 +2732,10 @@ body.question-sort-active .editor-helper {
         <div id="sec-login" class="section active">
             <div class="login-panel">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <h1 style="margin-bottom:6px;">ATC 訓練管理系統</h1>
-                    <div style="color:#ffffff; font-size:16px; font-weight:900; letter-spacing:0.5px; margin-bottom:6px; text-shadow:0 2px 4px rgba(0,0,0,0.72), 0 0 18px rgba(0,0,0,0.55), 0 0 2px rgba(255,255,255,0.35);">RCTP 臺北機場管制臺</div>
-                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px; background:transparent; background-color:transparent; border:0; box-shadow:none; padding:0; border-radius:0;">本機測試模式：尚未連線 Supabase</div>                
+                    <h1 id="appTitleText" style="margin-bottom:6px;">ATC 訓練管理系統</h1>
+                    <div id="appSubtitleText" style="color:#ffffff; font-size:16px; font-weight:900; letter-spacing:0.5px; margin-bottom:6px; text-shadow:0 2px 4px rgba(0,0,0,0.72), 0 0 18px rgba(0,0,0,0.55), 0 0 2px rgba(255,255,255,0.35);">RCTP 臺北機場管制臺</div>
+                    <div id="cloudStatus" style="display:none; font-size:12px; color:#8b949e; margin-bottom:10px; background:transparent; background-color:transparent; border:0; box-shadow:none; padding:0; border-radius:0;">本機測試模式：尚未連線 Supabase</div>
+                    <span class="badge-instructor hidden">管理員模式</span>
                 </div>
                 <div style="background:#161b22; padding:30px; border-radius:12px; border:1px solid var(--border-color);">
                     <label>使用者名稱</label>
@@ -2481,7 +2764,7 @@ body.question-sort-active .editor-helper {
 
         <div id="sec-quiz" class="section">
             <h2 style="margin-bottom:10px;">能力考核測驗</h2>
-            <div style="margin-bottom:15px; color:var(--warning-color); font-size:13px; font-weight:bold; line-height:1.6; background:#0d1117; border:1px solid rgba(255,157,0,0.45); border-radius:8px; padding:12px 14px;">⚠️ 測驗進行中請勿重新整理頁面或關閉視窗，如刷新或離開頁面，系統將自動記錄為 0 分，並視為已測驗，需由管理員解鎖後才能再次測驗。</div>
+            <div id="quizWarningText" style="margin-bottom:15px; color:var(--warning-color); font-size:13px; font-weight:bold; line-height:1.6; background:#0d1117; border:1px solid rgba(255,157,0,0.45); border-radius:8px; padding:12px 14px;">⚠️ 測驗進行中請勿重新整理頁面或關閉視窗，如刷新或離開頁面，系統將自動記錄為 0 分，並視為已測驗，需由管理員解鎖後才能再次測驗。</div>
             <div id="quizContainer" class="scroll-area"></div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:20px;">
                 <span id="quizCompletionStatus" style="font-size:13px; color:#8b949e;">送出時會檢查未作答題目。</span>
@@ -2499,7 +2782,7 @@ body.question-sort-active .editor-helper {
                 <div id="finalScore" style="font-size:100px; color:var(--success-color); font-weight:bold;">0</div>
                 <div id="resultPassNote" style="margin:0 0 12px 0; font-size:18px; font-weight:bold;"></div>
                 <div id="resultAnswerArea" class="result-answer-area hidden"></div>
-                <button class="btn btn-primary" onclick="App.toHome()">回到首頁</button>
+                <button id="resultHomeBtn" class="btn btn-primary" onclick="App.toHome()">回到首頁</button>
             </div>
         </div>
 
@@ -2513,19 +2796,21 @@ body.question-sort-active .editor-helper {
                         <div class="admin-tab" id="t-edit" onclick="App.switchAdmin('edit')">📚 教材與題庫編輯</div>
                         <div class="admin-tab" id="t-rec" onclick="App.switchAdmin('rec')" style="margin-top:auto;">🔒 人員帳號管理</div>
                     </div>
-                    <button class="btn btn-primary btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.adminOpenCourseTester()">進入教材/測驗</button>
-                    <button class="btn btn-warning btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.logoutInstructor()">管理員登出</button>
+                    <button id="adminCourseTesterBtn" class="btn btn-primary btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.adminOpenCourseTester()">進入教材/測驗</button>
+                    <button id="adminLogoutBtn" class="btn btn-warning btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.logoutInstructor()">管理員登出</button>
                     <div class="backup-inline-tools">
-                        <button class="btn btn-success btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
-                        <button class="btn btn-primary btn-sm" onclick="document.getElementById('backupImportFile').click()">匯入備份</button>
+                        <button id="backupExportBtn" class="btn btn-success btn-sm" onclick="Backup.exportLocal()">匯出備份</button>
+                        <button id="backupImportBtn" class="btn btn-primary btn-sm" onclick="document.getElementById('backupImportFile').click()">匯入備份</button>
                     </div>
                     <input type="file" id="backupImportFile" accept=".json,application/json" class="hidden" onchange="Backup.importLocal(this)">
-                    <button class="btn btn-outline btn-sm" style="width:100%;" onclick="App.toHome()">返回首頁</button>
+                    <button id="adminSidebarHomeBtn" class="btn btn-outline btn-sm" style="width:100%; margin-bottom:10px;" onclick="App.toHome()">返回首頁</button>
+                    <div class="admin-tab" id="t-settings" onclick="App.switchAdmin('settings')" style="margin-top:0; border:1px solid var(--border-color); background:#0d1117;">🛠️ 系統設定</div>
                 </div>
                 <div class="admin-content scroll-area" id="adminContent">
                     <div id="panel-rec" class="hidden"><div id="userTable"></div></div>
                     <div id="panel-score" class="hidden"></div>
                     <div id="panel-edit" class="hidden"></div>
+                    <div id="panel-settings" class="hidden"></div>
                     <div id="adminMobileJumpTools" class="admin-mobile-jump-tools" aria-label="手機後台快速跳轉">
                         <button class="btn btn-outline btn-sm" onclick="App.adminJumpToTop()" title="回到頁首">▲</button>
                         <button class="btn btn-outline btn-sm" onclick="App.adminJumpToBottom()" title="前往頁尾">▼</button>
@@ -2546,8 +2831,8 @@ body.question-sort-active .editor-helper {
         </div>
         <div id="adminPasswordError" class="admin-password-error"></div>
         <div class="admin-password-actions">
-            <button type="button" class="btn btn-outline" onclick="App.closeAdminPasswordModal()">取消</button>
-            <button type="button" class="btn btn-primary" onclick="App.submitAdminPassword()">登入後台</button>
+            <button type="button" id="adminPasswordCancelBtn" class="btn btn-outline" onclick="App.closeAdminPasswordModal()">取消</button>
+            <button type="button" id="adminPasswordSubmitBtn" class="btn btn-primary" onclick="App.submitAdminPassword()">登入後台</button>
         </div>
     </div>
 </div>
@@ -2770,7 +3055,8 @@ const Backend = {
                 userNames: settings.user_names && typeof settings.user_names === 'object' ? settings.user_names : {},
                 quizLocks: this.buildLocks(records, quizUnlocks, courses),
                 quizUnlocks: quizUnlocks,
-                adminPw: settings.admin_pw || 'rctp3023'
+                adminPw: settings.admin_pw || 'rctp3023',
+                systemSettings: settings.system_settings && typeof settings.system_settings === 'object' ? settings.system_settings : {}
             };
             App.state.courses.forEach(c => {
                 const n = Number(c.passScore);
@@ -2808,10 +3094,16 @@ const Backend = {
                 courses: Array.isArray(state && state.courses) ? state.courses : [],
                 admin_pw: (state && state.adminPw) ? String(state.adminPw) : (settings.admin_pw || 'rctp3023'),
                 quiz_unlocks: (state && state.quizUnlocks && typeof state.quizUnlocks === 'object') ? state.quizUnlocks : (settings.quiz_unlocks || {}),
+                system_settings: (state && state.systemSettings && typeof state.systemSettings === 'object') ? state.systemSettings : (settings.system_settings || {}),
                 revision: nextRevision
             };
-            const { error } = await client.from('atc_app_settings').upsert(payload, { onConflict: 'id' });
-            if (error) throw error;
+            let upsertRes = await client.from('atc_app_settings').upsert(payload, { onConflict: 'id' });
+            if (upsertRes.error && /system_settings|schema cache|column/i.test(String(upsertRes.error.message || ''))) {
+                delete payload.system_settings;
+                upsertRes = await client.from('atc_app_settings').upsert(payload, { onConflict: 'id' });
+                if (!upsertRes.error) console.warn('system_settings 欄位尚未建立，系統設定僅保存在本機。');
+            }
+            if (upsertRes.error) throw upsertRes.error;
             App.cloudRevision = String(nextRevision);
             localStorage.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
             localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
@@ -3171,6 +3463,233 @@ const App = {
     pendingScoreKey: 'ATC_PENDING_SCORE_RECORDS',
     ADMIN_SESSION_KEY: 'ATC_ADMIN_SESSION_ACTIVE',
     savePromise: null,
+    DEFAULT_SYSTEM_SETTINGS: {
+        appTitle: 'ATC 訓練管理系統',
+        appSubtitle: 'RCTP 臺北機場管制臺',
+        showCloudStatus: true,
+        quizWarningText: '⚠️ 測驗進行中請勿重新整理頁面或關閉視窗，如刷新或離開頁面，系統將自動記錄為 0 分，並視為已測驗，需由管理員解鎖後才能再次測驗。',
+        quizCompletionText: '送出時會檢查未作答題目。',
+        quizSubmitButtonText: '提交考核答案',
+        scoreSavingButtonText: '成績儲存中...',
+        reviewConfirmButtonText: '確認送出',
+        reviewSavingButtonText: '儲存中...',
+        resultHomeButtonText: '回到首頁',
+        manualScoreConfirmText: '此筆成績已完成人工計分，是否要修改計分？',
+        scoreSyncTitle: '成績儲存中',
+        scoreSyncMessage: '正在將成績與逐題紀錄寫入 Supabase，請勿關閉視窗或重新整理頁面。',
+        scoreSyncNote: '看到考核結果畫面後，才代表 Supabase 已完成寫入。',
+        accentColor: '#58a6ff',
+        interfaceDensity: 'normal',
+        panelWidth: 'normal',
+        adminHeaderMode: 'normal',
+        loginPosition: 'center',
+        loginBackgroundMode: 'default',
+        loginBackgroundSize: 'cover',
+        loginBackgroundImage: '',
+        questionEditorLayout: 'normal',
+        questionInputPosition: 'default',
+        imageToolsLayout: 'inline',
+        showButtonEmoji: true,
+        buttonEmojiPosition: 'prefix',
+        loginButtonText: '登入系統',
+        loginButtonEmoji: '',
+        reviewModeButtonText: '已測驗，進入複習模式',
+        reviewModeButtonEmoji: '🔁',
+        instructorEnterButtonText: '請由後台進入教材/測驗',
+        instructorEnterButtonEmoji: '',
+        adminLoginButtonText: '管理員登入',
+        adminLoginButtonEmoji: '⚙️',
+        adminAuthorizedButtonText: '管理員登入 (已授權)',
+        adminAuthorizedButtonEmoji: '⚙️',
+        startQuizButtonText: '開始考核',
+        startQuizButtonEmoji: '📝',
+        startPreparingButtonText: '準備考核中...',
+        startPreparingButtonEmoji: '',
+        quizSubmitButtonEmoji: '',
+        scoreSavingButtonEmoji: '',
+        reviewBackButtonText: '返回修改',
+        reviewBackButtonEmoji: '',
+        reviewConfirmButtonEmoji: '',
+        reviewSavingButtonEmoji: '',
+        resultHomeButtonEmoji: '',
+        viewExitButtonText: '退出',
+        viewExitButtonEmoji: '🚪',
+        backToAdminButtonText: '回到後台',
+        backToAdminButtonEmoji: '',
+        adminCourseTesterButtonText: '進入教材/測驗',
+        adminCourseTesterButtonEmoji: '',
+        adminLogoutButtonText: '管理員登出',
+        adminLogoutButtonEmoji: '',
+        backupExportButtonText: '匯出備份',
+        backupExportButtonEmoji: '',
+        backupImportButtonText: '匯入備份',
+        backupImportButtonEmoji: '',
+        adminSidebarHomeButtonText: '返回首頁',
+        adminSidebarHomeButtonEmoji: '',
+        showSidebarMenuEmoji: true,
+        sidebarMenuEmojiPosition: 'prefix',
+        adminScoreTabText: '測驗成績查詢',
+        adminScoreTabEmoji: '🔍',
+        adminEditTabText: '教材與題庫編輯',
+        adminEditTabEmoji: '📚',
+        adminSettingsTabText: '系統設定',
+        adminSettingsTabEmoji: '🛠️',
+        adminSettingsTabSubText: '',
+        adminRecTabText: '人員帳號管理',
+        adminRecTabEmoji: '🔒',
+        courseEditorIntroText: '編輯科目、教材與題庫，或拖拉科目卡片調整順序後，記得按下儲存變更才會生效。',
+        materialUrlPlaceholder: '可貼簡報、YouTube、Google Drive、mp4 或 iframe 嵌入碼',
+        courseTitlePlaceholder: '請輸入科目名稱',
+        passScorePlaceholder: '及格分數',
+        questionBankHelperText: '可手動新增題目，或用 CSV 匯入／匯出題庫；按「選項」可展開編輯。',
+        questionGroupTitlePlaceholder: '題組名稱，例如：題組A／雷達圖',
+        questionContentPlaceholder: '請輸入題目內容',
+        referenceAnswerPlaceholder: '可輸入批改用參考答案，學生作答時不會顯示',
+        questionGroupSectionTitleText: '題組共用圖片',
+        questionGroupHelperText: '同一張參考圖可在此上傳一次，再讓多個題目選用，避免每題重複上傳。',
+        addQuestionGroupButtonText: '新增題組圖片',
+        uploadGroupImageButtonText: '上傳圖片',
+        deleteQuestionGroupButtonText: '刪除題組',
+        useGroupImageButtonText: '使用題組圖片',
+        noGroupImageOptionText: '不使用題組圖片',
+        addQuestionGroupStatusText: '已新增題組圖片，請上傳圖片後按「儲存變更」寫入 Supabase',
+        noQuestionGroupAlertText: '尚未新增題組圖片。請先在上方「題組共用圖片」新增並上傳圖片。',
+        adminPasswordCancelButtonText: '取消',
+        adminPasswordCancelButtonEmoji: '',
+        adminPasswordSubmitButtonText: '登入後台',
+        adminPasswordSubmitButtonEmoji: ''
+    },
+    ensureSystemSettings: function() {
+        if (!this.state) this.state = {};
+        if (!this.state.systemSettings || typeof this.state.systemSettings !== 'object') this.state.systemSettings = {};
+        this.state.systemSettings = Object.assign({}, this.DEFAULT_SYSTEM_SETTINGS, this.state.systemSettings || {});
+        return this.state.systemSettings;
+    },
+    getSystemSetting: function(key) {
+        const settings = this.ensureSystemSettings();
+        return settings[key] !== undefined ? settings[key] : this.DEFAULT_SYSTEM_SETTINGS[key];
+    },
+    setSystemSetting: function(key, value) {
+        this.ensureSystemSettings();
+        this.state.systemSettings[key] = value;
+    },
+    buttonLabel: function(textKey, emojiKey, fallbackText, fallbackEmoji) {
+        const settings = this.ensureSystemSettings();
+        const text = String(settings[textKey] !== undefined ? settings[textKey] : fallbackText || '').trim();
+        const emoji = String(settings[emojiKey] !== undefined ? settings[emojiKey] : fallbackEmoji || '').trim();
+        if (settings.showButtonEmoji === false || !emoji) return text;
+        return (settings.buttonEmojiPosition === 'suffix') ? `${text} ${emoji}`.trim() : `${emoji} ${text}`.trim();
+    },
+    sidebarMenuLabel: function(textKey, emojiKey, fallbackText, fallbackEmoji) {
+        const settings = this.ensureSystemSettings();
+        const text = String(settings[textKey] !== undefined ? settings[textKey] : fallbackText || '').trim();
+        const emoji = String(settings[emojiKey] !== undefined ? settings[emojiKey] : fallbackEmoji || '').trim();
+        if (settings.showSidebarMenuEmoji === false || !emoji) return text;
+        return (settings.sidebarMenuEmojiPosition === 'suffix') ? `${text} ${emoji}`.trim() : `${emoji} ${text}`.trim();
+    },
+    adminTabTitle: function(tab) {
+        const map = {
+            score: ['adminScoreTabText', 'adminScoreTabEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminScoreTabText, this.DEFAULT_SYSTEM_SETTINGS.adminScoreTabEmoji],
+            edit: ['adminEditTabText', 'adminEditTabEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminEditTabText, this.DEFAULT_SYSTEM_SETTINGS.adminEditTabEmoji],
+            settings: ['adminSettingsTabText', 'adminSettingsTabEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminSettingsTabText, this.DEFAULT_SYSTEM_SETTINGS.adminSettingsTabEmoji],
+            rec: ['adminRecTabText', 'adminRecTabEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminRecTabText, this.DEFAULT_SYSTEM_SETTINGS.adminRecTabEmoji]
+        };
+        const item = map[tab] || map.score;
+        return this.sidebarMenuLabel(item[0], item[1], item[2], item[3]);
+    },
+    applyAdminMenuLabels: function() {
+        const score = document.getElementById('t-score');
+        const edit = document.getElementById('t-edit');
+        const settings = document.getElementById('t-settings');
+        const rec = document.getElementById('t-rec');
+        if (score) score.innerHTML = this.adminTabTitle('score');
+        if (edit) edit.innerHTML = this.adminTabTitle('edit');
+        if (settings) {
+            const sub = String(this.getSystemSetting('adminSettingsTabSubText') || '').trim();
+            settings.innerHTML = this.adminTabTitle('settings') + (sub ? `<br><span style="font-size:11px;color:#8b949e;font-weight:400;">${this.escapeHtml(sub)}</span>` : '');
+        }
+        if (rec) rec.innerHTML = this.adminTabTitle('rec');
+        const mobile = document.getElementById('adminMobileCurrent');
+        if (mobile) mobile.innerText = `目前展開：${this.adminTabTitle(this.currentAdminTab || 'score').replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\s]+/u, '')}`;
+    },
+    escapeHtml: function(str) {
+        return String(str || '').replace(/[&<>\"']/g, function(c) {
+            return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[c];
+        });
+    },
+    applySystemSettings: function() {
+        const settings = this.ensureSystemSettings();
+        document.title = settings.appTitle || this.DEFAULT_SYSTEM_SETTINGS.appTitle;
+        const titleEl = document.getElementById('appTitleText');
+        if (titleEl) titleEl.innerText = settings.appTitle || this.DEFAULT_SYSTEM_SETTINGS.appTitle;
+        const subtitleEl = document.getElementById('appSubtitleText');
+        if (subtitleEl) subtitleEl.innerText = settings.appSubtitle || this.DEFAULT_SYSTEM_SETTINGS.appSubtitle;
+        const cloudStatus = document.getElementById('cloudStatus');
+        if (cloudStatus) cloudStatus.style.display = settings.showCloudStatus === false ? 'none' : '';
+        const quizWarning = document.getElementById('quizWarningText');
+        if (quizWarning) quizWarning.innerText = settings.quizWarningText || this.DEFAULT_SYSTEM_SETTINGS.quizWarningText;
+        const quizStatus = document.getElementById('quizCompletionStatus');
+        if (quizStatus && (!quizStatus.dataset.dynamicStatus || quizStatus.dataset.dynamicStatus === 'default')) {
+            quizStatus.innerText = settings.quizCompletionText || this.DEFAULT_SYSTEM_SETTINGS.quizCompletionText;
+            quizStatus.dataset.dynamicStatus = 'default';
+            quizStatus.style.color = '#8b949e';
+        }
+        const submitBtn = document.getElementById('quizSubmitBtn');
+        if (submitBtn && !Quiz.submitInProgress) submitBtn.innerText = this.buttonLabel('quizSubmitButtonText', 'quizSubmitButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.quizSubmitButtonText, this.DEFAULT_SYSTEM_SETTINGS.quizSubmitButtonEmoji);
+        const resultHomeBtn = document.getElementById('resultHomeBtn');
+        if (resultHomeBtn) resultHomeBtn.innerText = this.buttonLabel('resultHomeButtonText', 'resultHomeButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.resultHomeButtonText, this.DEFAULT_SYSTEM_SETTINGS.resultHomeButtonEmoji);
+        const overlayTitle = document.getElementById('scoreSyncOverlayTitle');
+        if (overlayTitle) overlayTitle.innerText = settings.scoreSyncTitle || this.DEFAULT_SYSTEM_SETTINGS.scoreSyncTitle;
+        const overlayMessage = document.getElementById('scoreSyncOverlayMessage');
+        if (overlayMessage) overlayMessage.innerText = settings.scoreSyncMessage || this.DEFAULT_SYSTEM_SETTINGS.scoreSyncMessage;
+        const overlayNote = document.getElementById('scoreSyncOverlayNote');
+        if (overlayNote) overlayNote.innerText = settings.scoreSyncNote || this.DEFAULT_SYSTEM_SETTINGS.scoreSyncNote;
+
+        const setButtonText = (id, textKey, emojiKey, fallbackText, fallbackEmoji) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = this.buttonLabel(textKey, emojiKey, fallbackText, fallbackEmoji);
+        };
+        setButtonText('resultHomeBtn', 'resultHomeButtonText', 'resultHomeButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.resultHomeButtonText, '');
+        setButtonText('viewExitBtn', 'viewExitButtonText', 'viewExitButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.viewExitButtonText, this.DEFAULT_SYSTEM_SETTINGS.viewExitButtonEmoji);
+        setButtonText('adminBackFromViewBtn', 'backToAdminButtonText', 'backToAdminButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.backToAdminButtonText, '');
+        setButtonText('adminQuizBackBtn', 'backToAdminButtonText', 'backToAdminButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.backToAdminButtonText, '');
+        setButtonText('adminQuizExitBtn', 'viewExitButtonText', 'viewExitButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.viewExitButtonText, this.DEFAULT_SYSTEM_SETTINGS.viewExitButtonEmoji);
+        setButtonText('adminCourseTesterBtn', 'adminCourseTesterButtonText', 'adminCourseTesterButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminCourseTesterButtonText, '');
+        setButtonText('adminLogoutBtn', 'adminLogoutButtonText', 'adminLogoutButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminLogoutButtonText, '');
+        setButtonText('backupExportBtn', 'backupExportButtonText', 'backupExportButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.backupExportButtonText, '');
+        setButtonText('backupImportBtn', 'backupImportButtonText', 'backupImportButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.backupImportButtonText, '');
+        setButtonText('adminSidebarHomeBtn', 'adminSidebarHomeButtonText', 'adminSidebarHomeButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminSidebarHomeButtonText, '');
+        setButtonText('adminPasswordCancelBtn', 'adminPasswordCancelButtonText', 'adminPasswordCancelButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminPasswordCancelButtonText, '');
+        setButtonText('adminPasswordSubmitBtn', 'adminPasswordSubmitButtonText', 'adminPasswordSubmitButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminPasswordSubmitButtonText, '');
+        setButtonText('reviewBackBtn', 'reviewBackButtonText', 'reviewBackButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.reviewBackButtonText, '');
+        if (!Quiz.submitInProgress) setButtonText('reviewConfirmBtn', 'reviewConfirmButtonText', 'reviewConfirmButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.reviewConfirmButtonText, '');
+        this.applyAdminMenuLabels();
+        if (this.syncUI) this.syncUI();
+
+        const root = document.documentElement;
+        const body = document.body;
+        const accent = settings.accentColor || this.DEFAULT_SYSTEM_SETTINGS.accentColor;
+        if (/^#[0-9a-fA-F]{6}$/.test(accent)) root.style.setProperty('--accent-color', accent);
+        if (body) {
+            body.dataset.density = settings.interfaceDensity || 'normal';
+            body.dataset.panelWidth = settings.panelWidth || 'normal';
+            body.dataset.adminHeader = settings.adminHeaderMode || 'normal';
+            body.dataset.loginPosition = settings.loginPosition || 'center';
+            body.dataset.loginBgMode = settings.loginBackgroundMode || 'default';
+            body.dataset.questionLayout = settings.questionEditorLayout || 'normal';
+            body.dataset.qInputPosition = settings.questionInputPosition || 'default';
+            body.dataset.imageToolsLayout = settings.imageToolsLayout || 'inline';
+        }
+        if (settings.loginBackgroundMode === 'custom' && settings.loginBackgroundImage) {
+            root.style.setProperty('--login-bg-image', `url("${String(settings.loginBackgroundImage).replace(/"/g, '%22')}")`);
+            root.style.setProperty('--login-bg-size', settings.loginBackgroundSize || 'cover');
+            root.style.setProperty('--login-bg-repeat', settings.loginBackgroundSize === 'repeat' ? 'repeat' : 'no-repeat');
+        } else {
+            root.style.removeProperty('--login-bg-image');
+            root.style.removeProperty('--login-bg-size');
+            root.style.removeProperty('--login-bg-repeat');
+        }
+    },
     markPendingCloudSync: function() {
         try {
             localStorage.setItem('ATC_PENDING_CLOUD_SYNC', JSON.stringify({ ts: Date.now() }));
@@ -3409,6 +3928,8 @@ const App = {
         setTimeout(async () => {
             Backend.setStatus('Supabase 連線狀態確認中...', 'var(--warning-color)');
             await Backend.loadState();
+            App.ensureSystemSettings();
+            App.applySystemSettings();
             if (Admin.refreshSupabaseStatusForAdmin) Admin.refreshSupabaseStatusForAdmin();
             if (this.currentAdminTab === 'score' && Admin.applyScoreFilter) Admin.applyScoreFilter();
             else if (this.currentAdminTab === 'rec' && Admin.renderUsers) Admin.renderUsers();
@@ -3434,7 +3955,9 @@ const App = {
         if (!this.state.users) this.state.users = {};
         if (!this.state.quizLocks) this.state.quizLocks = {};
         if (!this.state.quizUnlocks) this.state.quizUnlocks = {};
+        this.ensureSystemSettings();
         this.normalizeUsers();
+        this.applySystemSettings();
 
         if (shouldRestoreAdminFirst) {
             this.restoreAdminSession();
@@ -3454,6 +3977,8 @@ const App = {
             if (!this.state.courses) this.state.courses = [];
             if (!this.state.records) this.state.records = [];
             if (!this.state.users) this.state.users = {};
+            this.ensureSystemSettings();
+            this.applySystemSettings();
             this.state.courses.forEach(c => { if (!Number.isFinite(Number(c.passScore))) c.passScore = 80; });
             this.normalizeUsers();
         }
@@ -3479,6 +4004,7 @@ const App = {
         this.renderSelects();
         this.updateLoginStatus();
         this.syncUI();
+        this.applySystemSettings();
         this.restoreAdminSession();
 
     },
@@ -3653,11 +4179,11 @@ const App = {
             cloudStatus.style.display = this.isInstructor ? 'inline-block' : 'none';
         }
         if(this.isInstructor) {
-            adminBtn.innerText = "⚙️ 管理員登入 (已授權)";
+            adminBtn.innerText = this.buttonLabel('adminAuthorizedButtonText', 'adminAuthorizedButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminAuthorizedButtonText, this.DEFAULT_SYSTEM_SETTINGS.adminAuthorizedButtonEmoji);
             adminBtn.classList.replace('btn-outline', 'btn-warning');
             document.querySelectorAll('.badge-instructor').forEach(b => b.classList.remove('hidden'));
         } else {
-            adminBtn.innerText = "⚙️ 管理員登入";
+            adminBtn.innerText = this.buttonLabel('adminLoginButtonText', 'adminLoginButtonEmoji', this.DEFAULT_SYSTEM_SETTINGS.adminLoginButtonText, this.DEFAULT_SYSTEM_SETTINGS.adminLoginButtonEmoji);
             adminBtn.classList.replace('btn-warning', 'btn-outline');
             document.querySelectorAll('.badge-instructor').forEach(b => b.classList.add('hidden'));
         }
@@ -3671,18 +4197,18 @@ const App = {
         const area = document.getElementById('loginBtnArea');
         const course = this.state.courses.find(c => c.id == cid);
         if (this.isInstructor) {
-            area.innerHTML = `<button class="btn btn-warning" style="width:100%" onclick="App.toAdmin()">管理員模式</button>`;
+            area.innerHTML = `<button class="btn btn-warning" style="width:100%" onclick="App.toAdmin()">${App.buttonLabel('instructorEnterButtonText', 'instructorEnterButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.instructorEnterButtonText, App.DEFAULT_SYSTEM_SETTINGS.instructorEnterButtonEmoji)}</button>`;
             return;
         }
         if (!name || !course) {
-            area.innerHTML = `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">登入系統</button>`;
+            area.innerHTML = `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">${App.buttonLabel('loginButtonText', 'loginButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.loginButtonText, App.DEFAULT_SYSTEM_SETTINGS.loginButtonEmoji)}</button>`;
             return;
         }
         
         const locked = !this.isInstructor && this.isQuizLocked(name, course.id);
         area.innerHTML = locked
-            ? `<button class="btn btn-warning" style="width:100%" onclick="App.start(true)">已測驗，進入複習模式</button>`
-            : `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">登入系統</button>`;
+            ? `<button class="btn btn-warning" style="width:100%" onclick="App.start(true)">${App.buttonLabel('reviewModeButtonText', 'reviewModeButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.reviewModeButtonText, App.DEFAULT_SYSTEM_SETTINGS.reviewModeButtonEmoji)}</button>`
+            : `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">${App.buttonLabel('loginButtonText', 'loginButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.loginButtonText, App.DEFAULT_SYSTEM_SETTINGS.loginButtonEmoji)}</button>`;
     },
     start: async function(isReview) {
         if (this.isInstructor) return alert("管理員請由後台「進入教材/測驗」按鈕進入測試。");
@@ -3805,11 +4331,11 @@ const App = {
         const actionHtml = this.isInstructor
             ? `<div style="display:flex; align-items:center; gap:10px; justify-content:flex-end;">
                     <span style="color:#8b949e; font-weight:bold;">管理員測試模式，不紀錄分數</span>
-                    <button id="startQuizBtn" class="btn btn-success" onclick="Quiz.init()">開始考核 📝</button>
+                    <button id="startQuizBtn" class="btn btn-success" onclick="Quiz.init()">${App.buttonLabel('startQuizButtonText', 'startQuizButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.startQuizButtonText, App.DEFAULT_SYSTEM_SETTINGS.startQuizButtonEmoji)}</button>
                </div>`
             : (locked
                 ? `<div style="color:var(--warning-color); font-weight:bold;">🔒 已完成本科目測驗，請洽管理員解鎖複測。</div>`
-                : `<button id="startQuizBtn" class="btn btn-success" onclick="Quiz.init()">開始考核 📝</button>`);
+                : `<button id="startQuizBtn" class="btn btn-success" onclick="Quiz.init()">${App.buttonLabel('startQuizButtonText', 'startQuizButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.startQuizButtonText, App.DEFAULT_SYSTEM_SETTINGS.startQuizButtonEmoji)}</button>`);
         document.getElementById('viewActionArea').innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; gap:15px; width:100%;">
                 <div id="materialTabs" style="text-align:left; flex:1; min-width:0;"></div>
@@ -3990,15 +4516,15 @@ const App = {
     },
     switchAdmin: function(tab) {
         this.currentAdminTab = tab;
-        ['rec', 'score', 'edit'].forEach(p => { document.getElementById(`panel-${p}`).classList.add('hidden'); document.getElementById(`t-${p}`).classList.remove('active'); });
+        ['rec', 'score', 'edit', 'settings'].forEach(p => { const panel = document.getElementById(`panel-${p}`); const tabEl = document.getElementById(`t-${p}`); if (panel) panel.classList.add('hidden'); if (tabEl) tabEl.classList.remove('active'); });
         document.getElementById(`panel-${tab}`).classList.remove('hidden'); document.getElementById(`t-${tab}`).classList.add('active');
 
-        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', rec: '人員帳號管理' };
+        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', settings: '系統設定', rec: '人員帳號管理' };
         const currentLabel = document.getElementById('adminMobileCurrent');
         if (currentLabel) currentLabel.innerText = `目前展開：${labelMap[tab] || ''}`;
 
         this.showSec('sec-admin');
-        if (tab === 'edit') Admin.renderEditor(); else if (tab === 'rec') Admin.renderUsers(); else Admin.renderScores();
+        if (tab === 'edit') Admin.renderEditor(); else if (tab === 'rec') Admin.renderUsers(); else if (tab === 'settings') Admin.renderSettings(); else Admin.renderScores();
 
         // 手機後台：點選功能後自動把畫面帶到內容區，避免只看到側欄。
         if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
@@ -4017,6 +4543,496 @@ const App = {
 };
 
 const Admin = { 
+    scrollToSettingsSection: function(sectionId) {
+        const el = document.getElementById(sectionId);
+        const content = document.getElementById('adminContent');
+        if (!el) return;
+        if (content && content.contains(el)) {
+            const offset = el.offsetTop - 12;
+            content.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+        } else {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        el.classList.add('settings-card-highlight');
+        setTimeout(() => el.classList.remove('settings-card-highlight'), 900);
+    },
+
+    renderSettings: function() {
+        App.ensureSystemSettings();
+        const s = App.state.systemSettings;
+        const panel = document.getElementById('panel-settings');
+        if (!panel) return;
+        const checked = s.showCloudStatus === false ? '' : 'checked';
+        panel.innerHTML = `
+            <div class="sticky-header">
+                <h3>🛠️ 系統設定</h3>
+                <div class="header-actions">
+                    <button class="btn btn-success btn-sm" onclick="Admin.saveSystemSettings()">儲存設定</button>
+                    <button class="btn btn-outline btn-sm" onclick="Admin.resetSystemSettings()">還原預設</button>
+                </div>
+            </div>
+            <div class="settings-grid">
+                <div class="settings-section-nav">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="Admin.scrollToSettingsSection('settingSectionFrontend')">前台設定</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="Admin.scrollToSettingsSection('settingSectionBackend')">後台設定</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="Admin.scrollToSettingsSection('settingSectionSidebarMenu')">左側選單設定</button>
+                </div>
+
+                <div class="settings-card settings-card-highlight" id="settingSectionFrontend">
+                    <h4>前台設定｜首頁、登入與整體外觀</h4>
+                    <div class="settings-row">
+                        <label>網站標題</label>
+                        <input id="settingAppTitle" class="input-field" value="${Admin.esc(s.appTitle || '')}">
+                    </div>
+                    <div class="settings-row">
+                        <label>單位副標</label>
+                        <input id="settingAppSubtitle" class="input-field" value="${Admin.esc(s.appSubtitle || '')}">
+                    </div>
+                    <div class="settings-row">
+                        <label>同步狀態提示</label>
+                        <div>
+                            <label class="settings-switch-row"><input type="checkbox" class="row-check" id="settingShowCloudStatus" ${checked}> 顯示 Supabase 同步狀態文字</label>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <label>主色調</label>
+                        <div>
+                            <div class="settings-color-row">
+                                <input type="color" id="settingAccentColor" value="${Admin.esc(s.accentColor || App.DEFAULT_SYSTEM_SETTINGS.accentColor)}" oninput="document.getElementById('settingAccentColorText').value=this.value">
+                                <input id="settingAccentColorText" class="input-field" value="${Admin.esc(s.accentColor || App.DEFAULT_SYSTEM_SETTINGS.accentColor)}" placeholder="#58a6ff">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <label>整體寬度</label>
+                        <select id="settingPanelWidth" class="select-field">
+                            <option value="normal" ${s.panelWidth === 'normal' || !s.panelWidth ? 'selected' : ''}>標準</option>
+                            <option value="wide" ${s.panelWidth === 'wide' ? 'selected' : ''}>加寬</option>
+                            <option value="narrow" ${s.panelWidth === 'narrow' ? 'selected' : ''}>較窄</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>介面密度</label>
+                        <select id="settingInterfaceDensity" class="select-field">
+                            <option value="normal" ${s.interfaceDensity === 'normal' || !s.interfaceDensity ? 'selected' : ''}>標準</option>
+                            <option value="compact" ${s.interfaceDensity === 'compact' ? 'selected' : ''}>緊密</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>首頁登入位置</label>
+                        <select id="settingLoginPosition" class="select-field">
+                            <option value="center" ${s.loginPosition === 'center' || !s.loginPosition ? 'selected' : ''}>置中</option>
+                            <option value="left" ${s.loginPosition === 'left' ? 'selected' : ''}>偏左</option>
+                            <option value="right" ${s.loginPosition === 'right' ? 'selected' : ''}>偏右</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>首頁背景</label>
+                        <div>
+                            <select id="settingLoginBackgroundMode" class="select-field">
+                                <option value="default" ${s.loginBackgroundMode === 'default' || !s.loginBackgroundMode ? 'selected' : ''}>使用目前塔台照片背景</option>
+                                <option value="gradient" ${s.loginBackgroundMode === 'gradient' ? 'selected' : ''}>漸層背景</option>
+                                <option value="custom" ${s.loginBackgroundMode === 'custom' ? 'selected' : ''}>自訂圖片背景</option>
+                                <option value="none" ${s.loginBackgroundMode === 'none' ? 'selected' : ''}>無背景圖</option>
+                            </select>
+                            <div class="setting-inline-tools" style="margin-top:8px;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('settingLoginBgFile').click()">上傳背景圖</button>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="Admin.clearSettingBackgroundImage()">移除自訂背景</button>
+                                <select id="settingLoginBackgroundSize" class="select-field" style="width:auto; min-width:140px; margin:0;">
+                                    <option value="cover" ${s.loginBackgroundSize === 'cover' || !s.loginBackgroundSize ? 'selected' : ''}>填滿裁切</option>
+                                    <option value="contain" ${s.loginBackgroundSize === 'contain' ? 'selected' : ''}>完整顯示</option>
+                                    <option value="repeat" ${s.loginBackgroundSize === 'repeat' ? 'selected' : ''}>重複平鋪</option>
+                                </select>
+                                <input type="file" id="settingLoginBgFile" class="hidden" accept="image/*" onchange="Admin.uploadSettingBackgroundImage(this)">
+                                <input type="hidden" id="settingLoginBackgroundImage" value="${Admin.esc(s.loginBackgroundImage || '')}">
+                            </div>
+                            <div id="settingLoginBgPreview" class="settings-preview-box ${s.loginBackgroundImage ? 'has-image' : ''}">${s.loginBackgroundImage ? `<img src="${Admin.esc(s.loginBackgroundImage)}" alt="自訂背景圖" onclick="ImageLightbox.open(this.src)">` : '尚未上傳自訂背景圖'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4>前台設定｜測驗與結果畫面文字</h4>
+                    <div class="settings-row">
+                        <label>測驗注意事項</label>
+                        <textarea id="settingQuizWarningText" class="input-field">${Admin.esc(s.quizWarningText || '')}</textarea>
+                    </div>
+                    <div class="settings-row">
+                        <label>作答檢查提示</label>
+                        <input id="settingQuizCompletionText" class="input-field" value="${Admin.esc(s.quizCompletionText || '')}">
+                    </div>
+                    <div class="settings-row">
+                        <label>送出按鈕文字</label>
+                        <input id="settingQuizSubmitButtonText" class="input-field" value="${Admin.esc(s.quizSubmitButtonText || '')}">
+                    </div>
+                    <div class="settings-row">
+                        <label>送出中按鈕文字</label>
+                        <input id="settingScoreSavingButtonText" class="input-field" value="${Admin.esc(s.scoreSavingButtonText || '')}">
+                    </div>
+                    <div class="settings-row">
+                        <label>結果頁返回按鈕</label>
+                        <input id="settingResultHomeButtonText" class="input-field" value="${Admin.esc(s.resultHomeButtonText || '')}">
+                    </div>
+                    <div class="settings-row">
+                        <label>儲存遮罩標題</label>
+                        <input id="settingScoreSyncTitle" class="input-field" value="${Admin.esc(s.scoreSyncTitle || '')}">
+                    </div>
+                    <div class="settings-row">
+                        <label>儲存遮罩主文字</label>
+                        <textarea id="settingScoreSyncMessage" class="input-field">${Admin.esc(s.scoreSyncMessage || '')}</textarea>
+                    </div>
+                    <div class="settings-row">
+                        <label>儲存遮罩說明</label>
+                        <textarea id="settingScoreSyncNote" class="input-field">${Admin.esc(s.scoreSyncNote || '')}</textarea>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4>前台設定｜前台按鈕文字與 Emoji</h4>
+                    <div class="settings-row">
+                        <label>Emoji 顯示</label>
+                        <div>
+                            <label class="settings-switch-row"><input type="checkbox" class="row-check" id="settingShowButtonEmoji" ${s.showButtonEmoji === false ? '' : 'checked'}> 顯示按鈕 Emoji</label>
+                            <select id="settingButtonEmojiPosition" class="select-field" style="margin-top:8px;">
+                                <option value="prefix" ${s.buttonEmojiPosition === 'prefix' || !s.buttonEmojiPosition ? 'selected' : ''}>Emoji 在文字前</option>
+                                <option value="suffix" ${s.buttonEmojiPosition === 'suffix' ? 'selected' : ''}>Emoji 在文字後</option>
+                            </select>
+                        </div>
+                    </div>
+                    ${Admin.renderButtonSettingRow('首頁登入按鈕', 'LoginButton', s.loginButtonText, s.loginButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('已測驗複習按鈕', 'ReviewModeButton', s.reviewModeButtonText, s.reviewModeButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('管理員由後台進入提示', 'InstructorEnterButton', s.instructorEnterButtonText, s.instructorEnterButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('管理員登入按鈕', 'AdminLoginButton', s.adminLoginButtonText, s.adminLoginButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('管理員已授權按鈕', 'AdminAuthorizedButton', s.adminAuthorizedButtonText, s.adminAuthorizedButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('開始考核按鈕', 'StartQuizButton', s.startQuizButtonText, s.startQuizButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('準備考核中按鈕', 'StartPreparingButton', s.startPreparingButtonText, s.startPreparingButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('提交答案按鈕', 'QuizSubmitButton', s.quizSubmitButtonText, s.quizSubmitButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('成績儲存中按鈕', 'ScoreSavingButton', s.scoreSavingButtonText, s.scoreSavingButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('作答檢查返回按鈕', 'ReviewBackButton', s.reviewBackButtonText, s.reviewBackButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('作答檢查確認按鈕', 'ReviewConfirmButton', s.reviewConfirmButtonText, s.reviewConfirmButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('作答檢查儲存中按鈕', 'ReviewSavingButton', s.reviewSavingButtonText, s.reviewSavingButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('結果頁回首頁按鈕', 'ResultHomeButton', s.resultHomeButtonText, s.resultHomeButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('教材頁退出按鈕', 'ViewExitButton', s.viewExitButtonText, s.viewExitButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('回到後台按鈕', 'BackToAdminButton', s.backToAdminButtonText, s.backToAdminButtonEmoji)}
+                </div>
+
+                <div class="settings-card settings-card-highlight" id="settingSectionBackend">
+                    <h4>後台設定｜後台與題庫編輯版面</h4>
+                    <div class="settings-row">
+                        <label>後台頂欄</label>
+                        <select id="settingAdminHeaderMode" class="select-field">
+                            <option value="normal" ${s.adminHeaderMode === 'normal' || !s.adminHeaderMode ? 'selected' : ''}>標準高度</option>
+                            <option value="compact" ${s.adminHeaderMode === 'compact' ? 'selected' : ''}>緊密高度</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>題庫卡片樣式</label>
+                        <select id="settingQuestionEditorLayout" class="select-field">
+                            <option value="normal" ${s.questionEditorLayout === 'normal' || !s.questionEditorLayout ? 'selected' : ''}>標準</option>
+                            <option value="compact" ${s.questionEditorLayout === 'compact' ? 'selected' : ''}>緊密</option>
+                            <option value="card" ${s.questionEditorLayout === 'card' ? 'selected' : ''}>卡片加強</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>題目輸入框位置</label>
+                        <select id="settingQuestionInputPosition" class="select-field">
+                            <option value="default" ${s.questionInputPosition === 'default' || !s.questionInputPosition ? 'selected' : ''}>預設：題型/配分下方</option>
+                            <option value="top" ${s.questionInputPosition === 'top' ? 'selected' : ''}>移到每題最上方</option>
+                            <option value="bottom" ${s.questionInputPosition === 'bottom' ? 'selected' : ''}>移到圖片與參考答案下方</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>圖片按鈕排列</label>
+                        <select id="settingImageToolsLayout" class="select-field">
+                            <option value="inline" ${s.imageToolsLayout === 'inline' || !s.imageToolsLayout ? 'selected' : ''}>並列</option>
+                            <option value="stack" ${s.imageToolsLayout === 'stack' ? 'selected' : ''}>上下排列</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>已計分確認文字</label>
+                        <textarea id="settingManualScoreConfirmText" class="input-field">${Admin.esc(s.manualScoreConfirmText || '')}</textarea>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4>後台設定｜題庫編輯提示文字</h4>
+                    <div class="settings-row">
+                        <label>題庫編輯上方說明</label>
+                        <textarea id="settingCourseEditorIntroText" class="input-field">${Admin.esc(s.courseEditorIntroText || '')}</textarea>
+                    </div>
+                    <div class="settings-row">
+                        <label>教材網址輸入框提示</label>
+                        <input id="settingMaterialUrlPlaceholder" class="input-field" value="${Admin.esc(s.materialUrlPlaceholder || '')}" placeholder="教材網址提示文字">
+                    </div>
+                    <div class="settings-row">
+                        <label>科目名稱輸入框提示</label>
+                        <input id="settingCourseTitlePlaceholder" class="input-field" value="${Admin.esc(s.courseTitlePlaceholder || '')}" placeholder="科目名稱提示文字">
+                    </div>
+                    <div class="settings-row">
+                        <label>及格分數輸入框提示</label>
+                        <input id="settingPassScorePlaceholder" class="input-field" value="${Admin.esc(s.passScorePlaceholder || '')}" placeholder="及格分數提示文字">
+                    </div>
+                    <div class="settings-row">
+                        <label>題庫內容說明</label>
+                        <textarea id="settingQuestionBankHelperText" class="input-field">${Admin.esc(s.questionBankHelperText || '')}</textarea>
+                    </div>
+                    <div class="settings-row">
+                        <label>題組名稱輸入框提示</label>
+                        <input id="settingQuestionGroupTitlePlaceholder" class="input-field" value="${Admin.esc(s.questionGroupTitlePlaceholder || '')}" placeholder="題組名稱提示文字">
+                    </div>
+                    <div class="settings-row">
+                        <label>題目內容輸入框提示</label>
+                        <input id="settingQuestionContentPlaceholder" class="input-field" value="${Admin.esc(s.questionContentPlaceholder || '')}" placeholder="題目內容提示文字">
+                    </div>
+                    <div class="settings-row">
+                        <label>簡答題參考答案提示</label>
+                        <input id="settingReferenceAnswerPlaceholder" class="input-field" value="${Admin.esc(s.referenceAnswerPlaceholder || '')}" placeholder="參考答案提示文字">
+                    </div>
+                    <div class="settings-row">
+                        <label>題組共用圖片標題</label>
+                        <input id="settingQuestionGroupSectionTitleText" class="input-field" value="${Admin.esc(s.questionGroupSectionTitleText || '')}" placeholder="題組共用圖片">
+                    </div>
+                    <div class="settings-row">
+                        <label>題組共用圖片說明</label>
+                        <textarea id="settingQuestionGroupHelperText" class="input-field">${Admin.esc(s.questionGroupHelperText || '')}</textarea>
+                    </div>
+                    <div class="settings-row">
+                        <label>題組新增按鈕文字</label>
+                        <input id="settingAddQuestionGroupButtonText" class="input-field" value="${Admin.esc(s.addQuestionGroupButtonText || '')}" placeholder="新增題組圖片">
+                    </div>
+                    <div class="settings-row">
+                        <label>題組上傳按鈕文字</label>
+                        <input id="settingUploadGroupImageButtonText" class="input-field" value="${Admin.esc(s.uploadGroupImageButtonText || '')}" placeholder="上傳圖片">
+                    </div>
+                    <div class="settings-row">
+                        <label>題組刪除按鈕文字</label>
+                        <input id="settingDeleteQuestionGroupButtonText" class="input-field" value="${Admin.esc(s.deleteQuestionGroupButtonText || '')}" placeholder="刪除題組">
+                    </div>
+                    <div class="settings-row">
+                        <label>各題使用題組圖片按鈕</label>
+                        <input id="settingUseGroupImageButtonText" class="input-field" value="${Admin.esc(s.useGroupImageButtonText || '')}" placeholder="使用題組圖片">
+                    </div>
+                    <div class="settings-row">
+                        <label>不使用題組圖片選項</label>
+                        <input id="settingNoGroupImageOptionText" class="input-field" value="${Admin.esc(s.noGroupImageOptionText || '')}" placeholder="不使用題組圖片">
+                    </div>
+                    <div class="settings-row">
+                        <label>尚未建立題組提醒</label>
+                        <textarea id="settingNoQuestionGroupAlertText" class="input-field">${Admin.esc(s.noQuestionGroupAlertText || '')}</textarea>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4>後台設定｜後台按鈕文字與 Emoji</h4>
+                    ${Admin.renderButtonSettingRow('後台進入教材/測驗', 'AdminCourseTesterButton', s.adminCourseTesterButtonText, s.adminCourseTesterButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('管理員登出按鈕', 'AdminLogoutButton', s.adminLogoutButtonText, s.adminLogoutButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('後台返回首頁按鈕', 'AdminSidebarHomeButton', s.adminSidebarHomeButtonText, s.adminSidebarHomeButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('密碼視窗取消按鈕', 'AdminPasswordCancelButton', s.adminPasswordCancelButtonText, s.adminPasswordCancelButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('密碼視窗登入按鈕', 'AdminPasswordSubmitButton', s.adminPasswordSubmitButtonText, s.adminPasswordSubmitButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('匯出備份按鈕', 'BackupExportButton', s.backupExportButtonText, s.backupExportButtonEmoji)}
+                    ${Admin.renderButtonSettingRow('匯入備份按鈕', 'BackupImportButton', s.backupImportButtonText, s.backupImportButtonEmoji)}
+                </div>
+
+                <div class="settings-card settings-card-highlight" id="settingSectionSidebarMenu">
+                    <h4>左側選單設定｜文字與圖示</h4>
+                    <div class="settings-row">
+                        <label>選單圖示顯示</label>
+                        <div>
+                            <label class="settings-switch-row"><input type="checkbox" class="row-check" id="settingShowSidebarMenuEmoji" ${s.showSidebarMenuEmoji === false ? '' : 'checked'}> 顯示左側選單 Emoji / 圖示</label>
+                            <select id="settingSidebarMenuEmojiPosition" class="select-field" style="margin-top:8px;">
+                                <option value="prefix" ${s.sidebarMenuEmojiPosition === 'prefix' || !s.sidebarMenuEmojiPosition ? 'selected' : ''}>圖示在文字前</option>
+                                <option value="suffix" ${s.sidebarMenuEmojiPosition === 'suffix' ? 'selected' : ''}>圖示在文字後</option>
+                            </select>
+                        </div>
+                    </div>
+                    ${Admin.renderMenuSettingRow('測驗成績選單', 'AdminScoreTab', s.adminScoreTabText, s.adminScoreTabEmoji)}
+                    ${Admin.renderMenuSettingRow('教材與題庫選單', 'AdminEditTab', s.adminEditTabText, s.adminEditTabEmoji)}
+                    ${Admin.renderMenuSettingRow('系統設定選單', 'AdminSettingsTab', s.adminSettingsTabText, s.adminSettingsTabEmoji)}
+                    <div class="settings-row">
+                        <label>系統設定選單副文字</label>
+                        <input id="settingAdminSettingsTabSubText" class="input-field" value="${Admin.esc(s.adminSettingsTabSubText || '')}" placeholder="可留空不顯示副文字">
+                    </div>
+                    ${Admin.renderMenuSettingRow('人員帳號選單', 'AdminRecTab', s.adminRecTabText, s.adminRecTabEmoji)}
+                </div>
+                <div class="settings-actions">
+                    <button class="btn btn-success" onclick="Admin.saveSystemSettings()">儲存設定</button>
+                    <button class="btn btn-outline" onclick="Admin.resetSystemSettings()">還原預設</button>
+                </div>
+            </div>
+        `;
+    },
+    renderButtonSettingRow: function(label, keyBase, textValue, emojiValue) {
+        const textId = `setting${keyBase}Text`;
+        const emojiId = `setting${keyBase}Emoji`;
+        return `
+            <div class="settings-row">
+                <label>${Admin.esc(label)}</label>
+                <div style="display:grid; grid-template-columns:minmax(0,1fr) 96px; gap:8px;">
+                    <input id="${textId}" class="input-field" value="${Admin.esc(textValue || '')}" placeholder="按鈕文字">
+                    <input id="${emojiId}" class="input-field" value="${Admin.esc(emojiValue || '')}" placeholder="Emoji" maxlength="12">
+                </div>
+            </div>`;
+    },
+    renderMenuSettingRow: function(label, keyBase, textValue, emojiValue) {
+        const textId = `setting${keyBase}Text`;
+        const emojiId = `setting${keyBase}Emoji`;
+        return `
+            <div class="settings-row">
+                <label>${Admin.esc(label)}</label>
+                <div style="display:grid; grid-template-columns:minmax(0,1fr) 96px; gap:8px;">
+                    <input id="${textId}" class="input-field" value="${Admin.esc(textValue || '')}" placeholder="選單文字">
+                    <input id="${emojiId}" class="input-field" value="${Admin.esc(emojiValue || '')}" placeholder="圖示" maxlength="12">
+                </div>
+            </div>`;
+    },
+    readButtonSettingPair: function(keyBase, defaultTextKey, defaultEmojiKey) {
+        const t = document.getElementById(`setting${keyBase}Text`);
+        const e = document.getElementById(`setting${keyBase}Emoji`);
+        const out = {};
+        out[defaultTextKey] = t ? t.value : App.DEFAULT_SYSTEM_SETTINGS[defaultTextKey];
+        out[defaultEmojiKey] = e ? e.value : App.DEFAULT_SYSTEM_SETTINGS[defaultEmojiKey];
+        return out;
+    },
+    readMenuSettingPair: function(keyBase, defaultTextKey, defaultEmojiKey) {
+        const t = document.getElementById(`setting${keyBase}Text`);
+        const e = document.getElementById(`setting${keyBase}Emoji`);
+        const out = {};
+        out[defaultTextKey] = t ? t.value : App.DEFAULT_SYSTEM_SETTINGS[defaultTextKey];
+        out[defaultEmojiKey] = e ? e.value : App.DEFAULT_SYSTEM_SETTINGS[defaultEmojiKey];
+        return out;
+    },
+    readSystemSettingsForm: function() {
+        const buttonPairs = Object.assign({},
+            Admin.readButtonSettingPair('LoginButton', 'loginButtonText', 'loginButtonEmoji'),
+            Admin.readButtonSettingPair('ReviewModeButton', 'reviewModeButtonText', 'reviewModeButtonEmoji'),
+            Admin.readButtonSettingPair('InstructorEnterButton', 'instructorEnterButtonText', 'instructorEnterButtonEmoji'),
+            Admin.readButtonSettingPair('AdminLoginButton', 'adminLoginButtonText', 'adminLoginButtonEmoji'),
+            Admin.readButtonSettingPair('AdminAuthorizedButton', 'adminAuthorizedButtonText', 'adminAuthorizedButtonEmoji'),
+            Admin.readButtonSettingPair('StartQuizButton', 'startQuizButtonText', 'startQuizButtonEmoji'),
+            Admin.readButtonSettingPair('StartPreparingButton', 'startPreparingButtonText', 'startPreparingButtonEmoji'),
+            Admin.readButtonSettingPair('QuizSubmitButton', 'quizSubmitButtonText', 'quizSubmitButtonEmoji'),
+            Admin.readButtonSettingPair('ScoreSavingButton', 'scoreSavingButtonText', 'scoreSavingButtonEmoji'),
+            Admin.readButtonSettingPair('ReviewBackButton', 'reviewBackButtonText', 'reviewBackButtonEmoji'),
+            Admin.readButtonSettingPair('ReviewConfirmButton', 'reviewConfirmButtonText', 'reviewConfirmButtonEmoji'),
+            Admin.readButtonSettingPair('ReviewSavingButton', 'reviewSavingButtonText', 'reviewSavingButtonEmoji'),
+            Admin.readButtonSettingPair('ResultHomeButton', 'resultHomeButtonText', 'resultHomeButtonEmoji'),
+            Admin.readButtonSettingPair('ViewExitButton', 'viewExitButtonText', 'viewExitButtonEmoji'),
+            Admin.readButtonSettingPair('BackToAdminButton', 'backToAdminButtonText', 'backToAdminButtonEmoji'),
+            Admin.readButtonSettingPair('AdminCourseTesterButton', 'adminCourseTesterButtonText', 'adminCourseTesterButtonEmoji'),
+            Admin.readButtonSettingPair('AdminLogoutButton', 'adminLogoutButtonText', 'adminLogoutButtonEmoji'),
+            Admin.readButtonSettingPair('BackupExportButton', 'backupExportButtonText', 'backupExportButtonEmoji'),
+            Admin.readButtonSettingPair('BackupImportButton', 'backupImportButtonText', 'backupImportButtonEmoji'),
+            Admin.readButtonSettingPair('AdminSidebarHomeButton', 'adminSidebarHomeButtonText', 'adminSidebarHomeButtonEmoji'),
+            Admin.readButtonSettingPair('AdminPasswordCancelButton', 'adminPasswordCancelButtonText', 'adminPasswordCancelButtonEmoji'),
+            Admin.readButtonSettingPair('AdminPasswordSubmitButton', 'adminPasswordSubmitButtonText', 'adminPasswordSubmitButtonEmoji')
+        );
+        const menuPairs = Object.assign(
+            {},
+            Admin.readMenuSettingPair('AdminScoreTab', 'adminScoreTabText', 'adminScoreTabEmoji'),
+            Admin.readMenuSettingPair('AdminEditTab', 'adminEditTabText', 'adminEditTabEmoji'),
+            Admin.readMenuSettingPair('AdminSettingsTab', 'adminSettingsTabText', 'adminSettingsTabEmoji'),
+            Admin.readMenuSettingPair('AdminRecTab', 'adminRecTabText', 'adminRecTabEmoji')
+        );
+        return Object.assign({
+            appTitle: (document.getElementById('settingAppTitle') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.appTitle,
+            appSubtitle: (document.getElementById('settingAppSubtitle') || {}).value || '',
+            showCloudStatus: !!((document.getElementById('settingShowCloudStatus') || {}).checked),
+            quizWarningText: (document.getElementById('settingQuizWarningText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.quizWarningText,
+            quizCompletionText: (document.getElementById('settingQuizCompletionText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.quizCompletionText,
+            quizSubmitButtonText: (document.getElementById('settingQuizSubmitButtonText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.quizSubmitButtonText,
+            scoreSavingButtonText: (document.getElementById('settingScoreSavingButtonText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.scoreSavingButtonText,
+            reviewConfirmButtonText: App.getSystemSetting('reviewConfirmButtonText'),
+            reviewSavingButtonText: App.getSystemSetting('reviewSavingButtonText'),
+            resultHomeButtonText: (document.getElementById('settingResultHomeButtonText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.resultHomeButtonText,
+            manualScoreConfirmText: (document.getElementById('settingManualScoreConfirmText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.manualScoreConfirmText,
+            scoreSyncTitle: (document.getElementById('settingScoreSyncTitle') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.scoreSyncTitle,
+            scoreSyncMessage: (document.getElementById('settingScoreSyncMessage') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.scoreSyncMessage,
+            scoreSyncNote: (document.getElementById('settingScoreSyncNote') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.scoreSyncNote,
+            courseEditorIntroText: (document.getElementById('settingCourseEditorIntroText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.courseEditorIntroText,
+            materialUrlPlaceholder: (document.getElementById('settingMaterialUrlPlaceholder') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.materialUrlPlaceholder,
+            courseTitlePlaceholder: (document.getElementById('settingCourseTitlePlaceholder') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.courseTitlePlaceholder,
+            passScorePlaceholder: (document.getElementById('settingPassScorePlaceholder') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.passScorePlaceholder,
+            questionBankHelperText: (document.getElementById('settingQuestionBankHelperText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.questionBankHelperText,
+            questionGroupTitlePlaceholder: (document.getElementById('settingQuestionGroupTitlePlaceholder') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.questionGroupTitlePlaceholder,
+            questionContentPlaceholder: (document.getElementById('settingQuestionContentPlaceholder') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.questionContentPlaceholder,
+            referenceAnswerPlaceholder: (document.getElementById('settingReferenceAnswerPlaceholder') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.referenceAnswerPlaceholder,
+            questionGroupSectionTitleText: (document.getElementById('settingQuestionGroupSectionTitleText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.questionGroupSectionTitleText,
+            questionGroupHelperText: (document.getElementById('settingQuestionGroupHelperText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.questionGroupHelperText,
+            addQuestionGroupButtonText: (document.getElementById('settingAddQuestionGroupButtonText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.addQuestionGroupButtonText,
+            uploadGroupImageButtonText: (document.getElementById('settingUploadGroupImageButtonText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.uploadGroupImageButtonText,
+            deleteQuestionGroupButtonText: (document.getElementById('settingDeleteQuestionGroupButtonText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.deleteQuestionGroupButtonText,
+            useGroupImageButtonText: (document.getElementById('settingUseGroupImageButtonText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.useGroupImageButtonText,
+            noGroupImageOptionText: (document.getElementById('settingNoGroupImageOptionText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.noGroupImageOptionText,
+            noQuestionGroupAlertText: (document.getElementById('settingNoQuestionGroupAlertText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.noQuestionGroupAlertText,
+            accentColor: (document.getElementById('settingAccentColorText') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.accentColor,
+            interfaceDensity: (document.getElementById('settingInterfaceDensity') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.interfaceDensity,
+            panelWidth: (document.getElementById('settingPanelWidth') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.panelWidth,
+            adminHeaderMode: (document.getElementById('settingAdminHeaderMode') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.adminHeaderMode,
+            loginPosition: (document.getElementById('settingLoginPosition') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.loginPosition,
+            loginBackgroundMode: (document.getElementById('settingLoginBackgroundMode') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.loginBackgroundMode,
+            loginBackgroundSize: (document.getElementById('settingLoginBackgroundSize') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.loginBackgroundSize,
+            loginBackgroundImage: (document.getElementById('settingLoginBackgroundImage') || {}).value || '',
+            questionEditorLayout: (document.getElementById('settingQuestionEditorLayout') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.questionEditorLayout,
+            questionInputPosition: (document.getElementById('settingQuestionInputPosition') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.questionInputPosition,
+            imageToolsLayout: (document.getElementById('settingImageToolsLayout') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.imageToolsLayout,
+            showButtonEmoji: !!((document.getElementById('settingShowButtonEmoji') || {}).checked),
+            buttonEmojiPosition: (document.getElementById('settingButtonEmojiPosition') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.buttonEmojiPosition,
+            showSidebarMenuEmoji: !!((document.getElementById('settingShowSidebarMenuEmoji') || {}).checked),
+            sidebarMenuEmojiPosition: (document.getElementById('settingSidebarMenuEmojiPosition') || {}).value || App.DEFAULT_SYSTEM_SETTINGS.sidebarMenuEmojiPosition,
+            adminSettingsTabSubText: (document.getElementById('settingAdminSettingsTabSubText') || {}).value || ''
+        }, buttonPairs, menuPairs);
+    },
+    uploadSettingBackgroundImage: async function(input) {
+        const file = input && input.files && input.files[0] ? input.files[0] : null;
+        if (!file) return;
+        if (!/^image\//.test(file.type || '')) {
+            input.value = '';
+            return alert('請上傳圖片檔。');
+        }
+        try {
+            const rawDataUrl = await Admin.readFileAsDataURL(file);
+            const dataUrl = await Admin.compressImageDataUrl(rawDataUrl, 1400, 0.72);
+            const hidden = document.getElementById('settingLoginBackgroundImage');
+            const preview = document.getElementById('settingLoginBgPreview');
+            const mode = document.getElementById('settingLoginBackgroundMode');
+            if (hidden) hidden.value = dataUrl;
+            if (mode) mode.value = 'custom';
+            if (preview) {
+                preview.classList.add('has-image');
+                preview.innerHTML = `<img src="${dataUrl}" alt="自訂背景圖" onclick="ImageLightbox.open(this.src)">`;
+            }
+            input.value = '';
+            Backend.setStatus('已加入自訂背景圖，請按「儲存設定」寫入 Supabase', 'var(--warning-color)');
+        } catch (err) {
+            console.error('uploadSettingBackgroundImage failed:', err);
+            alert('背景圖片讀取失敗，請改用其他圖片檔。');
+        }
+    },
+    clearSettingBackgroundImage: function() {
+        const hidden = document.getElementById('settingLoginBackgroundImage');
+        const preview = document.getElementById('settingLoginBgPreview');
+        if (hidden) hidden.value = '';
+        if (preview) {
+            preview.classList.remove('has-image');
+            preview.innerHTML = '尚未上傳自訂背景圖';
+        }
+        Backend.setStatus('已移除自訂背景圖，請按「儲存設定」寫入 Supabase', 'var(--warning-color)');
+    },
+    saveSystemSettings: async function() {
+        App.state.systemSettings = Object.assign({}, App.DEFAULT_SYSTEM_SETTINGS, Admin.readSystemSettingsForm());
+        App.applySystemSettings();
+        const ok = await App.saveWithNotice('系統設定已寫入 Supabase', '系統設定已保存在本機，但 Supabase 寫入失敗');
+        if (ok) alert('✅ 系統設定已儲存');
+        if (Admin.renderSettings) Admin.renderSettings();
+    },
+    resetSystemSettings: async function() {
+        if (!confirm('確定要將系統設定還原為預設值嗎？')) return;
+        App.state.systemSettings = Object.assign({}, App.DEFAULT_SYSTEM_SETTINGS);
+        App.applySystemSettings();
+        const ok = await App.saveWithNotice('系統設定已還原並寫入 Supabase', '系統設定已還原於本機，但 Supabase 寫入失敗');
+        if (ok) alert('✅ 系統設定已還原預設');
+        if (Admin.renderSettings) Admin.renderSettings();
+    },
     getCourseMaterials: function(course, includeBlank) {
         const list = Array.isArray(course && course.materials) ? course.materials : [];
         let clean = list.map((m, idx) => ({
@@ -4038,7 +5054,7 @@ const Admin = {
         const rows = mats.map((m, mi) => `
             <div class="material-row ${mi === active ? '' : 'is-hidden'}" data-material-index="${mi}" data-material-id="${Admin.esc(m.id || `${course && course.id || 'course'}_mat_${mi + 1}`)}">
                 <select class="select-field material-editor-select" onchange="Admin.selectEditorMaterial(this)" aria-label="選擇要編輯的教材">${options}</select>
-                <input type="text" class="input-field m-url" value="${Admin.esc(m.url || '')}" placeholder="可貼簡報、YouTube、Google Drive、mp4 或 iframe 嵌入碼">
+                <input type="text" class="input-field m-url" value="${Admin.esc(m.url || '')}" placeholder="${Admin.esc(App.getSystemSetting('materialUrlPlaceholder') || App.DEFAULT_SYSTEM_SETTINGS.materialUrlPlaceholder)}">
                 <button class="btn btn-primary btn-sm material-action-btn" onclick="Admin.addMaterial(${ci})">新增教材</button>
                 <button class="btn btn-danger btn-sm material-action-btn" onclick="Admin.delSelectedMaterial(${ci}, this)">移除教材</button>
                 <input type="hidden" class="m-title" value="${Admin.esc(m.title || `教材 ${mi + 1}`)}">
@@ -4258,13 +5274,115 @@ const Admin = {
         setTimeout(() => URL.revokeObjectURL(link.href), 0);
     },
 
+    getQuestionGroups: function(course) {
+        if (!course) return [];
+        if (!Array.isArray(course.questionGroups)) course.questionGroups = [];
+        course.questionGroups = course.questionGroups.map((g, i) => ({
+            id: String(g && g.id ? g.id : `qg_${course.id || 'course'}_${i + 1}`),
+            title: String(g && g.title ? g.title : `題組 ${i + 1}`),
+            imageData: String(g && g.imageData ? g.imageData : '')
+        }));
+        return course.questionGroups;
+    },
+    renderQuestionGroupManager: function(course, ci) {
+        const groups = Admin.getQuestionGroups(course);
+        return `
+            <div class="question-group-manager">
+                <div class="question-group-header">
+                    <div>
+                        <div class="question-group-title">${Admin.esc(App.getSystemSetting('questionGroupSectionTitleText') || App.DEFAULT_SYSTEM_SETTINGS.questionGroupSectionTitleText)}</div>
+                        <div class="editor-helper">${Admin.esc(App.getSystemSetting('questionGroupHelperText') || App.DEFAULT_SYSTEM_SETTINGS.questionGroupHelperText)}</div>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="Admin.addQuestionGroup(${ci})">➕ ${Admin.esc(App.getSystemSetting('addQuestionGroupButtonText') || App.DEFAULT_SYSTEM_SETTINGS.addQuestionGroupButtonText)}</button>
+                </div>
+                <div class="question-group-list">
+                    ${groups.length ? groups.map((g, gi) => `
+                        <div class="question-group-row" data-group-id="${Admin.esc(g.id)}">
+                            <input type="text" class="input-field qg-title" value="${Admin.esc(g.title || '')}" placeholder="${Admin.esc(App.getSystemSetting('questionGroupTitlePlaceholder') || App.DEFAULT_SYSTEM_SETTINGS.questionGroupTitlePlaceholder)}">
+                            <input type="hidden" class="qg-img-data" value="${Admin.esc(g.imageData || '')}">
+                            <div class="question-group-preview ${g.imageData ? 'has-image' : ''}">${g.imageData ? `<img src="${Admin.esc(g.imageData)}" alt="題組共用圖片" onclick="ImageLightbox.open(this.src)">` : ''}</div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="this.parentElement.querySelector('.qg-img-file').click()">${Admin.esc(App.getSystemSetting('uploadGroupImageButtonText') || App.DEFAULT_SYSTEM_SETTINGS.uploadGroupImageButtonText)}</button>
+                            <input type="file" class="qg-img-file hidden" accept="image/*" onchange="Admin.uploadQuestionGroupImage(this)">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="Admin.removeQuestionGroup(${ci}, ${gi})">${Admin.esc(App.getSystemSetting('deleteQuestionGroupButtonText') || App.DEFAULT_SYSTEM_SETTINGS.deleteQuestionGroupButtonText)}</button>
+                        </div>
+                    `).join('') : ''}
+                </div>
+            </div>`;
+    },
+    addQuestionGroup: function(ci) {
+        Admin.sync(true);
+        const course = App.state.courses[ci];
+        if (!course) return;
+        const groups = Admin.getQuestionGroups(course);
+        groups.push({ id: `qg_${course.id || Date.now()}_${Date.now()}`, title: `題組 ${groups.length + 1}`, imageData: '' });
+        App.lastOpenedCourseId = course.id;
+        App.saveLocalOnly();
+        Admin.renderEditor();
+        Backend.setStatus(App.getSystemSetting('addQuestionGroupStatusText') || App.DEFAULT_SYSTEM_SETTINGS.addQuestionGroupStatusText, 'var(--warning-color)');
+    },
+    removeQuestionGroup: function(ci, gi) {
+        Admin.sync(true);
+        const course = App.state.courses[ci];
+        if (!course) return;
+        const groups = Admin.getQuestionGroups(course);
+        const removed = groups[gi];
+        if (!removed) return;
+        if (!confirm(`確定刪除「${removed.title || '題組圖片'}」？使用此題組的題目會改為不使用題組圖片。`)) return;
+        groups.splice(gi, 1);
+        (course.questions || []).forEach(q => { if (String(q.imageGroupId || '') === String(removed.id)) q.imageGroupId = ''; });
+        App.lastOpenedCourseId = course.id;
+        App.saveLocalOnly();
+        Admin.renderEditor();
+        Backend.setStatus('已刪除題組圖片，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
+    },
+    uploadQuestionGroupImage: async function(input) {
+        const file = input && input.files && input.files[0] ? input.files[0] : null;
+        if (!file) return;
+        if (!/^image\//.test(file.type || '')) {
+            input.value = '';
+            return alert('請上傳圖片檔。');
+        }
+        try {
+            const rawDataUrl = await Admin.readFileAsDataURL(file);
+            const dataUrl = await Admin.compressImageDataUrl(rawDataUrl, 900, 0.78);
+            const row = input.closest('.question-group-row');
+            if (!row) return;
+            const hidden = row.querySelector('.qg-img-data');
+            const preview = row.querySelector('.question-group-preview');
+            if (hidden) hidden.value = dataUrl;
+            if (preview) {
+                preview.classList.add('has-image');
+                preview.innerHTML = `<img src="${dataUrl}" alt="題組共用圖片" onclick="ImageLightbox.open(this.src)">`;
+            }
+            input.value = '';
+            Backend.setStatus('已加入題組共用圖片，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
+        } catch (err) {
+            console.error('uploadQuestionGroupImage failed:', err);
+            alert('圖片讀取失敗，請改用其他圖片檔。');
+        }
+    },
+    toggleQuestionGroupPicker: function(btn) {
+        const tools = btn ? btn.closest('.q-image-tools') : null;
+        const select = tools ? tools.querySelector('.q-group-id') : null;
+        if (!select) return;
+        if (select.options.length <= 1) {
+            return alert(App.getSystemSetting('noQuestionGroupAlertText') || App.DEFAULT_SYSTEM_SETTINGS.noQuestionGroupAlertText);
+        }
+        select.classList.toggle('hidden');
+        if (!select.classList.contains('hidden')) select.focus();
+    },
+    updateQuestionImageSource: function(select) {
+        const row = select ? select.closest('.q-row') : null;
+        if (!row) return;
+        Backend.setStatus(select.value ? '此題已指定使用題組共用圖片，請按「儲存變更」寫入 Supabase' : '此題已改為不使用題組共用圖片，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
+    },
     renderEditor: function() {
         const listDiv = document.getElementById('panel-edit');
         listDiv.innerHTML = `
             <div class="sticky-header">
                 <div>
                     <h3>📚 教材與題庫編輯</h3>
-                    <div class="editor-helper" style="margin-top:6px;">編輯科目、教材與題庫，或拖拉科目卡片調整順序後，記得按下儲存變更才會生效。</div>
+                    <div class="editor-helper" style="margin-top:6px;">${Admin.esc(App.getSystemSetting('courseEditorIntroText') || App.DEFAULT_SYSTEM_SETTINGS.courseEditorIntroText)}</div>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-template btn-sm" onclick="Admin.downloadTemplate()"><span class="btn-icon-mono">⇩</span> 下載範本</button>
@@ -4291,11 +5409,11 @@ const Admin = {
                         <div class="course-compact-row">
                             <div>
                                 <label>科目名稱</label>
-                                <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="請輸入科目名稱">
+                                <input type="text" class="input-field c-title" value="${Admin.esc(c.title || '')}" placeholder="${Admin.esc(App.getSystemSetting('courseTitlePlaceholder') || App.DEFAULT_SYSTEM_SETTINGS.courseTitlePlaceholder)}">
                             </div>
                             <div>
                                 <label>及格分數</label>
-                                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" min="0" max="100" class="input-field c-pass-score no-spinner" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 80}" placeholder="及格分數">
+                                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" min="0" max="100" class="input-field c-pass-score no-spinner" value="${Number.isFinite(Number(c.passScore)) ? Number(c.passScore) : 80}" placeholder="${Admin.esc(App.getSystemSetting('passScorePlaceholder') || App.DEFAULT_SYSTEM_SETTINGS.passScorePlaceholder)}">
                             </div>
                             <div class="material-field">
                                 <label>教材清單／教材網址</label>
@@ -4303,10 +5421,11 @@ const Admin = {
                             </div>
                         </div>
                         <hr class="course-setting-divider">
+                        ${Admin.renderQuestionGroupManager(c, ci)}
                         <div class="question-toolbar">
                             <div>
                                 <h4>題庫內容</h4>
-                                <div class="editor-helper">可手動新增題目，或用 CSV 匯入／匯出題庫；按「選項」可展開編輯。</div>
+                                <div class="editor-helper">${Admin.esc(App.getSystemSetting('questionBankHelperText') || App.DEFAULT_SYSTEM_SETTINGS.questionBankHelperText)}</div>
                             </div>
                             <div class="question-actions">
                                 <button class="btn btn-question-export btn-sm" onclick="Admin.exportCourseQuestions(${ci})">📤 匯出題庫</button>
@@ -4332,17 +5451,22 @@ const Admin = {
                                         <button class="btn btn-danger btn-sm" onclick="Admin.delQ(${ci}, ${qi})">移除</button>
                                     </div>
                                 </div>
-                                <input type="text" class="input-field q-t" value="${Admin.esc(q.q)}" placeholder="請輸入題目內容">
+                                <input type="text" class="input-field q-t" value="${Admin.esc(q.q)}" placeholder="${Admin.esc(App.getSystemSetting('questionContentPlaceholder') || App.DEFAULT_SYSTEM_SETTINGS.questionContentPlaceholder)}">
                                 <input type="hidden" class="q-img-data" value="${Admin.esc(q.imageData || '')}">
-                                <div class="q-image-tools">
+                                <div class="q-image-tools q-image-source-tools">
                                     <button type="button" class="btn btn-outline btn-sm" onclick="this.parentElement.querySelector('.q-img-file').click()">上傳參考圖片</button>
                                     <input type="file" class="q-img-file hidden" accept="image/*" onchange="Admin.uploadQuestionImage(this)">
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="Admin.toggleQuestionGroupPicker(this)">${Admin.esc(App.getSystemSetting('useGroupImageButtonText') || App.DEFAULT_SYSTEM_SETTINGS.useGroupImageButtonText)}</button>
+                                    <select class="select-field q-group-id q-group-picker ${q.imageGroupId ? '' : 'hidden'}" onchange="Admin.updateQuestionImageSource(this)">
+                                        <option value="">${Admin.esc(App.getSystemSetting('noGroupImageOptionText') || App.DEFAULT_SYSTEM_SETTINGS.noGroupImageOptionText)}</option>
+                                        ${Admin.getQuestionGroups(c).map(g => `<option value="${Admin.esc(g.id)}" ${String(q.imageGroupId || '') === String(g.id) ? 'selected' : ''}>${Admin.esc(g.title || '題組圖片')}</option>`).join('')}
+                                    </select>
                                     <button type="button" class="btn btn-danger btn-sm ${q.imageData ? '' : 'hidden'} q-img-remove" onclick="Admin.removeQuestionImage(this)">移除圖片</button>
                                 </div>
                                 <div class="q-image-preview ${q.imageData ? 'has-image' : ''}">${q.imageData ? `<img src="${Admin.esc(q.imageData)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)">` : ''}</div>
                                 <div class="q-reference-answer-wrap">
                                     <label class="q-reference-answer-label">簡答題參考答案</label>
-                                    <textarea class="q-reference-answer" placeholder="請輸入參考答案">${Admin.esc(q.referenceAnswer || q.correctAnswerText || '')}</textarea>
+                                    <textarea class="q-reference-answer" placeholder="${Admin.esc(App.getSystemSetting('referenceAnswerPlaceholder') || App.DEFAULT_SYSTEM_SETTINGS.referenceAnswerPlaceholder)}">${Admin.esc(q.referenceAnswer || q.correctAnswerText || '')}</textarea>
                                 </div>
 
                                 <div class="q-options-grid" hidden style="${(q.type || 'choice') === 'truefalse' ? '' : 'display:none !important;'}">
@@ -4456,6 +5580,11 @@ const Admin = {
                 const passInput = item.querySelector('.c-pass-score');
                 const passScore = passInput ? parseInt(passInput.value, 10) : NaN;
                 target.passScore = Number.isFinite(passScore) && passScore >= 0 && passScore <= 100 ? passScore : 80;
+                target.questionGroups = Array.from(item.querySelectorAll('.question-group-row')).map((row, gi) => ({
+                    id: row.dataset.groupId || `qg_${target.id || Date.now()}_${gi + 1}_${Date.now()}`,
+                    title: (row.querySelector('.qg-title') ? row.querySelector('.qg-title').value.trim() : '') || `題組 ${gi + 1}`,
+                    imageData: row.querySelector('.qg-img-data') ? String(row.querySelector('.qg-img-data').value || '') : ''
+                })).filter(g => g.title || g.imageData);
                 target.questions = Array.from(item.querySelectorAll('.q-row')).map(row => {
                     const rawType = row.querySelector('.q-type') ? row.querySelector('.q-type').value : 'choice';
                     const qType = rawType === 'short' ? 'short' : (rawType === 'truefalse' ? 'truefalse' : 'choice');
@@ -4472,6 +5601,7 @@ const Admin = {
                             return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null;
                         })(),
                         imageData: row.querySelector('.q-img-data') ? String(row.querySelector('.q-img-data').value || '') : '',
+                        imageGroupId: row.querySelector('.q-group-id') ? String(row.querySelector('.q-group-id').value || '') : '',
                         referenceAnswer: row.querySelector('.q-reference-answer') ? String(row.querySelector('.q-reference-answer').value || '').trim() : ''
                     };
                 });
@@ -4520,7 +5650,7 @@ const Admin = {
     addCourse: function() {
         const t = prompt("科目名稱");
         if (t) {
-            App.state.courses.push({id:Date.now(), title:t, embedUrl:"", materials:[{ id: `mat_${Date.now()}`, title:"教材 1", url:"", type:"auto" }], passScore: 80, questions:[]});
+            App.state.courses.push({id:Date.now(), title:t, embedUrl:"", materials:[{ id: `mat_${Date.now()}`, title:"教材 1", url:"", type:"auto" }], passScore: 80, questionGroups:[], questions:[]});
             App.saveLocalOnly();
             Admin.renderEditor();
             Backend.setStatus('已新增科目，請按「儲存變更」寫入 Supabase', 'var(--warning-color)');
@@ -4658,7 +5788,7 @@ const Admin = {
         Admin.sync();
         const course = App.state.courses[ci];
         if (!course) return;
-        course.questions.push({type:"choice", q:"", o:["","","",""], a:0, imageData:"", referenceAnswer:""});
+        course.questions.push({type:"choice", q:"", o:["","","",""], a:0, imageData:"", imageGroupId:"", referenceAnswer:""});
         App.lastOpenedCourseId = course.id;
         App.pendingScrollQuestion = { courseIndex: ci, questionIndex: course.questions.length - 1 };
         Admin.renderEditor();
@@ -5365,7 +6495,7 @@ const Admin = {
         const r = App.state.records[recordIndex];
         if (!r) return alert('找不到此筆測驗紀錄。');
         if (r.manualScoreFinalized) {
-            const okToEdit = confirm('此筆成績已完成人工計分，是否要修改計分？');
+            const okToEdit = confirm(App.getSystemSetting('manualScoreConfirmText') || '此筆成績已完成人工計分，是否要修改計分？');
             if (!okToEdit) return;
         }
 
@@ -5677,22 +6807,36 @@ const Admin = {
     }
 };
 
+function getQuestionDisplayImage(q, course) {
+    if (!q) return '';
+    const groupId = String(q.imageGroupId || '');
+    if (groupId && course && Array.isArray(course.questionGroups)) {
+        const group = course.questionGroups.find(g => String(g && g.id || '') === groupId);
+        if (group && group.imageData) return String(group.imageData || '');
+    }
+    return String(q.imageData || '');
+}
+
 const Quiz = {
     init: async function() {
         this.setScoreSyncOverlay(false);
         const startBtn = document.getElementById('startQuizBtn');
         if (startBtn) {
             startBtn.disabled = true;
-            startBtn.innerText = '準備考核中...';
+            startBtn.innerText = App.buttonLabel('startPreparingButtonText', 'startPreparingButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.startPreparingButtonText, App.DEFAULT_SYSTEM_SETTINGS.startPreparingButtonEmoji);
         }
         const resetStartButton = function() {
             if (startBtn) {
                 startBtn.disabled = false;
-                startBtn.innerText = '開始考核 📝';
+                startBtn.innerText = App.buttonLabel('startQuizButtonText', 'startQuizButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.startQuizButtonText, App.DEFAULT_SYSTEM_SETTINGS.startQuizButtonEmoji);
             }
         };
         const resultArea = document.getElementById('resultAnswerArea');
         if (resultArea) { resultArea.classList.add('hidden'); resultArea.innerHTML = ''; }
+        const quizStatus = document.getElementById('quizCompletionStatus');
+        if (quizStatus) { quizStatus.dataset.dynamicStatus = 'default'; quizStatus.innerText = App.getSystemSetting('quizCompletionText') || '送出時會檢查未作答題目。'; quizStatus.style.color = '#8b949e'; }
+        const submitBtn = document.getElementById('quizSubmitBtn');
+        if (submitBtn) submitBtn.innerText = App.buttonLabel('quizSubmitButtonText', 'quizSubmitButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.quizSubmitButtonText, App.DEFAULT_SYSTEM_SETTINGS.quizSubmitButtonEmoji);
         if (!App.isInstructor && App.isQuizLocked(App.user, App.activeCourse.id)) { resetStartButton(); return alert("本科目已完成測驗，需由管理員於「測驗成績查詢」解鎖後才能再次測驗。"); }
         if(!App.activeCourse.questions.length) { resetStartButton(); return alert("本科目尚無考題。"); }
         if (!App.isInstructor) {
@@ -5717,7 +6861,7 @@ const Quiz = {
             return `
             <div class="quiz-question-card" style="background:#1c2128; padding:20px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);" id="q-card-${i}">
                 <p class="quiz-question-text"><strong>Q${i+1}：</strong> ${q.q}${qType === 'short' ? '<span class="manual-score-badge">簡答題｜人工計分</span>' : (qType === 'truefalse' ? '<span class="manual-score-badge">是非題</span>' : '')}${q.points === null || q.points === undefined || q.points === '' ? '' : `<span class="quiz-points-badge">配分 ${Number(q.points)} 分</span>`}<span class="unanswered-note hidden">未作答</span></p>
-                ${q.imageData ? `<div class="quiz-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
+                ${getQuestionDisplayImage(q, App.activeCourse) ? `<div class="quiz-question-image"><img src="${getQuestionDisplayImage(q, App.activeCourse)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                 ${qType === 'short'
                     ? `<textarea class="quiz-short-answer" placeholder="請輸入簡答內容..." oninput="Quiz.inputShort(${i}, this)"></textarea>`
                     : `<div class="quiz-options-list">
@@ -5863,7 +7007,7 @@ const Quiz = {
                 if (qType === 'short') {
                     return `<div class="review-answer-card">
                         <div class="review-q-title">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
-                        ${q.imageData ? `<div class="review-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
+                        ${getQuestionDisplayImage(q, App.activeCourse) ? `<div class="review-question-image"><img src="${getQuestionDisplayImage(q, App.activeCourse)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                         <div class="review-short-answer-label">簡答內容</div><div class="review-short-answer-box">${Admin.esc(String(selectedIndex || '（未填寫）'))}</div>
                         <div class="review-short-answer-label">參考答案</div><div class="review-short-answer-box">${Admin.esc(String(q.referenceAnswer || q.correctAnswerText || '（未設定）'))}</div>
                     </div>`;
@@ -5871,7 +7015,7 @@ const Quiz = {
                 const selectedText = q.o[selectedIndex] || '';
                 return `<div class="review-answer-card">
                     <div class="review-q-title">Q${i + 1}：${Admin.esc(q.q)}</div>
-                    ${q.imageData ? `<div class="review-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
+                    ${getQuestionDisplayImage(q, App.activeCourse) ? `<div class="review-question-image"><img src="${getQuestionDisplayImage(q, App.activeCourse)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                     <div class="review-selected">答案：<strong>(${Number(selectedIndex) + 1})</strong> ${Quiz.formatOptionText(selectedText)}</div>
                 </div>`;
             }).join('')}
@@ -5953,29 +7097,30 @@ const Quiz = {
         const titleEl = document.getElementById('scoreSyncOverlayTitle');
         const noteEl = document.getElementById('scoreSyncOverlayNote');
         if (!overlay) return;
-        if (titleEl) titleEl.innerText = title || '成績儲存中';
-        if (msg) msg.innerText = message || '正在將成績與逐題紀錄寫入 Supabase，請勿關閉視窗或重新整理頁面。';
-        if (noteEl) noteEl.innerText = note || '看到考核結果畫面後，才代表 Supabase 已完成寫入。';
+        if (titleEl) titleEl.innerText = title || App.getSystemSetting('scoreSyncTitle') || '成績儲存中';
+        if (msg) msg.innerText = message || App.getSystemSetting('scoreSyncMessage') || '正在將成績與逐題紀錄寫入 Supabase，請勿關閉視窗或重新整理頁面。';
+        if (noteEl) noteEl.innerText = note || App.getSystemSetting('scoreSyncNote') || '看到考核結果畫面後，才代表 Supabase 已完成寫入。';
         overlay.classList.toggle('active', !!isSubmitting);
         overlay.setAttribute('aria-hidden', isSubmitting ? 'false' : 'true');
     },
     setSubmitUi: function(isSubmitting, message) {
         this.submitInProgress = !!isSubmitting;
-        this.setScoreSyncOverlay(!!isSubmitting, message || '正在將成績與逐題紀錄寫入 Supabase，請勿關閉視窗或重新整理頁面。');
+        this.setScoreSyncOverlay(!!isSubmitting, message || App.getSystemSetting('scoreSyncMessage') || '正在將成績與逐題紀錄寫入 Supabase，請勿關閉視窗或重新整理頁面。');
         const btn = document.getElementById('quizSubmitBtn');
         const status = document.getElementById('quizCompletionStatus');
         const reviewConfirmBtn = document.getElementById('reviewConfirmBtn');
         const reviewBackBtn = document.getElementById('reviewBackBtn');
         if (btn) {
             btn.disabled = !!isSubmitting;
-            btn.innerText = isSubmitting ? '成績儲存中...' : '提交考核答案';
+            btn.innerText = isSubmitting ? App.buttonLabel('scoreSavingButtonText', 'scoreSavingButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.scoreSavingButtonText, App.DEFAULT_SYSTEM_SETTINGS.scoreSavingButtonEmoji) : App.buttonLabel('quizSubmitButtonText', 'quizSubmitButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.quizSubmitButtonText, App.DEFAULT_SYSTEM_SETTINGS.quizSubmitButtonEmoji);
         }
         if (reviewConfirmBtn) {
             reviewConfirmBtn.disabled = !!isSubmitting;
-            reviewConfirmBtn.innerText = isSubmitting ? '儲存中...' : '確認送出';
+            reviewConfirmBtn.innerText = isSubmitting ? App.buttonLabel('reviewSavingButtonText', 'reviewSavingButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.reviewSavingButtonText, App.DEFAULT_SYSTEM_SETTINGS.reviewSavingButtonEmoji) : App.buttonLabel('reviewConfirmButtonText', 'reviewConfirmButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.reviewConfirmButtonText, App.DEFAULT_SYSTEM_SETTINGS.reviewConfirmButtonEmoji);
         }
         if (reviewBackBtn) reviewBackBtn.disabled = !!isSubmitting;
         if (status && message) {
+            status.dataset.dynamicStatus = 'custom';
             status.innerText = message;
             status.style.color = isSubmitting ? 'var(--warning-color)' : 'var(--danger-color)';
         }
@@ -5992,8 +7137,8 @@ const Quiz = {
                 if (qType === 'short') {
                     return `<div class="result-answer-card">
                         <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)} <span class="manual-score-badge">人工計分</span></div>
-                        ${q.imageData ? `<div class="result-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
-                        <div class="result-short-answer-label">你的答案</div><div class="result-short-answer-box">${Admin.esc(String(userIndex || '（未填寫）'))}</div>
+                        ${getQuestionDisplayImage(q, App.activeCourse) ? `<div class="result-question-image"><img src="${getQuestionDisplayImage(q, App.activeCourse)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
+                        <div class="result-short-answer-label">你的簡答作答</div><div class="result-short-answer-box">${Admin.esc(String(userIndex || '（未填寫）'))}</div>
                         <div class="result-short-answer-label">參考答案</div><div class="result-short-answer-box">${Admin.esc(String(q.referenceAnswer || q.correctAnswerText || '（未設定）'))}</div>
                     </div>`;
                 }
@@ -6003,7 +7148,7 @@ const Quiz = {
                 const isCorrect = userIndex === correctIndex;
                 return `<div class="result-answer-card ${isCorrect ? 'correct' : 'wrong'}">
                     <div class="result-answer-question">Q${i + 1}：${Admin.esc(q.q)}</div>
-                    ${q.imageData ? `<div class="result-question-image"><img src="${q.imageData}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
+                    ${getQuestionDisplayImage(q, App.activeCourse) ? `<div class="result-question-image"><img src="${getQuestionDisplayImage(q, App.activeCourse)}" alt="題目參考圖片" onclick="ImageLightbox.open(this.src)"></div>` : ''}
                     <div class="result-answer-row">答案：<span class="result-answer-correct">(${correctIndex + 1}) ${Quiz.formatOptionText(correctText)}</span></div>
                     <div class="result-answer-row">你的作答：<span class="result-answer-user ${isCorrect ? '' : 'wrong'}">(${Number(userIndex) + 1}) ${Quiz.formatOptionText(userText)}</span> ${isCorrect ? '✅' : '❌'}</div>
                 </div>`;
@@ -6051,7 +7196,8 @@ const Quiz = {
                         questionId: String(q.id || `q${i + 1}`),
                         questionType: 'short',
                         questionText: String(q.q || ''),
-                        imageData: String(q.imageData || ''),
+                        imageData: String(getQuestionDisplayImage(q, course) || ''),
+                        imageGroupId: String(q.imageGroupId || ''),
                         options: [],
                         userAnswerIndex: null,
                         userAnswerText: String(answers[i] || ''),
@@ -6070,7 +7216,8 @@ const Quiz = {
                     questionId: String(q.id || `q${i + 1}`),
                     questionType: qType,
                     questionText: String(q.q || ''),
-                    imageData: String(q.imageData || ''),
+                    imageData: String(getQuestionDisplayImage(q, course) || ''),
+                        imageGroupId: String(q.imageGroupId || ''),
                     options: opts,
                     userAnswerIndex: Number.isFinite(userIndex) ? userIndex : null,
                     userAnswerText: Number.isFinite(userIndex) ? String(opts[userIndex] || '') : '',
@@ -6107,7 +7254,8 @@ const Quiz = {
                         questionId: String(q.id || `q${i + 1}`),
                         questionType: (q.type || 'choice') === 'short' ? 'short' : ((q.type || 'choice') === 'truefalse' ? 'truefalse' : 'choice'),
                         questionText: String(q.q || ''),
-                        imageData: String(q.imageData || ''),
+                        imageData: String(getQuestionDisplayImage(q, course) || ''),
+                        imageGroupId: String(q.imageGroupId || ''),
                         options: Array.isArray(q.o) ? q.o.map(o => String(o || '')) : [],
                         correctAnswerIndex: (q.type || 'choice') === 'short' ? null : Number(q.a),
                         correctAnswerText: (q.type || 'choice') === 'short' ? String(q.referenceAnswer || q.correctAnswerText || '') : '',
@@ -6122,7 +7270,8 @@ const Quiz = {
                 questionNo: i + 1,
                 questionId: String(q.id || `q${i + 1}`),
                 questionText: String(q.q || ''),
-                imageData: String(q.imageData || ''),
+                imageData: String(getQuestionDisplayImage(q, course) || ''),
+                        imageGroupId: String(q.imageGroupId || ''),
                 options: Array.isArray(q.o) ? q.o.map(o => String(o || '')) : [],
                 correctAnswerIndex: (q.type || 'choice') === 'short' ? null : Number(q.a),
                 correctAnswerText: (q.type || 'choice') === 'short' ? String(q.referenceAnswer || q.correctAnswerText || '') : '',
