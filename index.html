@@ -4519,7 +4519,7 @@ const App = {
         ['rec', 'score', 'edit', 'settings'].forEach(p => { const panel = document.getElementById(`panel-${p}`); const tabEl = document.getElementById(`t-${p}`); if (panel) panel.classList.add('hidden'); if (tabEl) tabEl.classList.remove('active'); });
         document.getElementById(`panel-${tab}`).classList.remove('hidden'); document.getElementById(`t-${tab}`).classList.add('active');
 
-        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', settings: '系統設定', rec: '人員帳號管理' };
+        const labelMap = { score: '測驗成績查詢', edit: '教材與題庫編輯', rec: '人員帳號管理', settings: '系統設定'};
         const currentLabel = document.getElementById('adminMobileCurrent');
         if (currentLabel) currentLabel.innerText = `目前展開：${labelMap[tab] || ''}`;
 
