@@ -515,18 +515,25 @@
         }
 
         .result-answer-area {
-            width: min(900px, 100%);
-            max-height: 46vh;
-            overflow-y: auto;
-            margin: 18px auto 24px;
-            padding: 12px;
-            background: #0d1117;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            text-align: left;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(88,166,255,0.75) #0d1117;
-        }
+    width: min(900px, 100%);
+    max-height: min(45vh, 360px);
+    overflow-y: auto;
+    margin: 18px auto 18px;
+    padding: 12px;
+    background: #0d1117;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    text-align: left;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(88,166,255,0.75) #0d1117;
+}
+
+@media (max-width: 760px) {
+    .result-answer-area {
+        max-height: 38vh;
+        margin-bottom: 14px;
+    }
+}
         .result-answer-area::-webkit-scrollbar { width: 6px; }
         .result-answer-area::-webkit-scrollbar-track { background: #0d1117; }
         .result-answer-area::-webkit-scrollbar-thumb { background: rgba(88,166,255,0.65); border-radius: 999px; }
