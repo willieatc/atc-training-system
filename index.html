@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- ATC_V001_LOCALSTORAGE_QUOTA_SAFE_SUPABASE_STATUS -->
 <!-- ATC_V001_SUPABASE_STATUS_NO_BACKGROUND_FORCE -->
 <!-- ATC_V003_ADMIN_STATUS_TEXT_BACKGROUND_ONLY -->
 <!-- ATC_V002_QUESTION_IMAGE_CLICK_ZOOM -->
@@ -2961,12 +2962,64 @@ const PASS_SCORE = 80;
 // ================= Supabase 後端設定 =================
 // Supabase URL 與 anon key 請設定在同層的 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V001-review-no-ref-v2';
+const APP_BUILD_VERSION = 'V002-supabase-quota-safe';
 
 const SUPABASE_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_URL) ? window.ATC_CONFIG.SUPABASE_URL.trim() : "";
 const SUPABASE_ANON_KEY = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_ANON_KEY) ? window.ATC_CONFIG.SUPABASE_ANON_KEY.trim() : "";
 // V128：本版只使用 Supabase，不使用 Apps Script / Google Sheets。
 const SHEETS_WEB_APP_URL = "";
+
+// 本機快取保護：localStorage 容量不足時，只略過本機快取，不能誤判為 Supabase 斷線。
+const LocalCache = {
+    key: 'ATC_PRO_CLOUD',
+    quotaBlocked: false,
+    isQuotaError: function(err) {
+        return !!err && (
+            err.name === 'QuotaExceededError' ||
+            err.code === 22 ||
+            err.code === 1014
+        );
+    },
+    loadState: function() {
+        try {
+            const raw = localStorage.getItem(this.key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (err) {
+            console.warn('ATC 本機快取讀取失敗，將改由 Supabase 載入：', err);
+            return null;
+        }
+    },
+    setItem: function(key, value) {
+        try {
+            localStorage.setItem(key, String(value));
+            return true;
+        } catch (err) {
+            if (this.isQuotaError(err)) {
+                console.warn('ATC 本機儲存空間不足，略過本機狀態標記：', key);
+                return false;
+            }
+            console.error('ATC 本機狀態標記寫入失敗：', key, err);
+            return false;
+        }
+    },
+    saveState: function(state) {
+        if (this.quotaBlocked) return false;
+        try {
+            localStorage.setItem(this.key, JSON.stringify(state));
+            return true;
+        } catch (err) {
+            if (this.isQuotaError(err)) {
+                this.quotaBlocked = true;
+                // 清掉舊的大型快取，避免後續每次操作都再次觸發容量錯誤。
+                try { localStorage.removeItem(this.key); } catch (removeErr) {}
+                console.warn('ATC 本機快取空間不足，已略過本機快取；Supabase 連線與雲端資料不受影響。');
+                return false;
+            }
+            console.error('ATC 本機快取寫入失敗：', err);
+            return false;
+        }
+    }
+};
 
 const Backend = {
     _client: null,
@@ -3142,7 +3195,7 @@ const Backend = {
             const quizUnlocks = Object.assign({}, quizUnlocksRaw);
             delete quizUnlocks.__system_settings;
             App.cloudRevision = String(settings.revision || 1);
-            localStorage.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
+            LocalCache.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
             App.state = {
                 courses: courses,
                 records: records,
@@ -3160,11 +3213,15 @@ const Backend = {
                     c.materials = c.embedUrl ? [{ id: `${c.id || 'course'}_mat_1`, title: '教材 1', url: String(c.embedUrl || ''), type: 'auto' }] : [];
                 }
             });
-            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
-            localStorage.setItem('ATC_LAST_CLOUD_LOAD_TS', String(Date.now()));
+            // Supabase 已成功讀取；本機快取是否寫入成功，不影響雲端連線判定。
             App.cloudReady = true;
             this.loaded = true;
-            this.setStatus('Supabase 連線正常', 'var(--success-color)');
+            const localCacheSaved = LocalCache.saveState(App.state);
+            LocalCache.setItem('ATC_LAST_CLOUD_LOAD_TS', String(Date.now()));
+            this.setStatus(
+                localCacheSaved ? 'Supabase 連線正常' : 'Supabase 連線正常（本機快取空間不足，已略過快取）',
+                'var(--success-color)'
+            );
             if (App.isInstructor && typeof Admin !== 'undefined' && Admin.refreshSupabaseStatusForAdmin) Admin.refreshSupabaseStatusForAdmin();
             return true;
         } catch (err) {
@@ -3176,7 +3233,7 @@ const Backend = {
         }
     },
     saveState: async function(state) {
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(state));
+        LocalCache.saveState(state);
         if (!this.enabled()) return true;
         this.saving = true;
         this.setStatus('Supabase 寫入中...', 'var(--warning-color)');
@@ -3206,7 +3263,7 @@ const Backend = {
             }
             if (upsertRes.error) throw upsertRes.error;
             App.cloudRevision = String(nextRevision);
-            localStorage.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
+            LocalCache.setItem('ATC_CLOUD_REVISION', App.cloudRevision);
             localStorage.removeItem('ATC_PENDING_CLOUD_SYNC');
             this.setStatus('Supabase 連線正常', 'var(--success-color)');
             return true;
@@ -3557,7 +3614,7 @@ const Backup = {
 
 const App = {
     cloudReady: false,
-    state: JSON.parse(localStorage.getItem('ATC_PRO_CLOUD')) || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
+    state: LocalCache.loadState() || { courses: [], records: [], users: {}, quizLocks: {}, quizUnlocks: {}, adminPw: "rctp3023" },
     user: "", employeeId: "", activeCourse: null, isInstructor: false, lastOpenedCourseId: null, currentAdminTab: 'score', quizInProgress: false,
     scoreSyncPending: false, recoveredInterruptedQuiz: null, pendingScrollQuestion: null,
     pendingQuizKey: 'ATC_PENDING_QUIZ',
@@ -3871,7 +3928,7 @@ const App = {
         }
     },
     save: function() {
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         this.markPendingCloudSync();
         this.savePromise = Backend.saveState(JSON.parse(JSON.stringify(this.state)));
         return this.savePromise;
@@ -3902,13 +3959,13 @@ const App = {
         }
 
         this.normalizeUsers();
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         Backend.setStatus(successText, 'var(--success-color)');
         return true;
     },
     syncUsersOnly: async function(successText = '帳號資料已寫入 Supabase完成', failureText = '帳號資料已保存在本機，但 Supabase 寫入失敗') {
         this.normalizeUsers();
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         const result = await Backend.syncUsers(JSON.parse(JSON.stringify(this.state.users)), JSON.parse(JSON.stringify(this.state.userNames || {})));
         if (result && result.ok) {
             Backend.setStatus(successText, 'var(--success-color)');
@@ -3919,7 +3976,7 @@ const App = {
         return false;
     },
     saveWithNotice: async function(successText, failureText) {
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         if (Backend.enabled() && !this.cloudReady) {
             Backend.setStatus('尚未成功連線 Supabase，禁止儲存以避免覆蓋資料庫', 'var(--danger-color)');
             alert('尚未成功連線 Supabase。為避免本機舊資料覆蓋資料庫，請重新整理並確認 Supabase 連線正常後再操作。');
@@ -3952,11 +4009,11 @@ const App = {
         return false;
     },
     saveLocalOnly: function() {
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         return true;
     },
     saveBackground: function() {
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         this.markPendingCloudSync();
         const snapshot = JSON.parse(JSON.stringify(this.state));
         this.savePromise = Backend.saveState(snapshot)
@@ -4198,7 +4255,7 @@ const App = {
             if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
         }
 
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         return true;
     },
     unlockQuiz: async function(user, courseId) {
@@ -4227,7 +4284,7 @@ const App = {
             if (Array.isArray(result.data.state.records)) this.state.records = result.data.state.records;
         }
 
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+        LocalCache.saveState(this.state);
         return true;
     },
     
@@ -6698,7 +6755,7 @@ const Admin = {
         const ok = await Admin.withButtonStatus(async () => {
             const result = await Backend.updateScoreRecord(r);
             if (!(result && result.ok)) return false;
-            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            LocalCache.saveState(App.state);
             return true;
         }, { syncingText: '寫入中...', successText: '✅ 已寫入', failText: '⚠️ 寫入失敗' });
 
@@ -6727,7 +6784,7 @@ const Admin = {
             } else {
                 App.state.records.splice(recordIndex, 1);
             }
-            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            LocalCache.saveState(App.state);
             return true;
         }, { syncingText: '寫入中...', successText: '✅ 已寫入', failText: '⚠️ 寫入失敗' });
 
@@ -6763,7 +6820,7 @@ const Admin = {
             } else {
                 uniqueIndices.forEach(idx => App.state.records.splice(idx, 1));
             }
-            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+            LocalCache.saveState(App.state);
             return true;
         }, { syncingText: '寫入中...', successText: '✅ 已寫入', failText: '⚠️ 寫入失敗' });
 
@@ -7453,7 +7510,7 @@ const Quiz = {
                 App.lockQuiz(App.user, course.id, course.title);
                 App.removePendingScore(record);
                 if (typeof App.saveLocalOnly === 'function') App.saveLocalOnly();
-                else localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(App.state));
+                else LocalCache.saveState(App.state);
             }
 
             App.quizInProgress = false;
