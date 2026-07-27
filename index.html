@@ -15,6 +15,7 @@
 <!-- ATC_V001_MANUAL_SCORE_PER_SHORT_ANSWER_NO_SQL -->
 <!-- ATC_V001_FINAL_SCORE_EDIT_FUNCTION -->
 <!-- ATC_V001_QUIZ_POINTS_DISPLAY_MANUAL_SCORE_NOTE -->
+<!-- ATC_V007_MANUAL_SCORE_SHOW_QUESTION_IMAGE -->
 <!-- ATC_V001_POINTS_ALL_TYPES_AUTO_REMAINDER -->
 <html lang="zh-TW">
 <head>
@@ -2891,6 +2892,28 @@ body.question-sort-active .editor-helper {
 
 
 
+        /* V007：簡答題人工評分視窗顯示題目圖片 */
+        #manualScoreQuestionImage {
+            margin: 10px 0 16px;
+            width: min(680px, 100%);
+            padding: 8px;
+            border: 1px solid rgba(88,166,255,0.28);
+            border-radius: 10px;
+            background: rgba(13,17,23,0.55);
+        }
+        #manualScoreQuestionImage[hidden] {
+            display: none !important;
+        }
+        #manualScoreQuestionImage img {
+            display: block;
+            max-width: 100%;
+            max-height: 380px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin: 0 auto;
+            cursor: zoom-in;
+        }
+
         /* V006：人工給分輸入框移除數字增減箭頭 */
         #manualScoreInput {
             appearance: textfield !important;
@@ -3092,6 +3115,7 @@ body.question-sort-active .editor-helper {
         <div class="review-modal-body">
             <div class="review-short-answer-label" style="margin-top:0;">題目</div>
             <div id="manualScoreQuestion" class="manual-score-question"></div>
+            <div id="manualScoreQuestionImage" hidden aria-label="題目參考圖片"></div>
             <div class="review-short-answer-label">作答內容</div>
             <div id="manualScoreUserAnswer" class="review-short-answer-box manual-score-full-text"></div>
             <div class="review-short-answer-label">參考答案</div>
@@ -3125,7 +3149,7 @@ const PASS_SCORE = 80;
 // ================= Supabase 後端設定 =================
 // Supabase URL 與 anon key 請設定在同層的 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V005-manual-score-full-text-scroll';
+const APP_BUILD_VERSION = 'V007-manual-score-question-image';
 
 const SUPABASE_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_URL) ? window.ATC_CONFIG.SUPABASE_URL.trim() : "";
 const SUPABASE_ANON_KEY = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_ANON_KEY) ? window.ATC_CONFIG.SUPABASE_ANON_KEY.trim() : "";
@@ -6842,15 +6866,19 @@ const Admin = {
         const details = Array.isArray(record && record.answerDetails) ? record.answerDetails : [];
         const course = App.state.courses.find(c => String(c.id || '') === String(record && (record.cid || record.courseId || '')) || String(c.title || '') === String(record && (record.c || record.courseTitle || '')));
         const courseQuestions = course && Array.isArray(course.questions) ? course.questions : [];
+        const questionSnapshot = Array.isArray(record && record.questionSnapshot) ? record.questionSnapshot : [];
         details.forEach(ans => {
             if (!ans || !(ans.questionType === 'short' || ans.needsManualScore)) return;
             const qIndex = Number(ans.questionNo) - 1;
             const q = courseQuestions[qIndex] || courseQuestions.find(item => String(item.id || '') === String(ans.questionId || ''));
-            const ref = String(ans.referenceAnswer || ans.correctAnswerText || (q && (q.referenceAnswer || q.correctAnswerText)) || '').trim();
+            const snapshot = questionSnapshot[qIndex] || questionSnapshot.find(item => String(item && item.questionId || '') === String(ans.questionId || ''));
+            const ref = String(ans.referenceAnswer || ans.correctAnswerText || (snapshot && (snapshot.referenceAnswer || snapshot.correctAnswerText)) || (q && (q.referenceAnswer || q.correctAnswerText)) || '').trim();
             if (ref) {
                 ans.referenceAnswer = ref;
                 if (!ans.correctAnswerText) ans.correctAnswerText = ref;
             }
+            const imageData = String(ans.imageData || (snapshot && snapshot.imageData) || (q && getQuestionDisplayImage(q, course)) || '').trim();
+            if (imageData) ans.imageData = imageData;
         });
         const shortItems = details.filter(ans => ans && (ans.questionType === 'short' || ans.needsManualScore));
         const existingManualSum = shortItems.reduce((sum, ans) => {
@@ -6886,12 +6914,29 @@ const Admin = {
 
         const title = document.getElementById('manualScoreTitle');
         const question = document.getElementById('manualScoreQuestion');
+        const questionImage = document.getElementById('manualScoreQuestionImage');
         const userAnswer = document.getElementById('manualScoreUserAnswer');
         const referenceAnswer = document.getElementById('manualScoreReferenceAnswer');
         const limitText = document.getElementById('manualScoreLimitText');
 
         if (title) title.textContent = `Q${data.qNo || ''} 簡答題人工計分`;
         if (question) question.textContent = data.questionText || '（題目未記錄）';
+        if (questionImage) {
+            questionImage.replaceChildren();
+            const imageSrc = String(data.imageData || '').trim();
+            if (imageSrc) {
+                const img = document.createElement('img');
+                img.src = imageSrc;
+                img.alt = `Q${data.qNo || ''} 題目參考圖片`;
+                img.addEventListener('click', function() {
+                    if (window.ImageLightbox && typeof ImageLightbox.open === 'function') ImageLightbox.open(img.src);
+                });
+                questionImage.appendChild(img);
+                questionImage.hidden = false;
+            } else {
+                questionImage.hidden = true;
+            }
+        }
         if (userAnswer) userAnswer.textContent = data.userText || '（未填寫）';
         if (referenceAnswer) referenceAnswer.textContent = data.referenceText || '（未設定）';
         if (limitText) limitText.textContent = `給分（0～${data.maxPoint} 分）`;
@@ -6920,6 +6965,11 @@ const Admin = {
         if (overlay) {
             overlay.classList.remove('active');
             overlay.setAttribute('aria-hidden', 'true');
+        }
+        const questionImage = document.getElementById('manualScoreQuestionImage');
+        if (questionImage) {
+            questionImage.hidden = true;
+            questionImage.replaceChildren();
         }
         const resolve = this._manualScoreResolve;
         this._manualScoreResolve = null;
@@ -6978,6 +7028,7 @@ const Admin = {
                     maxPoint,
                     oldManual,
                     questionText: qText,
+                    imageData: String(ans.imageData || ''),
                     userText,
                     referenceText: refText
                 });
