@@ -2534,6 +2534,80 @@ body.question-sort-active .editor-helper {
         }
 
 
+        /* V003：人工評分視窗顯示完整簡答內容與參考答案 */
+        .manual-score-modal {
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(920px, 94vw);
+            height: min(760px, 88vh);
+            min-width: 320px;
+            min-height: 420px;
+            max-width: 96vw;
+            max-height: 94vh;
+            resize: none;
+        }
+        .manual-score-question {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(88,166,255,0.35);
+            background: rgba(88,166,255,0.08);
+            color: var(--accent-color);
+            font-weight: 700;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+        .manual-score-full-text {
+            min-height: 72px;
+            max-height: none;
+            overflow: visible;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .manual-score-reference {
+            color: var(--success-color);
+            font-weight: 700;
+        }
+        .manual-score-footer {
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .manual-score-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .manual-score-input-wrap .input-field {
+            width: 120px;
+            margin: 0;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        @media (max-width: 640px) {
+            .manual-score-modal {
+                width: 96vw;
+                height: 90vh;
+                min-height: 360px;
+            }
+            .manual-score-footer,
+            .manual-score-input-wrap {
+                align-items: stretch;
+                flex-direction: column;
+                width: 100%;
+            }
+            .manual-score-input-wrap .input-field,
+            .manual-score-footer .btn {
+                width: 100%;
+            }
+        }
+
+
         /* V004：系統設定後台 */
         .settings-grid {
             display: grid;
@@ -2814,7 +2888,70 @@ body.question-sort-active .editor-helper {
             }
         }
 
-</style>
+
+
+
+        /* V006：人工給分輸入框移除數字增減箭頭 */
+        #manualScoreInput {
+            appearance: textfield !important;
+            -moz-appearance: textfield !important;
+        }
+        #manualScoreInput::-webkit-inner-spin-button,
+        #manualScoreInput::-webkit-outer-spin-button {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            margin: 0 !important;
+            display: none !important;
+        }
+
+        /* V005：修正人工評分視窗長文字遭父層裁切 */
+        #manualScoreOverlay .manual-score-modal {
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+        }
+        #manualScoreOverlay .review-modal-header,
+        #manualScoreOverlay .review-modal-footer {
+            flex: 0 0 auto !important;
+        }
+        #manualScoreOverlay .review-modal-body {
+            flex: 1 1 0 !important;
+            min-height: 0 !important;
+            height: 0 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            padding-bottom: 28px !important;
+            overscroll-behavior: contain;
+        }
+        #manualScoreOverlay .manual-score-question,
+        #manualScoreOverlay .manual-score-full-text {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+            text-overflow: clip !important;
+            -webkit-line-clamp: unset !important;
+            line-clamp: unset !important;
+        }
+        #manualScoreOverlay .manual-score-full-text {
+            min-height: 88px !important;
+        }
+        @media (max-width: 640px) {
+            #manualScoreOverlay .manual-score-modal {
+                height: 94dvh !important;
+                max-height: 94dvh !important;
+            }
+            #manualScoreOverlay .review-modal-body {
+                padding: 14px 14px 24px !important;
+            }
+        }
+
+    </style>
 </head>
 <body oncontextmenu="return false;"> 
 
@@ -2947,6 +3084,32 @@ body.question-sort-active .editor-helper {
     </div>
 </div>
 
+<div id="manualScoreOverlay" class="review-modal-overlay" aria-hidden="true">
+    <div class="review-modal manual-score-modal" role="dialog" aria-modal="true" aria-labelledby="manualScoreTitle">
+        <div class="review-modal-header" style="cursor:default;">
+            <h3 id="manualScoreTitle">簡答題人工計分</h3>
+        </div>
+        <div class="review-modal-body">
+            <div class="review-short-answer-label" style="margin-top:0;">題目</div>
+            <div id="manualScoreQuestion" class="manual-score-question"></div>
+            <div class="review-short-answer-label">作答內容</div>
+            <div id="manualScoreUserAnswer" class="review-short-answer-box manual-score-full-text"></div>
+            <div class="review-short-answer-label">參考答案</div>
+            <div id="manualScoreReferenceAnswer" class="review-short-answer-box manual-score-full-text manual-score-reference"></div>
+        </div>
+        <div class="review-modal-footer manual-score-footer">
+            <div class="manual-score-input-wrap">
+                <label for="manualScoreInput" id="manualScoreLimitText" style="font-size:13px; color:#8b949e; font-weight:700;">給分</label>
+                <input type="number" id="manualScoreInput" class="input-field no-spinner" min="0" step="0.1" inputmode="decimal" onkeydown="Admin.handleManualScoreKey(event)">
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-outline" onclick="Admin.cancelManualScoreDialog()">取消計分</button>
+                <button type="button" class="btn btn-primary" onclick="Admin.submitManualScoreDialog()">確認分數</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="scoreSyncOverlay" class="score-sync-overlay" aria-hidden="true">
     <div class="score-sync-card" role="alert" aria-live="assertive">
         <div class="score-sync-spinner" aria-hidden="true"></div>
@@ -2962,7 +3125,7 @@ const PASS_SCORE = 80;
 // ================= Supabase 後端設定 =================
 // Supabase URL 與 anon key 請設定在同層的 config.js。
 // 若 config.js 未設定或未載入，系統會維持本機 localStorage 模式，方便測試。
-const APP_BUILD_VERSION = 'V002-supabase-quota-safe';
+const APP_BUILD_VERSION = 'V005-manual-score-full-text-scroll';
 
 const SUPABASE_URL = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_URL) ? window.ATC_CONFIG.SUPABASE_URL.trim() : "";
 const SUPABASE_ANON_KEY = (window.ATC_CONFIG && window.ATC_CONFIG.SUPABASE_ANON_KEY) ? window.ATC_CONFIG.SUPABASE_ANON_KEY.trim() : "";
@@ -4089,7 +4252,8 @@ const App = {
             App.ensureSystemSettings();
             App.applySystemSettings();
             if (Admin.refreshSupabaseStatusForAdmin) Admin.refreshSupabaseStatusForAdmin();
-            if (this.currentAdminTab === 'score' && Admin.applyScoreFilter) Admin.applyScoreFilter();
+            // Supabase 載入完成後重新建立整個成績面板，確保科目下拉選單立即更新。
+            if (this.currentAdminTab === 'score' && Admin.renderScores) Admin.renderScores();
             else if (this.currentAdminTab === 'rec' && Admin.renderUsers) Admin.renderUsers();
             else if (this.currentAdminTab === 'edit' && Admin.renderEditor) Admin.renderEditor();
         }, 0);
@@ -6700,6 +6864,93 @@ const Admin = {
         }
         return { details, shortItems, autoScore };
     },
+    _manualScoreResolve: null,
+    openManualScoreDialog: function(data) {
+        const overlay = document.getElementById('manualScoreOverlay');
+        const input = document.getElementById('manualScoreInput');
+        if (!overlay || !input) {
+            const fallback = prompt(
+                `Q${data.qNo || ''} 簡答題給分（配分 ${data.maxPoint} 分）\n` +
+                `題目：${data.questionText || '（題目未記錄）'}\n\n` +
+                `【作答內容】\n${data.userText || '（未填寫）'}\n\n` +
+                `【參考答案】\n${data.referenceText || '（未設定）'}`,
+                data.oldManual || ''
+            );
+            if (fallback === null) return Promise.resolve(null);
+            return Promise.resolve(Number(String(fallback).trim()));
+        }
+
+        if (typeof this._manualScoreResolve === 'function') {
+            this._manualScoreResolve(null);
+        }
+
+        const title = document.getElementById('manualScoreTitle');
+        const question = document.getElementById('manualScoreQuestion');
+        const userAnswer = document.getElementById('manualScoreUserAnswer');
+        const referenceAnswer = document.getElementById('manualScoreReferenceAnswer');
+        const limitText = document.getElementById('manualScoreLimitText');
+
+        if (title) title.textContent = `Q${data.qNo || ''} 簡答題人工計分`;
+        if (question) question.textContent = data.questionText || '（題目未記錄）';
+        if (userAnswer) userAnswer.textContent = data.userText || '（未填寫）';
+        if (referenceAnswer) referenceAnswer.textContent = data.referenceText || '（未設定）';
+        if (limitText) limitText.textContent = `給分（0～${data.maxPoint} 分）`;
+
+        input.min = '0';
+        input.max = String(data.maxPoint);
+        input.step = '0.1';
+        input.value = data.oldManual || '';
+        input.dataset.maxPoint = String(data.maxPoint);
+
+        overlay.classList.add('active');
+        overlay.setAttribute('aria-hidden', 'false');
+        const body = overlay.querySelector('.review-modal-body');
+        if (body) body.scrollTop = 0;
+
+        return new Promise(resolve => {
+            this._manualScoreResolve = resolve;
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 0);
+        });
+    },
+    closeManualScoreDialog: function(value) {
+        const overlay = document.getElementById('manualScoreOverlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+        const resolve = this._manualScoreResolve;
+        this._manualScoreResolve = null;
+        if (typeof resolve === 'function') resolve(value);
+    },
+    submitManualScoreDialog: function() {
+        const input = document.getElementById('manualScoreInput');
+        if (!input) return this.closeManualScoreDialog(null);
+        const maxPoint = Number(input.dataset.maxPoint || input.max || 0);
+        const score = Number(String(input.value || '').trim());
+        if (!Number.isFinite(score) || score < 0 || score > maxPoint) {
+            alert(`請輸入 0 到 ${maxPoint} 之間的分數。`);
+            input.focus();
+            input.select();
+            return;
+        }
+        this.closeManualScoreDialog(Math.round(score * 10) / 10);
+    },
+    cancelManualScoreDialog: function() {
+        this.closeManualScoreDialog(null);
+    },
+    handleManualScoreKey: function(event) {
+        if (!event) return;
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.submitManualScoreDialog();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            this.cancelManualScoreDialog();
+        }
+    },
     editFinalScore: async function(recordIndex) {
         const r = App.state.records[recordIndex];
         if (!r) return alert('找不到此筆測驗紀錄。');
@@ -6719,13 +6970,18 @@ const Admin = {
                 const maxPoint = Number.isFinite(maxPointRaw) ? maxPointRaw : 0;
                 const oldManual = ans.manualScore === undefined || ans.manualScore === null || ans.manualScore === '' ? '' : String(ans.manualScore);
                 const qNo = ans.questionNo || '';
-                const qText = String(ans.questionText || '').slice(0, 80);
-                const userText = String(ans.userAnswerText || '').slice(0, 120);
+                const qText = String(ans.questionText || '');
+                const userText = String(ans.userAnswerText || '');
                 const refText = String(ans.referenceAnswer || ans.correctAnswerText || '').trim();
-                const refLine = refText ? `\n\n【參考答案】\n${refText.slice(0, 500)}` : '\n\n【參考答案】\n（未設定）';
-                const input = prompt(`Q${qNo} 簡答題給分（配分 ${maxPoint} 分）\n題目：${qText}\n作答：${userText}${refLine}`, oldManual);
-                if (input === null) return;
-                const manualScore = Number(String(input).trim());
+                const manualScore = await Admin.openManualScoreDialog({
+                    qNo,
+                    maxPoint,
+                    oldManual,
+                    questionText: qText,
+                    userText,
+                    referenceText: refText
+                });
+                if (manualScore === null) return;
                 if (!Number.isFinite(manualScore) || manualScore < 0 || manualScore > maxPoint) {
                     return alert(`Q${qNo} 請輸入 0 到 ${maxPoint} 之間的分數。`);
                 }
@@ -6963,6 +7219,18 @@ const Admin = {
         this.applyScoreFilter();
     },
     applyScoreFilter: function() {
+        // 若 Supabase 資料在後台畫面建立後才載入，立即補齊科目選項，不必先切換其他模組。
+        const courseSelect = document.getElementById('searchCourse');
+        if (courseSelect) {
+            const previousValue = courseSelect.value || 'ALL';
+            const courseTitles = (App.state.courses || []).map(c => String(c.title || ''));
+            const currentTitles = Array.from(courseSelect.options).slice(1).map(opt => String(opt.value || ''));
+            const needsRefresh = courseTitles.length !== currentTitles.length || courseTitles.some((title, i) => title !== currentTitles[i]);
+            if (needsRefresh) {
+                courseSelect.innerHTML = `<option value="ALL">所有科目</option>${(App.state.courses || []).map(c => `<option value="${Admin.esc(c.title)}">${Admin.esc(c.title)}</option>`).join('')}`;
+                courseSelect.value = courseTitles.includes(previousValue) ? previousValue : 'ALL';
+            }
+        }
         const filtered = this.getFilteredScoreItems();
 
         document.getElementById('scoreTableArea').innerHTML = `
