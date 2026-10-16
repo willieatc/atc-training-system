@@ -3292,10 +3292,22 @@ const Backend = {
                 }
                 return rows.map(row => this.recordFromRow(row));
             };
-            const [settings, records] = await Promise.all([
-                this.getSettings(), readAllRecords()
-            ]);
+            // 先讀取小量系統設定與科目，立即更新首頁；完整成績在第二階段讀取。
+            // 即使成績量很大，也不讓首頁科目一直顯示空白。
+            const settings = await this.getSettings();
             const courses = Array.isArray(settings.courses) ? settings.courses : [];
+            if (courses.length) {
+                App.state.courses = courses;
+                App.state.courses.forEach(c => {
+                    const n = Number(c.passScore);
+                    c.passScore = Number.isFinite(n) && n >= 0 && n <= 100 ? n : 80;
+                    if (!Array.isArray(c.materials)) c.materials = c.embedUrl ? [{id: `${c.id || 'course'}_mat_1`, title: '教材 1', url: String(c.embedUrl || ''), type: 'auto'}] : [];
+                });
+                if (App.renderSelects) App.renderSelects();
+                if (App.updateLoginStatus) App.updateLoginStatus();
+            }
+            this.setStatus('科目已載入，正在同步測驗成績...', 'var(--warning-color)');
+            const records = await readAllRecords();
             const quizUnlocksRaw = settings.quiz_unlocks && typeof settings.quiz_unlocks === 'object' ? settings.quiz_unlocks : {};
             const systemSettingsFromColumn = settings.system_settings && typeof settings.system_settings === 'object' ? settings.system_settings : {};
             const systemSettingsFromFallback = quizUnlocksRaw.__system_settings && typeof quizUnlocksRaw.__system_settings === 'object' ? quizUnlocksRaw.__system_settings : {};
@@ -4118,8 +4130,15 @@ const App = {
         return false;
     },
     saveLocalOnly: function() {
-        localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
-        return true;
+        // 成績與逐題作答資料增加後可能超過 localStorage 5MB 左右的容量限制。
+        // 快取僅是便利功能；失敗絕不可中止首頁科目或登入介面渲染。
+        try {
+            localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
+            return true;
+        } catch (err) {
+            console.warn('成績資料過大，略過本機快取；資料仍以 Supabase 為準。', err);
+            return false;
+        }
     },
     saveBackground: function() {
         localStorage.setItem('ATC_PRO_CLOUD', JSON.stringify(this.state));
@@ -4478,6 +4497,8 @@ const App = {
             : `<button class="btn btn-primary" style="width:100%" onclick="App.start(false)">${App.buttonLabel('loginButtonText', 'loginButtonEmoji', App.DEFAULT_SYSTEM_SETTINGS.loginButtonText, App.DEFAULT_SYSTEM_SETTINGS.loginButtonEmoji)}</button>`;
     },
     start: async function(isReview) {
+        // 雲端成績與鎖定狀態尚未同步完畢，不可用舊快取判斷能否再次測驗。
+        if (Backend.enabled() && !this.cloudReady) return alert('科目已顯示，但測驗成績與鎖定狀態仍在同步中。請待 Supabase 連線正常後再進入測驗。');
         if (this.isInstructor) return alert("管理員請由後台「進入教材/測驗」按鈕進入測試。");
         let code = document.getElementById('loginUser').value.trim();
         const selectedCourse = this.state.courses.find(c => c.id == document.getElementById('loginCourse').value);
